@@ -206,8 +206,7 @@ class SteamCleanerGUI:
         total_formatted = format_size(self._result.total_bytes)
         selected_formatted = format_size(selected_bytes)
         self._total_label.value = (
-            f"{selected_formatted} / {total_formatted} selected"
-            f" ({len(self._selected)}/{len(self._result.entries)})"
+            f"{selected_formatted} / {total_formatted} selected ({len(self._selected)}/{len(self._result.entries)})"
         )
         has_selection = len(self._selected) > 0
         self._clean_button.disabled = not has_selection

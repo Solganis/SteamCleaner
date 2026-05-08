@@ -149,7 +149,8 @@ class SteamClient(GameClient):
                 if any(subdir.is_relative_to(parent) for parent in found):
                     continue
                 junk_files = [
-                    file_path for file_path in subdir.rglob("*")
+                    file_path
+                    for file_path in subdir.rglob("*")
                     if file_path.is_file() and file_path.suffix.lower() in _JUNK_EXTENSIONS
                 ]
                 if junk_files:
