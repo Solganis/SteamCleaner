@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml)
 [![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/badge/type--checker-ty-D4AA00.svg)](https://github.com/astral-sh/ty)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub stars](https://img.shields.io/github/stars/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/stargazers)
@@ -12,6 +12,18 @@
 Reclaim wasted disk space from Steam and other game clients.
 
 SteamCleaner finds and safely removes junk files left behind by games. These files accumulate over time and can take up tens of gigabytes without you noticing.
+
+<!-- TODO: add screenshot when UI is finalized -->
+
+## Features
+
+- Scans Steam libraries for junk files across all detected library folders
+- Detects redistributables, shader caches, crash dumps, old logs, and cross-platform binaries
+- Desktop GUI with per-item selection, category badges, and size breakdown
+- CLI for scripting and automation (`steamcleaner scan`, `steamcleaner clean`)
+- Safe by default: files go to system trash, symlinks are never followed
+- Automatic OS theme detection (dark/light) with manual toggle
+- Cross-platform: Windows and Linux
 
 ## What it finds
 
@@ -46,6 +58,10 @@ Games built with engines like Ren'Py ship binaries for all platforms (`lib/darwi
 
 - Windows 10/11
 - Linux (native, Flatpak, Snap)
+
+## Contributing
+
+Contributions are welcome. Please open an issue first to discuss what you'd like to change.
 
 ## License
 
