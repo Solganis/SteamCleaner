@@ -374,6 +374,7 @@ class SteamCleanerGUI:
         self._page.run_task(self._scan_task)
 
     async def _scan_task(self):
+        assert self._cancel_event is not None
         cancel = self._cancel_event
         found_queue: queue.Queue[JunkEntry] = queue.Queue()
         status_text = ["Scanning..."]
@@ -502,7 +503,7 @@ class SteamCleanerGUI:
         self._refresh_list()
 
     def _show_error_dialog(self, stats: CleanStats):
-        error_lines = [ft.Text(error, size=12) for error in stats.errors]
+        error_lines: list[ft.Control] = [ft.Text(error, size=12) for error in stats.errors]
         dialog = ft.AlertDialog(
             title=ft.Text(f"Deleted {stats.deleted}, failed {stats.skipped}"),
             content=ft.Column(error_lines, tight=True, scroll=ft.ScrollMode.AUTO, height=200),
