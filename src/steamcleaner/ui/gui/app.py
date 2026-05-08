@@ -24,7 +24,6 @@ class SteamCleanerGUI:
         self._build_ui()
 
     def _setup_page(self):
-        self._page.window.visible = False
         self._page.title = "SteamCleaner"
         saved_theme = get_value("ui", "theme")
         match saved_theme:
@@ -135,7 +134,6 @@ class SteamCleanerGUI:
             padding=ft.Padding.symmetric(horizontal=20, vertical=8),
         )
 
-        self._page.window.visible = True
         self._page.add(
             header,
             self._progress,
@@ -143,6 +141,8 @@ class SteamCleanerGUI:
             ft.Divider(height=1),
             ft.Container(content=self._results_list, expand=True),
         )
+        self._page.window.visible = True
+        self._page.update()
 
     def _make_row(self, index: int, entry: JunkEntry) -> ft.Container:
         checkbox = ft.Checkbox(
@@ -308,4 +308,4 @@ class SteamCleanerGUI:
 
 
 def run_gui():
-    ft.run(lambda page: SteamCleanerGUI(page))
+    ft.run(lambda page: SteamCleanerGUI(page), view=ft.AppView.FLET_APP_HIDDEN)
