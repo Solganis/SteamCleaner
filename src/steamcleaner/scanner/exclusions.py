@@ -31,7 +31,7 @@ class ExclusionRegistry:
 
     def is_excluded(self, path: PurePath) -> bool:
         path_str = str(path).replace("\\", "/").lower()
-        return any(e.pattern.lower() in path_str for e in self._exclusions)
+        return any(exclusion.pattern.lower() in path_str for exclusion in self._exclusions)
 
     @property
     def all(self) -> list[Exclusion]:

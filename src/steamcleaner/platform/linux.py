@@ -21,8 +21,8 @@ class LinuxAdapter(PlatformAdapter):
 
     def program_files(self) -> list[Path]:
         paths = []
-        for d in ("/usr/local/share", "/usr/share", "/opt"):
-            p = Path(d)
-            if p.is_dir():
-                paths.append(p)
+        for directory in ("/usr/local/share", "/usr/share", "/opt"):
+            dir_path = Path(directory)
+            if dir_path.is_dir():
+                paths.append(dir_path)
         return paths

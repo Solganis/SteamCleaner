@@ -58,14 +58,14 @@ class ScanScreen(Screen):
         table = self.query_one("#results-table", DataTable)
         table.clear()
 
-        for i, entry in enumerate(self._result.entries):
+        for entry_index, entry in enumerate(self._result.entries):
             table.add_row(
                 "[ ]",
                 format_size(entry.size_bytes),
                 entry.category.value,
                 str(entry.path),
                 entry.description,
-                key=str(i),
+                key=str(entry_index),
             )
 
         total = format_size(self._result.total_bytes)
@@ -75,26 +75,27 @@ class ScanScreen(Screen):
     def on_data_table_row_selected(self, event: DataTable.RowSelected):
         if event.row_key.value is None:
             return
-        idx = int(event.row_key.value)
+        row_index = int(event.row_key.value)
         table = self.query_one("#results-table", DataTable)
-        if idx in self._selected:
-            self._selected.discard(idx)
+        if row_index in self._selected:
+            self._selected.discard(row_index)
             table.update_cell(event.row_key, table.columns[next(iter(table.columns))].key, "[ ]")
         else:
-            self._selected.add(idx)
+            self._selected.add(row_index)
             table.update_cell(event.row_key, table.columns[next(iter(table.columns))].key, "[x]")
         self._update_selection_status()
 
     def _update_selection_status(self):
-        selected_entries = [self._result.entries[i] for i in self._selected]
-        total = sum(e.size_bytes for e in selected_entries)
+        selected_entries = [self._result.entries[entry_index] for entry_index in self._selected]
+        total = sum(entry.size_bytes for entry in selected_entries)
         status = self.query_one("#status-label", Label)
         all_total = format_size(self._result.total_bytes)
-        sel_total = format_size(total)
-        status.update(f"Selected {len(self._selected)}/{len(self._result.entries)} items — {sel_total} / {all_total}")
+        selected_total = format_size(total)
+        count = f"{len(self._selected)}/{len(self._result.entries)}"
+        status.update(f"Selected {count} items: {selected_total} / {all_total}")
 
     def _get_selected_result(self) -> ScanResult:
-        entries = [self._result.entries[i] for i in sorted(self._selected)]
+        entries = [self._result.entries[entry_index] for entry_index in sorted(self._selected)]
         return ScanResult(entries=entries)
 
     def _do_clean(self, *, dry_run: bool):
@@ -111,8 +112,8 @@ class ScanScreen(Screen):
         else:
             self.notify(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
             if stats.errors:
-                for err in stats.errors:
-                    self.notify(f"Error: {err}", severity="error")
+                for error in stats.errors:
+                    self.notify(f"Error: {error}", severity="error")
             self._run_scan()
 
     def on_button_pressed(self, event: Button.Pressed):
@@ -137,12 +138,12 @@ class ScanScreen(Screen):
         first_col_key = table.columns[next(iter(table.columns))].key
         if len(self._selected) == len(self._result.entries):
             self._selected.clear()
-            for i in range(len(self._result.entries)):
-                table.update_cell(str(i), first_col_key, "[ ]")
+            for row_index in range(len(self._result.entries)):
+                table.update_cell(str(row_index), first_col_key, "[ ]")
         else:
             self._selected = set(range(len(self._result.entries)))
-            for i in range(len(self._result.entries)):
-                table.update_cell(str(i), first_col_key, "[x]")
+            for row_index in range(len(self._result.entries)):
+                table.update_cell(str(row_index), first_col_key, "[x]")
         self._update_selection_status()
 
     def action_select_none(self):
