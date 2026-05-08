@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import sys
 import threading
+import time
 
 import darkdetect
 import flet as ft
@@ -14,13 +17,94 @@ from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
 
 
+class _WindowHider:
+    """Hides the Flutter window before Python gets control via WebSocket.
+
+    Flet's Flutter runtime creates and shows a native window before any
+    Python code runs. This class polls for the Flutter window class at 1ms
+    intervals and immediately moves it off-screen + hides it, preventing
+    the visible "jump" when restoring saved window geometry.
+
+    Windows-only. On other platforms this is a no-op.
+    """
+
+    def __init__(self):
+        self._hwnd: int | None = None
+        self._stop = threading.Event()
+
+    def start(self):
+        if sys.platform != "win32":
+            return
+        thread = threading.Thread(target=self._monitor, daemon=True)
+        thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def show(self):
+        if self._hwnd is None:
+            return
+        import ctypes
+
+        ctypes.windll.user32.ShowWindow(self._hwnd, 5)  # SW_SHOW
+
+    def _monitor(self):
+        import ctypes
+        import ctypes.wintypes
+
+        user32 = ctypes.windll.user32
+        sw_hide = 0
+        swp_nosize = 0x0001
+        swp_nozorder = 0x0004
+        swp_noactivate = 0x0010
+
+        enum_callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+        def find_flutter():
+            found = [None]
+
+            def callback(hwnd, _):
+                class_name = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(hwnd, class_name, 256)
+                if "FLUTTER" in class_name.value.upper():
+                    found[0] = hwnd
+                    return False
+                return True
+
+            user32.EnumWindows(enum_callback_type(callback), 0)
+            return found[0]
+
+        while not self._stop.is_set():
+            hwnd = find_flutter()
+            if hwnd:
+                user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, swp_nosize | swp_nozorder | swp_noactivate)
+                user32.ShowWindow(hwnd, sw_hide)
+                self._hwnd = hwnd
+                return
+            time.sleep(0.001)
+
+
 class SteamCleanerGUI:
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, window_hider: _WindowHider | None = None):
         self._page = page
         self._result = ScanResult()
         self._selected: set[int] = set()
         self._cancel_event: threading.Event | None = None
+        self._window_hider = window_hider or _WindowHider()
+        self._status = ft.Text("Ready")
+        self._total_label = ft.Text("")
+        self._theme_button = ft.IconButton()
+        self._scan_button = ft.Button("Scan")
+        self._clean_button = ft.Button("Clean Selected", disabled=True)
+        self._select_all_button = ft.TextButton("Select All", disabled=True)
+        self._progress = ft.ProgressBar(visible=False)
+        self._results_list = ft.ListView()
         self._setup_page()
+
+    async def initialize(self):
+        self._window_hider.stop()
+        self._page.update()
+        await asyncio.sleep(0.15)
         self._build_ui()
 
     def _setup_page(self):
@@ -141,6 +225,7 @@ class SteamCleanerGUI:
             ft.Divider(height=1),
             ft.Container(content=self._results_list, expand=True),
         )
+        self._window_hider.show()
         self._page.window.visible = True
         self._page.update()
 
@@ -308,4 +393,11 @@ class SteamCleanerGUI:
 
 
 def run_gui():
-    ft.run(lambda page: SteamCleanerGUI(page), view=ft.AppView.FLET_APP_HIDDEN)
+    hider = _WindowHider()
+    hider.start()
+
+    async def main(page: ft.Page):
+        gui = SteamCleanerGUI(page, hider)
+        await gui.initialize()
+
+    ft.run(main)
