@@ -37,9 +37,7 @@ class ScanEngine:
             if progress:
                 progress(f"Scanning {client.name}...", 0)
 
-            for entry in client.scan_safe():
-                if cancel and cancel.is_set():
-                    break
+            for entry in client.scan_safe(cancel=cancel):
                 all_entries.append(entry)
 
         return ScanResult(entries=all_entries)
