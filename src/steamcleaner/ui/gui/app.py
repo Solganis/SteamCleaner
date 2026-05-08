@@ -173,9 +173,18 @@ class SteamCleanerGUI:
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
             disabled=True,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-            color=ft.Colors.WHITE,
-            bgcolor=ft.Colors.RED_700,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                color={
+                    ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                    ft.ControlState.DISABLED: ft.Colors.with_opacity(0.4, ft.Colors.WHITE),
+                },
+                bgcolor={
+                    ft.ControlState.DEFAULT: ft.Colors.RED_700,
+                    ft.ControlState.HOVERED: ft.Colors.RED_800,
+                    ft.ControlState.DISABLED: ft.Colors.with_opacity(0.3, ft.Colors.RED_700),
+                },
+            ),
         )
         self._select_all_button = ft.TextButton(
             "Select All",
