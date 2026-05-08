@@ -113,9 +113,6 @@ class SteamClient(GameClient):
         if install:
             if self.cancelled:
                 return
-            yield from self._scan_steam_logs(install)
-            if self.cancelled:
-                return
             yield from self._scan_steam_dumps(install)
 
     def _scan_common(self, library: Path) -> Iterator[JunkEntry]:
@@ -223,20 +220,6 @@ class SteamClient(GameClient):
                         )
         except OSError:
             return
-
-    def _scan_steam_logs(self, install: Path) -> Iterator[JunkEntry]:
-        logs_dir = install / "logs"
-        if not logs_dir.is_dir() or self.cancelled:
-            return
-        total = _dir_size(logs_dir)
-        if total >= _LOG_MIN_SIZE:
-            yield JunkEntry(
-                path=logs_dir,
-                category=JunkCategory.OLD_LOG,
-                size_bytes=total,
-                client_name=self.name,
-                description="Steam client logs",
-            )
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:
         dumps_dir = install / "dumps"
