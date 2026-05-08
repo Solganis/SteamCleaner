@@ -9,7 +9,7 @@ import time
 import darkdetect
 import flet as ft
 
-from steamcleaner.cleaner.engine import CleanEngine
+from steamcleaner.cleaner.engine import CleanEngine, CleanStats
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
@@ -465,33 +465,50 @@ class SteamCleanerGUI:
         self._set_controls_locked(locked=True)
         self._scan_button.disabled = True
         self._page.update()
+        self._page.run_task(self._clean_task, entries)
 
+    async def _clean_task(self, entries: list[JunkEntry]):
         deleted_set = set(id(entry) for entry in entries)
+        clean_done = threading.Event()
+        stats_holder: list[CleanStats] = []
 
-        def do_clean():
+        def run_clean():
             selected_result = ScanResult(entries=entries)
             cleaner = CleanEngine(use_trash=True, dry_run=False)
-            stats = cleaner.clean(selected_result)
+            stats_holder.append(cleaner.clean(selected_result))
+            clean_done.set()
 
-            self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
-            self._selected.clear()
+        threading.Thread(target=run_clean, daemon=True).start()
 
-            self._scan_button.disabled = False
-            self._progress.visible = False
+        while not clean_done.is_set():
+            await asyncio.sleep(0.1)
 
-            entry_count = len(self._result.entries)
-            if stats.errors:
-                error_summary = f"Deleted {stats.deleted}, failed {stats.skipped}: {stats.errors[0]}"
-                self._show_snackbar(error_summary)
-                self._status.value = f"{entry_count} items remaining, {stats.skipped} failed"
-            else:
-                self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
-                self._status.value = f"{entry_count} items remaining"
+        stats = stats_holder[0]
 
-            self._set_controls_locked(locked=False)
-            self._refresh_list()
+        self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
+        self._selected.clear()
+        self._scan_button.disabled = False
+        self._progress.visible = False
 
-        threading.Thread(target=do_clean, daemon=True).start()
+        entry_count = len(self._result.entries)
+        if stats.errors:
+            self._status.value = f"{entry_count} items remaining, {stats.skipped} failed"
+            self._show_error_dialog(stats)
+        else:
+            self._status.value = f"{entry_count} items remaining"
+            self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+
+        self._set_controls_locked(locked=False)
+        self._refresh_list()
+
+    def _show_error_dialog(self, stats: CleanStats):
+        error_lines = [ft.Text(error, size=12) for error in stats.errors]
+        dialog = ft.AlertDialog(
+            title=ft.Text(f"Deleted {stats.deleted}, failed {stats.skipped}"),
+            content=ft.Column(error_lines, tight=True, scroll=ft.ScrollMode.AUTO, height=200),
+            actions=[ft.TextButton("OK", on_click=lambda _: self._page.pop_dialog())],
+        )
+        self._page.show_dialog(dialog)
 
     def _show_snackbar(self, message: str):
         snackbar = ft.SnackBar(content=ft.Text(message), duration=4000, open=True)
