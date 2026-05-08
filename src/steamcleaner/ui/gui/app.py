@@ -10,6 +10,7 @@ from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
 
 
@@ -24,11 +25,18 @@ class SteamCleanerGUI:
 
     def _setup_page(self):
         self._page.title = "SteamCleaner"
-        os_theme = darkdetect.theme()
-        if os_theme == "Light":
-            self._page.theme_mode = ft.ThemeMode.LIGHT
-        else:
-            self._page.theme_mode = ft.ThemeMode.DARK
+        saved_theme = get_value("ui", "theme")
+        match saved_theme:
+            case "light":
+                self._page.theme_mode = ft.ThemeMode.LIGHT
+            case "dark":
+                self._page.theme_mode = ft.ThemeMode.DARK
+            case _:
+                os_theme = darkdetect.theme()
+                if os_theme == "Light":
+                    self._page.theme_mode = ft.ThemeMode.LIGHT
+                else:
+                    self._page.theme_mode = ft.ThemeMode.DARK
         self._page.theme = ft.Theme(
             color_scheme_seed=ft.Colors.BLUE,
             visual_density=ft.VisualDensity.COMPACT,
@@ -209,10 +217,12 @@ class SteamCleanerGUI:
             self._page.theme_mode = ft.ThemeMode.LIGHT
             self._theme_btn.icon = ft.Icons.DARK_MODE
             self._theme_btn.tooltip = "Switch to dark theme"
+            save_value("ui", "theme", "light")
         else:
             self._page.theme_mode = ft.ThemeMode.DARK
             self._theme_btn.icon = ft.Icons.LIGHT_MODE
             self._theme_btn.tooltip = "Switch to light theme"
+            save_value("ui", "theme", "dark")
         self._page.update()
 
     def _on_scan(self, _e):
