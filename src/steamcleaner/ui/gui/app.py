@@ -5,6 +5,7 @@ import queue
 import sys
 import threading
 import time
+from pathlib import Path
 
 import darkdetect
 import flet as ft
@@ -89,7 +90,10 @@ class SteamCleanerGUI:
     def __init__(self, page: ft.Page, window_hider: _WindowHider | None = None):
         self._page = page
         self._result = ScanResult()
-        self._selected: set[int] = set()
+        self._selected: set[Path] = set()
+        self._visible_entries: list[JunkEntry] = []
+        self._sort_key = "size_desc"
+        self._category_filter: str | None = None
         self._cancel_event: threading.Event | None = None
         self._window_hider = window_hider or _WindowHider()
         self._status = ft.Text("Ready")
@@ -98,6 +102,8 @@ class SteamCleanerGUI:
         self._scan_button = ft.Button("Scan")
         self._clean_button = ft.Button("Clean Selected", disabled=True)
         self._select_all_button = ft.TextButton("Select All", disabled=True)
+        self._sort_dropdown = ft.Dropdown(width=160)
+        self._filter_dropdown = ft.Dropdown(width=160)
         self._progress = ft.ProgressBar(visible=False)
         self._results_list = ft.ListView()
         self._setup_page()
@@ -193,6 +199,31 @@ class SteamCleanerGUI:
             disabled=True,
         )
 
+        self._sort_dropdown = ft.Dropdown(
+            width=200,
+            value="size_desc",
+            label="Sort by",
+            options=[
+                ft.dropdown.Option("size_desc", "Size (largest)"),
+                ft.dropdown.Option("size_asc", "Size (smallest)"),
+                ft.dropdown.Option("category", "Category"),
+                ft.dropdown.Option("path", "Path"),
+            ],
+            on_select=self._on_sort_changed,
+            dense=True,
+            text_size=13,
+        )
+
+        self._filter_dropdown = ft.Dropdown(
+            width=200,
+            value="all",
+            label="Filter",
+            options=[ft.dropdown.Option("all", "All categories")],
+            on_select=self._on_filter_changed,
+            dense=True,
+            text_size=13,
+        )
+
         self._progress = ft.ProgressBar(visible=False)
 
         self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.Padding.symmetric(horizontal=16))
@@ -218,6 +249,8 @@ class SteamCleanerGUI:
                 [
                     self._scan_button,
                     self._select_all_button,
+                    self._sort_dropdown,
+                    self._filter_dropdown,
                     ft.Container(expand=True),
                     self._total_label,
                     self._clean_button,
@@ -239,24 +272,25 @@ class SteamCleanerGUI:
         self._page.window.visible = True
         self._page.update()
 
-    def _make_row(self, index: int, entry: JunkEntry) -> ft.Container:
-        checkbox = ft.Checkbox(
-            value=index in self._selected,
-            on_change=lambda event, idx=index: self._on_toggle(idx, event.control.value),
-        )
+    _CATEGORY_COLORS = {
+        "redistributable": ft.Colors.ORANGE_700,
+        "shader_cache": ft.Colors.PURPLE_700,
+        "crash_dump": ft.Colors.RED_700,
+        "old_log": ft.Colors.BLUE_GREY_700,
+        "installer": ft.Colors.AMBER_700,
+        "cross_platform": ft.Colors.TEAL_700,
+    }
 
-        category_colors = {
-            "redistributable": ft.Colors.ORANGE_700,
-            "shader_cache": ft.Colors.PURPLE_700,
-            "crash_dump": ft.Colors.RED_700,
-            "old_log": ft.Colors.BLUE_GREY_700,
-            "installer": ft.Colors.AMBER_700,
-            "cross_platform": ft.Colors.TEAL_700,
-        }
+    def _make_row(self, entry: JunkEntry) -> ft.Container:
+        entry_path = entry.path
+        checkbox = ft.Checkbox(
+            value=entry_path in self._selected,
+            on_change=lambda event, path=entry_path: self._on_toggle(path, event.control.value),
+        )
 
         badge = ft.Container(
             content=ft.Text(entry.category.value.replace("_", " "), size=11, color=ft.Colors.WHITE),
-            bgcolor=category_colors.get(entry.category.value, ft.Colors.GREY_700),
+            bgcolor=self._CATEGORY_COLORS.get(entry.category.value, ft.Colors.GREY_700),
             border_radius=4,
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
@@ -286,49 +320,89 @@ class SteamCleanerGUI:
             padding=ft.Padding.symmetric(horizontal=4, vertical=2),
             border_radius=6,
             ink=True,
-            on_click=lambda event, idx=index: self._on_row_click(idx),
+            on_click=lambda event, path=entry_path: self._on_row_click(path),
         )
 
+    def _apply_sort_filter(self):
+        entries = self._result.entries
+        if self._category_filter and self._category_filter != "all":
+            entries = [entry for entry in entries if entry.category.value == self._category_filter]
+        match self._sort_key:
+            case "size_desc":
+                entries = sorted(entries, key=lambda entry: entry.size_bytes, reverse=True)
+            case "size_asc":
+                entries = sorted(entries, key=lambda entry: entry.size_bytes)
+            case "category":
+                entries = sorted(entries, key=lambda entry: entry.category.value)
+            case "path":
+                entries = sorted(entries, key=lambda entry: str(entry.path).lower())
+        self._visible_entries = entries
+
     def _refresh_list(self):
+        self._apply_sort_filter()
         self._results_list.controls.clear()
-        for entry_index, entry in enumerate(self._result.entries):
-            self._results_list.controls.append(self._make_row(entry_index, entry))
+        for entry in self._visible_entries:
+            self._results_list.controls.append(self._make_row(entry))
         self._update_totals()
         self._page.update()
 
+    def _rebuild_filter_options(self):
+        categories = sorted({entry.category.value for entry in self._result.entries})
+        options: list[ft.dropdown.Option] = [ft.dropdown.Option("all", "All categories")]
+        for category in categories:
+            label = category.replace("_", " ").title()
+            options.append(ft.dropdown.Option(category, label))
+        self._filter_dropdown.options = options
+        if self._category_filter not in categories:
+            self._category_filter = None
+            self._filter_dropdown.value = "all"
+
     def _update_totals(self):
-        selected_bytes = sum(self._result.entries[entry_index].size_bytes for entry_index in self._selected)
+        selected_bytes = sum(entry.size_bytes for entry in self._result.entries if entry.path in self._selected)
         total_formatted = format_size(self._result.total_bytes)
         selected_formatted = format_size(selected_bytes)
+        visible_count = len(self._visible_entries)
+        total_count = len(self._result.entries)
+        filter_note = f" ({visible_count} shown)" if visible_count != total_count else ""
         self._total_label.value = (
-            f"{selected_formatted} / {total_formatted} selected ({len(self._selected)}/{len(self._result.entries)})"
+            f"{selected_formatted} / {total_formatted} selected ({len(self._selected)}/{total_count}){filter_note}"
         )
         has_selection = len(self._selected) > 0
         self._clean_button.disabled = not has_selection
-        self._select_all_button.disabled = len(self._result.entries) == 0
+        self._select_all_button.disabled = total_count == 0
 
-    def _on_toggle(self, index: int, checked: bool):
+    def _on_toggle(self, path: Path, checked: bool):
         if checked:
-            self._selected.add(index)
+            self._selected.add(path)
         else:
-            self._selected.discard(index)
+            self._selected.discard(path)
         self._update_totals()
         self._page.update()
 
-    def _on_row_click(self, index: int):
-        if index in self._selected:
-            self._selected.discard(index)
+    def _on_row_click(self, path: Path):
+        if path in self._selected:
+            self._selected.discard(path)
         else:
-            self._selected.add(index)
+            self._selected.add(path)
         self._refresh_list()
 
     def _on_select_all(self, _event):
-        if len(self._selected) == len(self._result.entries):
-            self._selected.clear()
+        visible_paths = {entry.path for entry in self._visible_entries}
+        if visible_paths.issubset(self._selected):
+            self._selected -= visible_paths
             self._select_all_button.text = "Select All"
         else:
-            self._selected = set(range(len(self._result.entries)))
+            self._selected |= visible_paths
             self._select_all_button.text = "Deselect All"
+        self._refresh_list()
+
+    def _on_sort_changed(self, event):
+        self._sort_key = event.control.value
+        self._refresh_list()
+
+    def _on_filter_changed(self, event):
+        value = event.control.value
+        self._category_filter = None if value == "all" else value
         self._refresh_list()
 
     def _on_toggle_theme(self, _event):
@@ -353,6 +427,8 @@ class SteamCleanerGUI:
     def _set_controls_locked(self, locked: bool):
         self._clean_button.disabled = locked or not self._selected
         self._select_all_button.disabled = locked or len(self._result.entries) == 0
+        self._sort_dropdown.disabled = locked
+        self._filter_dropdown.disabled = locked
         self._results_list.disabled = locked
 
     def _on_scan(self, _event):
@@ -421,22 +497,28 @@ class SteamCleanerGUI:
 
         self._reset_scan_ui()
         self._set_controls_locked(locked=False)
-        self._update_totals()
-        self._page.update()
+        self._rebuild_filter_options()
+        self._refresh_list()
 
     def _drain_found_queue(self, found_queue: queue.Queue[JunkEntry]):
+        added = False
         while not found_queue.empty():
             entry = found_queue.get_nowait()
-            entry_index = len(self._result.entries)
             self._result.entries.append(entry)
-            self._results_list.controls.append(self._make_row(entry_index, entry))
+            added = True
+        if added:
+            self._rebuild_filter_options()
+            self._apply_sort_filter()
+            self._results_list.controls.clear()
+            for visible_entry in self._visible_entries:
+                self._results_list.controls.append(self._make_row(visible_entry))
             self._total_label.value = f"{len(self._result.entries)} items, {format_size(self._result.total_bytes)}"
 
     def _on_clean(self, _event):
         if not self._selected:
             return
 
-        entries = [self._result.entries[entry_index] for entry_index in sorted(self._selected)]
+        entries = [entry for entry in self._result.entries if entry.path in self._selected]
         selected_bytes = sum(entry.size_bytes for entry in entries)
 
         dialog = ft.AlertDialog(
@@ -486,8 +568,9 @@ class SteamCleanerGUI:
 
         stats = stats_holder[0]
 
+        deleted_paths = {entry.path for entry in entries}
         self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
-        self._selected.clear()
+        self._selected -= deleted_paths
         self._scan_button.disabled = False
         self._progress.visible = False
 
@@ -500,6 +583,7 @@ class SteamCleanerGUI:
             self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
 
         self._set_controls_locked(locked=False)
+        self._rebuild_filter_options()
         self._refresh_list()
 
     def _show_error_dialog(self, stats: CleanStats):
