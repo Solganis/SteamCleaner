@@ -272,12 +272,28 @@ class SteamCleanerGUI:
             padding=ft.Padding.symmetric(horizontal=20, vertical=8),
         )
 
+        self._empty_state = ft.Column(
+            [
+                ft.Container(expand=True),
+                ft.Icon(ft.Icons.SEARCH_OFF, size=48, color=ft.Colors.with_opacity(0.4, ft.Colors.ON_SURFACE)),
+                ft.Text(
+                    "Click Scan to find junk files",
+                    size=16,
+                    color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE),
+                ),
+                ft.Container(expand=True),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=12,
+            expand=True,
+        )
+
         self._page.add(
             header,
             self._progress,
             toolbar,
             ft.Divider(height=1),
-            ft.Container(content=self._results_list, expand=True),
+            ft.Stack([self._results_list, self._empty_state], expand=True),
         )
         self._window_hider.show()
         self._page.window.visible = True
@@ -376,8 +392,28 @@ class SteamCleanerGUI:
         self._results_list.controls.clear()
         for entry in self._visible_entries:
             self._results_list.controls.append(self._make_row(entry))
+        self._update_empty_state()
         self._update_totals()
         self._page.update()
+
+    def _update_empty_state(self):
+        has_results = len(self._result.entries) > 0
+        has_visible = len(self._visible_entries) > 0
+        icon_control = self._empty_state.controls[1]
+        text_control = self._empty_state.controls[2]
+        assert isinstance(icon_control, ft.Icon)
+        assert isinstance(text_control, ft.Text)
+
+        if has_visible:
+            self._empty_state.visible = False
+        elif has_results:
+            icon_control.name = ft.Icons.FILTER_LIST_OFF
+            text_control.value = "No results matching your filters"
+            self._empty_state.visible = True
+        else:
+            icon_control.name = ft.Icons.SEARCH_OFF
+            text_control.value = "Click Scan to find junk files"
+            self._empty_state.visible = True
 
     def _rebuild_filter_options(self):
         categories = sorted({entry.category.value for entry in self._result.entries})
@@ -505,6 +541,7 @@ class SteamCleanerGUI:
         self._selected.clear()
         self._results_list.controls.clear()
         self._total_label.value = ""
+        self._empty_state.visible = False
         self._set_controls_locked(locked=True)
         self._page.update()
         self._page.run_task(self._scan_task)
