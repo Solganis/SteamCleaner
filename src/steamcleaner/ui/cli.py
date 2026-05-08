@@ -36,9 +36,9 @@ def _print_results(result: ScanResult):
 def cli(ctx: click.Context):
     """SteamCleaner — reclaim disk space from game clients."""
     if ctx.invoked_subcommand is None:
-        from steamcleaner.ui.tui.app import run_tui
+        from steamcleaner.ui.gui.app import run_gui
 
-        run_tui()
+        run_gui()
 
 
 @cli.command()
