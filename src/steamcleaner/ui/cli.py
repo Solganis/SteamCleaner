@@ -4,13 +4,14 @@ import click
 
 from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.scan_result import ScanResult
-from steamcleaner.platform.windows import WindowsAdapter
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import format_size
 
 
 def _build_scanner() -> ScanEngine:
+    from steamcleaner.platform.windows import WindowsAdapter
+
     platform = WindowsAdapter()
     exclusions = ExclusionRegistry()
     return ScanEngine(platform, exclusions)

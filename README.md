@@ -1,10 +1,10 @@
 # SteamCleaner
 
-Cross-platform CLI/TUI tool for reclaiming disk space wasted by game clients.
+Reclaim wasted disk space from Steam and other game clients.
 
-Detects and safely removes redistributable installers, shader caches, crash dumps, and old logs left behind by Steam (more clients coming soon).
+SteamCleaner finds and safely removes junk files left behind by games — redistributable installers, shader caches, crash dumps, and old logs that pile up over time.
 
-## Installation
+## Download
 
 Requires Python 3.14+.
 
@@ -12,37 +12,20 @@ Requires Python 3.14+.
 pip install steamcleaner
 ```
 
-Or with [uv](https://docs.astral.sh/uv/):
+## Getting Started
 
-```bash
-uv tool install steamcleaner
-```
-
-## Usage
-
-### TUI (default)
+Launch the app:
 
 ```bash
 steamcleaner
 ```
 
-Interactive terminal UI with scan results table, row selection, and one-click cleanup.
+1. Click **Scan** to find junk files
+2. Review the results — each item shows its size, category, and path
+3. Select what you want to remove (or use **Select All**)
+4. Click **Clean Selected** to free up space
 
-### CLI
-
-```bash
-# Scan for junk
-steamcleaner scan
-
-# Delete with confirmation (sends to trash)
-steamcleaner clean
-
-# Preview what would be deleted
-steamcleaner clean --dry-run
-
-# Permanently delete instead of trashing
-steamcleaner clean --no-trash
-```
+Files are sent to the trash by default, so you can always restore them if needed. Use **Dry Run** to preview what would be deleted without actually removing anything.
 
 ## What it finds
 
@@ -55,10 +38,10 @@ steamcleaner clean --no-trash
 
 ## Safety
 
-- Known-safe paths are excluded by default (e.g. `Steamworks Shared`, game files misplaced in `redist/` directories)
+- Known game files are excluded automatically
 - Symlinks and junction points are never followed
 - Files go to trash by default, not permanent deletion
-- Dry-run mode available for previewing changes
+- Dry-run mode for previewing changes before committing
 
 ## License
 
