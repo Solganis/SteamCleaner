@@ -43,9 +43,19 @@ unresolved-attribute = "warn"
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+[tool.coverage.run]
+source = ["steamcleaner"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]
+
 [dependency-groups]
 dev = [
     "ruff>=0.11",
     "pytest>=8.0",
+    "pytest-cov>=6.0",
     "ty>=0.0.1a7",
 ]
