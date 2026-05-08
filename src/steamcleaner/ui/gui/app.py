@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import queue
 import sys
 import threading
 import time
@@ -370,30 +371,65 @@ class SteamCleanerGUI:
         self._total_label.value = ""
         self._set_controls_locked(locked=True)
         self._page.update()
+        self._page.run_task(self._scan_task)
 
+    async def _scan_task(self):
         cancel = self._cancel_event
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        status_text = ["Scanning..."]
+        scan_done = threading.Event()
 
-        def do_scan():
+        def on_progress(message: str, _count: int):
+            if not cancel.is_set():
+                status_text[0] = message
+
+        def on_found(entry: JunkEntry):
+            if not cancel.is_set():
+                found_queue.put(entry)
+
+        def run_scan():
             try:
                 from steamcleaner.platform import create_adapter
 
                 platform = create_adapter()
                 exclusions = ExclusionRegistry()
                 engine = ScanEngine(platform, exclusions)
-                self._result = engine.scan(cancel=cancel)
-                entry_count = len(self._result.entries)
-                if cancel.is_set():
-                    self._status.value = f"Stopped: {entry_count} items found so far"
-                else:
-                    self._status.value = f"Found {entry_count} items: {format_size(self._result.total_bytes)}"
+                engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
             except Exception:
-                self._status.value = "Scan failed"
+                status_text[0] = "Scan failed"
             finally:
-                self._reset_scan_ui()
-                self._set_controls_locked(locked=False)
-                self._refresh_list()
+                scan_done.set()
 
-        threading.Thread(target=do_scan, daemon=True).start()
+        threading.Thread(target=run_scan, daemon=True).start()
+
+        while not scan_done.is_set():
+            self._drain_found_queue(found_queue)
+            self._status.value = status_text[0]
+            self._page.update()
+            await asyncio.sleep(0.15)
+
+        self._drain_found_queue(found_queue)
+
+        entry_count = len(self._result.entries)
+        if cancel.is_set():
+            self._status.value = f"Stopped: {entry_count} items found so far"
+        elif status_text[0] == "Scan failed":
+            self._status.value = "Scan failed"
+        else:
+            self._status.value = f"Found {entry_count} items: {format_size(self._result.total_bytes)}"
+
+        self._reset_scan_ui()
+        self._set_controls_locked(locked=False)
+        self._update_totals()
+        self._page.update()
+
+    def _drain_found_queue(self, found_queue: queue.Queue[JunkEntry]):
+        while not found_queue.empty():
+            entry = found_queue.get_nowait()
+            entry_index = len(self._result.entries)
+            self._result.entries.append(entry)
+            self._results_list.controls.append(self._make_row(entry_index, entry))
+            self._total_label.value = f"{len(self._result.entries)} items, {format_size(self._result.total_bytes)}"
 
     def _on_clean(self, _event):
         if not self._selected:
