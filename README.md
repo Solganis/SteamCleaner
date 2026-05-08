@@ -2,6 +2,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/issues)
+[![PyPI downloads](https://img.shields.io/pypi/dm/steamcleaner)](https://pypi.org/project/steamcleaner/)
 
 [![CI](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml)
 [![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
