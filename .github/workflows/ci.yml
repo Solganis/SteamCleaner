@@ -30,4 +30,5 @@ jobs:
       - uses: codecov/codecov-action@v5
         if: matrix.os == 'ubuntu-latest'
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
