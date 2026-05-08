@@ -72,6 +72,14 @@ class TestFileSize:
         assert _file_size(tmp_path / "missing.txt") == 0
 
 
+class TestSteamNotInstalled:
+    def test_library_folders_empty_without_install(self, tmp_path: Path):
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        assert entries == []
+
+
 class TestSteamClientLibraries:
     def test_library_folders_from_vdf(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -95,6 +103,15 @@ class TestSteamClientLibraries:
         redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
         assert len(redist_entries) > 0
 
+    def test_scan_library_without_common_dir(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps").mkdir(parents=True)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist = [entry for entry in entries if entry.category.value == "redistributable"]
+        assert len(redist) == 0
+
     def test_scan_handles_empty_common(self, tmp_path: Path):
         steam = tmp_path / "Steam"
         (steam / "steamapps" / "common").mkdir(parents=True)
@@ -113,6 +130,22 @@ class TestSteamClientLibraries:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         assert all("not_a_dir" not in str(entry.path) for entry in entries)
+
+
+class TestSteamRedistFiltering:
+    def test_skips_non_matching_subdirs(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        common = steam / "steamapps" / "common"
+        game = common / "TestGame"
+        game.mkdir(parents=True)
+        non_redist = game / "gamedata"
+        non_redist.mkdir()
+        (non_redist / "setup.exe").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist = [entry for entry in entries if entry.category.value == "redistributable"]
+        assert len(redist) == 0
 
 
 class TestSteamGameLogs:
