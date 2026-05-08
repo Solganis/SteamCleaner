@@ -31,4 +31,4 @@ def format_size(size_bytes: int) -> str:
         if size_bytes_f < 1024 or unit == "TB":
             return f"{size_bytes_f:.1f} {unit}"
         size_bytes = int(size_bytes_f)
-    return f"{size_bytes} B"
+    return f"{size_bytes} B"  # pragma: no cover
