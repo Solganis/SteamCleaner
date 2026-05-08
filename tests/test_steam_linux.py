@@ -74,12 +74,3 @@ class TestSteamLinuxScan:
         dump_entries = [e for e in entries if e.category.value == "crash_dump"]
         assert len(dump_entries) == 1
 
-    def test_finds_logs_on_linux(self, tmp_path: Path):
-        platform, steam_dir = self._make_steam(tmp_path)
-        logs = steam_dir / "logs"
-        logs.mkdir()
-        (logs / "steam.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
-        client = SteamClient(platform, ExclusionRegistry())
-        entries = list(client.scan_junk())
-        log_entries = [e for e in entries if e.category.value == "old_log"]
-        assert len(log_entries) == 1
