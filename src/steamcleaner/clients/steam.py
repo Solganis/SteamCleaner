@@ -119,6 +119,8 @@ class SteamClient(GameClient):
         except OSError:
             return
         for game_dir in game_dirs:
+            if self.cancelled:
+                return
             if not game_dir.is_dir():
                 continue
             yield from self._scan_game_redist(game_dir)
@@ -130,6 +132,8 @@ class SteamClient(GameClient):
         found: list[Path] = []
         try:
             for subdir in game_dir.rglob("*"):
+                if self.cancelled:
+                    return
                 if not subdir.is_dir():
                     continue
                 if not _REDIST_DIR_RE.search(subdir.name):
@@ -154,6 +158,8 @@ class SteamClient(GameClient):
     def _scan_game_dumps(self, game_dir: Path) -> Iterator[JunkEntry]:
         try:
             for f in game_dir.rglob("*"):
+                if self.cancelled:
+                    return
                 if f.is_file() and f.suffix.lower() in _DUMP_EXTENSIONS:
                     size = _file_size(f)
                     if size > 0:
@@ -170,6 +176,8 @@ class SteamClient(GameClient):
     def _scan_game_logs(self, game_dir: Path) -> Iterator[JunkEntry]:
         try:
             for f in game_dir.rglob("*.log"):
+                if self.cancelled:
+                    return
                 if f.is_file():
                     size = _file_size(f)
                     if size >= _LOG_MIN_SIZE:
@@ -189,6 +197,8 @@ class SteamClient(GameClient):
             return
         try:
             for app_dir in shader_cache.iterdir():
+                if self.cancelled:
+                    return
                 if app_dir.is_dir():
                     size = _dir_size(app_dir)
                     if size > 0:
