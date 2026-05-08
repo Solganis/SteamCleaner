@@ -108,6 +108,7 @@ class SteamCleanerGUI:
         self._search_field = ft.TextField()
         self._progress = ft.ProgressBar(visible=False)
         self._results_list = ft.ListView()
+        self._empty_state = ft.Column()
         self._setup_page()
 
     async def initialize(self):

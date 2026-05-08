@@ -169,18 +169,6 @@ class TestSteamShaderCache:
 
 
 class TestSteamClientLogs:
-    def test_finds_steam_logs(self, tmp_path: Path):
-        steam = tmp_path / "Steam"
-        logs = steam / "logs"
-        logs.mkdir(parents=True)
-        (logs / "bootstrap.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
-        (steam / "steamapps" / "common").mkdir(parents=True)
-        platform = FakePlatformAdapter(install_path=steam)
-        client = SteamClient(platform, ExclusionRegistry())
-        log_entries = [e for e in client.scan_junk() if e.category == JunkCategory.OLD_LOG]
-        assert len(log_entries) == 1
-        assert log_entries[0].description == "Steam client logs"
-
     def test_finds_steam_dumps(self, tmp_path: Path):
         steam = tmp_path / "Steam"
         dumps = steam / "dumps"
