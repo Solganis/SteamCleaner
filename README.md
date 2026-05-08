@@ -11,45 +11,41 @@
 
 Reclaim wasted disk space from Steam and other game clients.
 
-SteamCleaner finds and safely removes junk files left behind by games — redistributable installers, shader caches, crash dumps, and old logs that pile up over time.
-
-## Download
-
-Requires Python 3.14+.
-
-```bash
-pip install steamcleaner
-```
-
-## Getting Started
-
-Launch the app:
-
-```bash
-steamcleaner
-```
-
-1. Click **Scan** to find junk files
-2. Review the results — each item shows its size, category, and path
-3. Select what you want to remove (or use **Select All**)
-4. Click **Clean Selected** to free up space
-
-Files are sent to the trash by default, so you can always restore them if needed.
+SteamCleaner finds and safely removes junk files left behind by games. These files accumulate over time and can take up tens of gigabytes without you noticing.
 
 ## What it finds
 
-| Category | Examples |
-|----------|---------|
-| Redistributables | DirectX, VC++ installers bundled with games |
-| Shader cache | Compiled shader caches per game |
-| Crash dumps | `.dmp`, `.mdmp` files |
-| Old logs | Log files over 1 MB |
+### Redistributable installers
+
+Games bundle DirectX, Visual C++, .NET, PhysX, and OpenAL installers that run once during first launch and are never needed again. These sit in directories like `_CommonRedist`, `__Installer`, `redist`, `DirectX`, `miles`, and `support` inside each game folder. A typical Steam library with 50+ games can have 5-15 GB of these.
+
+### Shader cache
+
+Steam compiles and caches shaders per game in `steamapps/shadercache/`. These caches are rebuilt automatically when needed, but old entries for uninstalled games remain. Individual caches range from a few MB to 500+ MB for graphically intensive titles.
+
+### Crash dumps
+
+`.dmp` and `.mdmp` files generated when games or the Steam client crash. These are useful for developers but not for players. They accumulate in game directories and in `Steam/dumps/`.
+
+### Old logs
+
+Log files over 1 MB in game directories and `Steam/logs/`. Steam and many games write extensive logs that grow indefinitely. The Steam client log directory alone can reach several hundred MB on long-running installations.
+
+### Cross-platform binaries
+
+Games built with engines like Ren'Py ship binaries for all platforms (`lib/darwin-*`, `lib/linux-*` on Windows). These are completely unused on your OS.
 
 ## Safety
 
-- Known game files are excluded automatically
-- Symlinks and junction points are never followed
-- Files go to trash by default, not permanent deletion
+- Known game files are never touched (e.g. `Steamworks Shared`, game data misplaced in `redist/` directories)
+- Symlinks and junction points are never followed or deleted through
+- Files go to the system trash by default, not permanent deletion
+- Each detected item shows its exact path and size before you decide to remove it
+
+## Supported platforms
+
+- Windows 10/11
+- Linux (native, Flatpak, Snap)
 
 ## License
 
