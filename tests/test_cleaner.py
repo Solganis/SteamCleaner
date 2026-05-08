@@ -148,6 +148,33 @@ class TestCleanEngineSafetyChecks:
         assert real_dir.exists()
         assert (real_dir / "important.dat").exists()
 
+    def test_refuse_symlink_callback_reports_failure(self, tmp_path: Path):
+        real_dir = tmp_path / "real"
+        real_dir.mkdir()
+        symlink = tmp_path / "link"
+        symlink.symlink_to(real_dir)
+
+        result = ScanResult(entries=[_make_entry(symlink)])
+        callback_log: list[tuple[JunkEntry, bool]] = []
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
+
+        assert len(callback_log) == 1
+        assert callback_log[0][1] is False
+
+    def test_real_deletion_callback_reports_success(self, tmp_path: Path):
+        target = tmp_path / "junk"
+        target.mkdir()
+        (target / "file.exe").write_bytes(b"\x00" * 100)
+
+        result = ScanResult(entries=[_make_entry(target)])
+        callback_log: list[tuple[JunkEntry, bool]] = []
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
+
+        assert len(callback_log) == 1
+        assert callback_log[0][1] is True
+
     def test_refuse_symlink_preserves_target_contents(self, tmp_path: Path):
         target_dir = tmp_path / "steam_library"
         target_dir.mkdir()
