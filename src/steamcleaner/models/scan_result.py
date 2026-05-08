@@ -11,7 +11,7 @@ class ScanResult:
 
     @property
     def total_bytes(self) -> int:
-        return sum(e.size_bytes for e in self.entries)
+        return sum(entry.size_bytes for entry in self.entries)
 
     @property
     def total_mb(self) -> float:
@@ -30,7 +30,7 @@ class ScanResult:
         return result
 
     def filter_min_size(self, min_bytes: int) -> ScanResult:
-        return ScanResult(entries=[e for e in self.entries if e.size_bytes >= min_bytes])
+        return ScanResult(entries=[entry for entry in self.entries if entry.size_bytes >= min_bytes])
 
     def merge(self, other: ScanResult) -> ScanResult:
         return ScanResult(entries=self.entries + other.entries)

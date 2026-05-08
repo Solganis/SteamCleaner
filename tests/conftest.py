@@ -51,9 +51,9 @@ def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) ->
         for subdir_name, files in subdirs.items():
             subdir = game_dir / subdir_name if subdir_name else game_dir
             subdir.mkdir(parents=True, exist_ok=True)
-            for fname in files:
-                f = subdir / fname
-                f.write_bytes(b"\x00" * 1024)
+            for filename in files:
+                file_path = subdir / filename
+                file_path.write_bytes(b"\x00" * 1024)
     return steam
 
 

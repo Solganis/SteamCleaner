@@ -55,16 +55,16 @@ class SteamCleanerGUI:
         self._page.padding = 0
 
     def _save_window_geometry(self):
-        w = self._page.window
-        if w.width is None or w.height is None or w.left is None or w.top is None:
+        window = self._page.window
+        if window.width is None or window.height is None or window.left is None or window.top is None:
             return
-        save_value("window", "width", str(int(w.width)))
-        save_value("window", "height", str(int(w.height)))
-        save_value("window", "left", str(int(w.left)))
-        save_value("window", "top", str(int(w.top)))
+        save_value("window", "width", str(int(window.width)))
+        save_value("window", "height", str(int(window.height)))
+        save_value("window", "left", str(int(window.left)))
+        save_value("window", "top", str(int(window.top)))
 
-    def _on_window_event(self, e: ft.WindowEvent):
-        match e.type:
+    def _on_window_event(self, event: ft.WindowEvent):
+        match event.type:
             case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
                 self._save_window_geometry()
 
@@ -73,19 +73,19 @@ class SteamCleanerGUI:
         self._total_label = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
 
         is_dark = self._page.theme_mode == ft.ThemeMode.DARK
-        self._theme_btn = ft.IconButton(
+        self._theme_button = ft.IconButton(
             icon=ft.Icons.LIGHT_MODE if is_dark else ft.Icons.DARK_MODE,
             tooltip="Switch to light theme" if is_dark else "Switch to dark theme",
             on_click=self._on_toggle_theme,
         )
 
-        self._scan_btn = ft.Button(
+        self._scan_button = ft.Button(
             "Scan",
             icon=ft.Icons.SEARCH,
             on_click=self._on_scan,
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         )
-        self._clean_btn = ft.Button(
+        self._clean_button = ft.Button(
             "Clean Selected",
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
@@ -94,7 +94,7 @@ class SteamCleanerGUI:
             color=ft.Colors.WHITE,
             bgcolor=ft.Colors.RED_700,
         )
-        self._select_all_btn = ft.TextButton(
+        self._select_all_button = ft.TextButton(
             "Select All",
             on_click=self._on_select_all,
             disabled=True,
@@ -111,7 +111,7 @@ class SteamCleanerGUI:
                     ft.Text("SteamCleaner", size=22, weight=ft.FontWeight.BOLD),
                     ft.Container(expand=True),
                     self._status,
-                    self._theme_btn,
+                    self._theme_button,
                 ],
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -123,11 +123,11 @@ class SteamCleanerGUI:
         toolbar = ft.Container(
             content=ft.Row(
                 [
-                    self._scan_btn,
-                    self._select_all_btn,
+                    self._scan_button,
+                    self._select_all_button,
                     ft.Container(expand=True),
                     self._total_label,
-                    self._clean_btn,
+                    self._clean_button,
                 ],
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -145,9 +145,9 @@ class SteamCleanerGUI:
         )
 
     def _make_row(self, index: int, entry: JunkEntry) -> ft.Container:
-        cb = ft.Checkbox(
+        checkbox = ft.Checkbox(
             value=index in self._selected,
-            on_change=lambda e, i=index: self._on_toggle(i, e.control.value),
+            on_change=lambda event, idx=index: self._on_toggle(idx, event.control.value),
         )
 
         category_colors = {
@@ -169,7 +169,7 @@ class SteamCleanerGUI:
         return ft.Container(
             content=ft.Row(
                 [
-                    cb,
+                    checkbox,
                     ft.Text(
                         format_size(entry.size_bytes),
                         width=80,
@@ -191,24 +191,27 @@ class SteamCleanerGUI:
             padding=ft.Padding.symmetric(horizontal=4, vertical=2),
             border_radius=6,
             ink=True,
-            on_click=lambda e, i=index: self._on_row_click(i),
+            on_click=lambda event, idx=index: self._on_row_click(idx),
         )
 
     def _refresh_list(self):
         self._results_list.controls.clear()
-        for i, entry in enumerate(self._result.entries):
-            self._results_list.controls.append(self._make_row(i, entry))
+        for entry_index, entry in enumerate(self._result.entries):
+            self._results_list.controls.append(self._make_row(entry_index, entry))
         self._update_totals()
         self._page.update()
 
     def _update_totals(self):
-        selected_bytes = sum(self._result.entries[i].size_bytes for i in self._selected)
-        total = format_size(self._result.total_bytes)
-        sel = format_size(selected_bytes)
-        self._total_label.value = f"{sel} / {total} selected ({len(self._selected)}/{len(self._result.entries)})"
+        selected_bytes = sum(self._result.entries[entry_index].size_bytes for entry_index in self._selected)
+        total_formatted = format_size(self._result.total_bytes)
+        selected_formatted = format_size(selected_bytes)
+        self._total_label.value = (
+            f"{selected_formatted} / {total_formatted} selected"
+            f" ({len(self._selected)}/{len(self._result.entries)})"
+        )
         has_selection = len(self._selected) > 0
-        self._clean_btn.disabled = not has_selection
-        self._select_all_btn.disabled = len(self._result.entries) == 0
+        self._clean_button.disabled = not has_selection
+        self._select_all_button.disabled = len(self._result.entries) == 0
 
     def _on_toggle(self, index: int, checked: bool):
         if checked:
@@ -225,36 +228,42 @@ class SteamCleanerGUI:
             self._selected.add(index)
         self._refresh_list()
 
-    def _on_select_all(self, _e):
+    def _on_select_all(self, _event):
         if len(self._selected) == len(self._result.entries):
             self._selected.clear()
-            self._select_all_btn.text = "Select All"
+            self._select_all_button.text = "Select All"
         else:
             self._selected = set(range(len(self._result.entries)))
-            self._select_all_btn.text = "Deselect All"
+            self._select_all_button.text = "Deselect All"
         self._refresh_list()
 
-    def _on_toggle_theme(self, _e):
+    def _on_toggle_theme(self, _event):
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
-            self._theme_btn.icon = ft.Icons.DARK_MODE
-            self._theme_btn.tooltip = "Switch to dark theme"
+            self._theme_button.icon = ft.Icons.DARK_MODE
+            self._theme_button.tooltip = "Switch to dark theme"
             save_value("ui", "theme", "light")
         else:
             self._page.theme_mode = ft.ThemeMode.DARK
-            self._theme_btn.icon = ft.Icons.LIGHT_MODE
-            self._theme_btn.tooltip = "Switch to light theme"
+            self._theme_button.icon = ft.Icons.LIGHT_MODE
+            self._theme_button.tooltip = "Switch to light theme"
             save_value("ui", "theme", "dark")
         self._page.update()
 
-    def _on_scan(self, _e):
+    def _reset_scan_ui(self):
+        self._scan_button.text = "Scan"
+        self._scan_button.icon = ft.Icons.SEARCH
+        self._progress.visible = False
+        self._cancel_event = None
+
+    def _on_scan(self, _event):
         if self._cancel_event is not None:
             self._cancel_event.set()
             return
 
         self._cancel_event = threading.Event()
-        self._scan_btn.text = "Stop"
-        self._scan_btn.icon = ft.Icons.STOP
+        self._scan_button.text = "Stop"
+        self._scan_button.icon = ft.Icons.STOP
         self._progress.visible = True
         self._status.value = "Scanning..."
         self._page.update()
@@ -262,31 +271,32 @@ class SteamCleanerGUI:
         cancel = self._cancel_event
 
         def do_scan():
-            from steamcleaner.platform import create_adapter
+            try:
+                from steamcleaner.platform import create_adapter
 
-            platform = create_adapter()
-            exclusions = ExclusionRegistry()
-            engine = ScanEngine(platform, exclusions)
-            self._result = engine.scan(cancel=cancel)
-            self._selected.clear()
-            self._scan_btn.text = "Scan"
-            self._scan_btn.icon = ft.Icons.SEARCH
-            self._progress.visible = False
-            self._cancel_event = None
-            count = len(self._result.entries)
-            if cancel.is_set():
-                self._status.value = f"Stopped — {count} items found so far"
-            else:
-                self._status.value = f"Found {count} items — {format_size(self._result.total_bytes)}"
-            self._refresh_list()
+                platform = create_adapter()
+                exclusions = ExclusionRegistry()
+                engine = ScanEngine(platform, exclusions)
+                self._result = engine.scan(cancel=cancel)
+                self._selected.clear()
+                entry_count = len(self._result.entries)
+                if cancel.is_set():
+                    self._status.value = f"Stopped: {entry_count} items found so far"
+                else:
+                    self._status.value = f"Found {entry_count} items: {format_size(self._result.total_bytes)}"
+            except Exception:
+                self._status.value = "Scan failed"
+            finally:
+                self._reset_scan_ui()
+                self._refresh_list()
 
         threading.Thread(target=do_scan, daemon=True).start()
 
-    def _on_clean(self, _e):
+    def _on_clean(self, _event):
         if not self._selected:
             return
 
-        entries = [self._result.entries[i] for i in sorted(self._selected)]
+        entries = [self._result.entries[entry_index] for entry_index in sorted(self._selected)]
         selected_result = ScanResult(entries=entries)
         cleaner = CleanEngine(use_trash=True, dry_run=False)
         stats = cleaner.clean(selected_result)

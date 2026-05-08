@@ -24,19 +24,19 @@ def _parse_library_folders_vdf(path: Path) -> list[Path]:
     text = path.read_text(encoding="utf-8", errors="replace")
     paths: list[Path] = []
     for match in re.finditer(r'"path"\s+"([^"]+)"', text):
-        p = Path(match.group(1).replace("\\\\", "\\"))
-        if p.is_dir():
-            paths.append(p)
+        library_path = Path(match.group(1).replace("\\\\", "\\"))
+        if library_path.is_dir():
+            paths.append(library_path)
     return paths
 
 
 def _dir_size(path: Path) -> int:
     total = 0
     try:
-        for f in path.rglob("*"):
-            if f.is_file():
+        for file_path in path.rglob("*"):
+            if file_path.is_file():
                 with contextlib.suppress(OSError):
-                    total += f.stat().st_size
+                    total += file_path.stat().st_size
     except OSError:
         pass
     return total
@@ -65,12 +65,12 @@ class SteamClient(GameClient):
             r"SOFTWARE\Wow6432Node\Valve\Steam",
             r"SOFTWARE\Valve\Steam",
         ):
-            val = self._platform.read_registry_str("HKLM", subkey, "InstallPath")
-            if val:
-                p = Path(val)
-                if p.is_dir():
-                    self._install_path = p
-                    return p
+            registry_value = self._platform.read_registry_str("HKLM", subkey, "InstallPath")
+            if registry_value:
+                candidate_path = Path(registry_value)
+                if candidate_path.is_dir():
+                    self._install_path = candidate_path
+                    return candidate_path
         for candidate in self._linux_steam_paths():
             if candidate.is_dir() and (candidate / "steamapps").is_dir():
                 self._install_path = candidate
@@ -146,11 +146,14 @@ class SteamClient(GameClient):
                     continue
                 if not _REDIST_DIR_RE.search(subdir.name):
                     continue
-                if any(subdir.is_relative_to(p) for p in found):
+                if any(subdir.is_relative_to(parent) for parent in found):
                     continue
-                junk_files = [f for f in subdir.rglob("*") if f.is_file() and f.suffix.lower() in _JUNK_EXTENSIONS]
+                junk_files = [
+                    file_path for file_path in subdir.rglob("*")
+                    if file_path.is_file() and file_path.suffix.lower() in _JUNK_EXTENSIONS
+                ]
                 if junk_files:
-                    size = sum(_file_size(f) for f in junk_files)
+                    size = sum(_file_size(junk_file) for junk_file in junk_files)
                     rel = subdir.relative_to(game_dir)
                     found.append(subdir)
                     yield JunkEntry(
@@ -165,14 +168,14 @@ class SteamClient(GameClient):
 
     def _scan_game_dumps(self, game_dir: Path) -> Iterator[JunkEntry]:
         try:
-            for f in game_dir.rglob("*"):
+            for file_path in game_dir.rglob("*"):
                 if self.cancelled:
                     return
-                if f.is_file() and f.suffix.lower() in _DUMP_EXTENSIONS:
-                    size = _file_size(f)
+                if file_path.is_file() and file_path.suffix.lower() in _DUMP_EXTENSIONS:
+                    size = _file_size(file_path)
                     if size > 0:
                         yield JunkEntry(
-                            path=f,
+                            path=file_path,
                             category=JunkCategory.CRASH_DUMP,
                             size_bytes=size,
                             client_name=self.name,
@@ -183,14 +186,14 @@ class SteamClient(GameClient):
 
     def _scan_game_logs(self, game_dir: Path) -> Iterator[JunkEntry]:
         try:
-            for f in game_dir.rglob("*.log"):
+            for log_file in game_dir.rglob("*.log"):
                 if self.cancelled:
                     return
-                if f.is_file():
-                    size = _file_size(f)
+                if log_file.is_file():
+                    size = _file_size(log_file)
                     if size >= _LOG_MIN_SIZE:
                         yield JunkEntry(
-                            path=f,
+                            path=log_file,
                             category=JunkCategory.OLD_LOG,
                             size_bytes=size,
                             client_name=self.name,

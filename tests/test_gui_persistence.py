@@ -132,3 +132,74 @@ class TestThemePersistence:
             SteamCleanerGUI(page)
 
             assert page.theme_mode == ft.ThemeMode.LIGHT
+
+
+class TestScanCancelCycles:
+    @staticmethod
+    def _start_scan(gui: SteamCleanerGUI):
+        with patch("threading.Thread"):
+            gui._on_scan(None)
+
+    def test_scan_sets_stop_state(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            self._start_scan(gui)
+            assert gui._cancel_event is not None
+            assert gui._scan_button.text == "Stop"
+
+    def test_second_click_cancels(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            self._start_scan(gui)
+            gui._on_scan(None)
+            assert gui._cancel_event.is_set()
+
+    def test_reset_scan_ui_clears_state(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            gui._cancel_event = MagicMock()
+            gui._reset_scan_ui()
+
+            assert gui._cancel_event is None
+            assert gui._scan_button.text == "Scan"
+            assert gui._progress.visible is False
+
+    def test_multiple_cancel_cycles_keep_working(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            for cycle in range(5):
+                self._start_scan(gui)
+                assert gui._cancel_event is not None, f"cycle {cycle}: scan should set cancel_event"
+
+                gui._on_scan(None)
+                assert gui._cancel_event.is_set(), f"cycle {cycle}: stop should set cancel flag"
+
+                gui._reset_scan_ui()
+                assert gui._cancel_event is None, f"cycle {cycle}: reset should clear cancel_event"
+
+    def test_scan_after_reset_creates_fresh_event(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            self._start_scan(gui)
+            gui._on_scan(None)
+            gui._reset_scan_ui()
+
+            self._start_scan(gui)
+            assert gui._cancel_event is not None
+            assert not gui._cancel_event.is_set()
+            assert gui._scan_button.text == "Stop"
