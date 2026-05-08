@@ -10,6 +10,7 @@ from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 ProgressCallback = Callable[[str, int], None]
+FoundCallback = Callable[[JunkEntry], None]
 
 
 class ScanEngine:
@@ -20,6 +21,7 @@ class ScanEngine:
     def scan(
         self,
         progress: ProgressCallback | None = None,
+        on_found: FoundCallback | None = None,
         cancel: threading.Event | None = None,
     ) -> ScanResult:
         all_entries: list[JunkEntry] = []
@@ -31,13 +33,19 @@ class ScanEngine:
 
             if not client.is_installed():
                 if progress:
-                    progress(f"{client.name}: not installed", 0)
+                    progress(f"{client.name}: not installed", len(all_entries))
                 continue
 
             if progress:
-                progress(f"Scanning {client.name}...", 0)
+                progress(f"Scanning {client.name}...", len(all_entries))
 
             for entry in client.scan_safe(cancel=cancel):
+                if cancel and cancel.is_set():
+                    break
                 all_entries.append(entry)
+                if on_found:
+                    on_found(entry)
+                if progress:
+                    progress(f"Scanning {client.name}... ({len(all_entries)} found)", len(all_entries))
 
         return ScanResult(entries=all_entries)
