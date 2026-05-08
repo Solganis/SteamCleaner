@@ -45,11 +45,19 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["steamcleaner"]
+omit = [
+    "src/steamcleaner/ui/*",
+    "src/steamcleaner/platform/windows.py",
+    "src/steamcleaner/__main__.py",
+    "src/steamcleaner/app.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [
     "if __name__ == .__main__.",
     "if TYPE_CHECKING:",
+    "except OSError",
+    "pragma: no cover",
 ]
 
 [dependency-groups]

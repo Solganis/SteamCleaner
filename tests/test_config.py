@@ -1,9 +1,28 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from steamcleaner.utils.config import get_value, load_config, save_value
+from steamcleaner.utils.config import _config_dir, get_value, load_config, save_value
+
+
+class TestConfigDir:
+    def test_win32_uses_appdata(self):
+        with patch.object(sys, "platform", "win32"), patch.dict("os.environ", {"APPDATA": "/fake/appdata"}):
+            result = _config_dir()
+            assert result == Path("/fake/appdata/steamcleaner")
+
+    def test_linux_uses_xdg(self):
+        with patch.object(sys, "platform", "linux"), patch.dict("os.environ", {"XDG_CONFIG_HOME": "/fake/xdg"}):
+            result = _config_dir()
+            assert result == Path("/fake/xdg/steamcleaner")
+
+    def test_linux_default_without_xdg(self, tmp_path: Path):
+        env = {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path)}
+        with patch.object(sys, "platform", "linux"), patch.dict("os.environ", env, clear=True):
+            result = _config_dir()
+            assert result == tmp_path / ".config" / "steamcleaner"
 
 
 class TestConfig:
@@ -41,3 +60,9 @@ class TestConfig:
             save_value("clean", "use_trash", "true")
             assert get_value("ui", "theme") == "dark"
             assert get_value("clean", "use_trash") == "true"
+
+    def test_get_value_non_dict_section_returns_default(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        path.write_text('broken = "not a section"\n', encoding="utf-8")
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            assert get_value("broken", "key", "fallback") == "fallback"
