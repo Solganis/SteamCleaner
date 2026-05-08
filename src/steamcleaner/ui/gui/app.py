@@ -42,8 +42,8 @@ class SteamCleanerGUI:
             color_scheme_seed=ft.Colors.BLUE,
             visual_density=ft.VisualDensity.COMPACT,
         )
-        self._page.window.width = int(get_value("window", "width", "960"))
-        self._page.window.height = int(get_value("window", "height", "640"))
+        self._page.window.width = int(get_value("window", "width") or "960")
+        self._page.window.height = int(get_value("window", "height") or "640")
         self._page.window.min_width = 720
         self._page.window.min_height = 480
         saved_left = get_value("window", "left")
@@ -55,10 +55,13 @@ class SteamCleanerGUI:
         self._page.padding = 0
 
     def _save_window_geometry(self):
-        save_value("window", "width", str(int(self._page.window.width)))
-        save_value("window", "height", str(int(self._page.window.height)))
-        save_value("window", "left", str(int(self._page.window.left)))
-        save_value("window", "top", str(int(self._page.window.top)))
+        w = self._page.window
+        if w.width is None or w.height is None or w.left is None or w.top is None:
+            return
+        save_value("window", "width", str(int(w.width)))
+        save_value("window", "height", str(int(w.height)))
+        save_value("window", "left", str(int(w.left)))
+        save_value("window", "top", str(int(w.top)))
 
     def _on_window_event(self, e: ft.WindowEvent):
         match e.data:
