@@ -15,6 +15,13 @@ dependencies = [
 [project.scripts]
 steamcleaner = "steamcleaner.app:main"
 
+[tool.flet]
+org = "dev.steamcleaner"
+product = "SteamCleaner"
+
+[tool.flet.app]
+path = "src"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
