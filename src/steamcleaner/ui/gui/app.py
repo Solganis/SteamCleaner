@@ -24,7 +24,6 @@ class SteamCleanerGUI:
         self._build_ui()
 
     def _setup_page(self):
-        self._page.window.visible = False
         self._page.title = "SteamCleaner"
         saved_theme = get_value("ui", "theme")
         match saved_theme:
@@ -51,6 +50,7 @@ class SteamCleanerGUI:
         if saved_left is not None and saved_top is not None:
             self._page.window.left = int(saved_left)
             self._page.window.top = int(saved_top)
+        self._page.window.prevent_close = True
         self._page.window.on_event = self._on_window_event
         self._page.padding = 0
 
@@ -63,10 +63,13 @@ class SteamCleanerGUI:
         save_value("window", "left", str(int(w.left)))
         save_value("window", "top", str(int(w.top)))
 
-    def _on_window_event(self, e: ft.WindowEvent):
-        match e.data:
-            case "resized" | "moved" | "close":
+    async def _on_window_event(self, e: ft.WindowEvent):
+        match e.type:
+            case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
                 self._save_window_geometry()
+            case ft.WindowEventType.CLOSE:
+                self._save_window_geometry()
+                await self._page.window.destroy()
 
     def _build_ui(self):
         self._status = ft.Text("Ready", size=14)
@@ -142,8 +145,6 @@ class SteamCleanerGUI:
             ft.Divider(height=1),
             ft.Container(content=self._results_list, expand=True),
         )
-        self._page.window.visible = True
-        self._page.update()
 
     def _make_row(self, index: int, entry: JunkEntry) -> ft.Container:
         cb = ft.Checkbox(
