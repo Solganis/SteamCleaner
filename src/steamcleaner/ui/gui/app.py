@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import threading
 
+import darkdetect
 import flet as ft
 
 from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
-from steamcleaner.platform.windows import WindowsAdapter
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import format_size
@@ -23,7 +23,11 @@ class SteamCleanerGUI:
 
     def _setup_page(self):
         self._page.title = "SteamCleaner"
-        self._page.theme_mode = ft.ThemeMode.DARK
+        os_theme = darkdetect.theme()
+        if os_theme == "Light":
+            self._page.theme_mode = ft.ThemeMode.LIGHT
+        else:
+            self._page.theme_mode = ft.ThemeMode.DARK
         self._page.theme = ft.Theme(
             color_scheme_seed=ft.Colors.BLUE,
             visual_density=ft.VisualDensity.COMPACT,
@@ -37,6 +41,13 @@ class SteamCleanerGUI:
     def _build_ui(self):
         self._status = ft.Text("Ready", size=14)
         self._total_label = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
+
+        is_dark = self._page.theme_mode == ft.ThemeMode.DARK
+        self._theme_btn = ft.IconButton(
+            icon=ft.Icons.LIGHT_MODE if is_dark else ft.Icons.DARK_MODE,
+            tooltip="Switch to light theme" if is_dark else "Switch to dark theme",
+            on_click=self._on_toggle_theme,
+        )
 
         self._scan_btn = ft.ElevatedButton(
             "Scan",
@@ -77,6 +88,7 @@ class SteamCleanerGUI:
                     ft.Text("SteamCleaner", size=22, weight=ft.FontWeight.BOLD),
                     ft.Container(expand=True),
                     self._status,
+                    self._theme_btn,
                 ],
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -200,6 +212,17 @@ class SteamCleanerGUI:
             self._select_all_btn.text = "Deselect All"
         self._refresh_list()
 
+    def _on_toggle_theme(self, _e):
+        if self._page.theme_mode == ft.ThemeMode.DARK:
+            self._page.theme_mode = ft.ThemeMode.LIGHT
+            self._theme_btn.icon = ft.Icons.DARK_MODE
+            self._theme_btn.tooltip = "Switch to dark theme"
+        else:
+            self._page.theme_mode = ft.ThemeMode.DARK
+            self._theme_btn.icon = ft.Icons.LIGHT_MODE
+            self._theme_btn.tooltip = "Switch to light theme"
+        self._page.update()
+
     def _on_scan(self, _e):
         self._scan_btn.disabled = True
         self._progress.visible = True
@@ -207,6 +230,8 @@ class SteamCleanerGUI:
         self._page.update()
 
         def do_scan():
+            from steamcleaner.platform.windows import WindowsAdapter
+
             platform = WindowsAdapter()
             exclusions = ExclusionRegistry()
             engine = ScanEngine(platform, exclusions)
