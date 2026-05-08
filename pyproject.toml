@@ -36,6 +36,9 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
 
+[tool.ty.rules]
+unresolved-attribute = "warn"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
@@ -44,4 +47,5 @@ pythonpath = ["src"]
 dev = [
     "ruff>=0.11",
     "pytest>=8.0",
+    "ty>=0.0.1a7",
 ]
