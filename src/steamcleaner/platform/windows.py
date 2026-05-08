@@ -35,9 +35,9 @@ class WindowsAdapter(PlatformAdapter):
     def program_files(self) -> list[Path]:
         paths = []
         for var in ("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432"):
-            val = os.environ.get(var)
-            if val:
-                p = Path(val)
-                if p.is_dir() and p not in paths:
-                    paths.append(p)
+            env_value = os.environ.get(var)
+            if env_value:
+                program_path = Path(env_value)
+                if program_path.is_dir() and program_path not in paths:
+                    paths.append(program_path)
         return paths

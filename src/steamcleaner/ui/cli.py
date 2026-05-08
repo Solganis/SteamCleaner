@@ -25,7 +25,7 @@ def _print_results(result: ScanResult):
     by_client = result.by_client()
     for client_name, entries in sorted(by_client.items()):
         click.echo(f"\n  [{client_name}]")
-        for entry in sorted(entries, key=lambda e: e.size_bytes, reverse=True):
+        for entry in sorted(entries, key=lambda entry: entry.size_bytes, reverse=True):
             click.echo(f"    {format_size(entry.size_bytes):>10}  {entry.path}")
 
     click.echo(f"\n  Total: {format_size(result.total_bytes)} in {len(result.entries)} items")
@@ -82,5 +82,5 @@ def clean(*, dry_run: bool, no_trash: bool):
     click.echo(f"\n  Deleted: {stats.deleted} items ({format_size(stats.bytes_freed)})")
     if stats.skipped:
         click.echo(f"  Skipped: {stats.skipped} items")
-    for err in stats.errors:
-        click.echo(f"  Error: {err}", err=True)
+    for error in stats.errors:
+        click.echo(f"  Error: {error}", err=True)
