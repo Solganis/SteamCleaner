@@ -64,13 +64,6 @@ class SteamCleanerGUI:
             color=ft.Colors.WHITE,
             bgcolor=ft.Colors.RED_700,
         )
-        self._dry_btn = ft.OutlinedButton(
-            "Dry Run",
-            icon=ft.Icons.PREVIEW,
-            on_click=self._on_dry_run,
-            disabled=True,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-        )
         self._select_all_btn = ft.TextButton(
             "Select All",
             on_click=self._on_select_all,
@@ -104,7 +97,6 @@ class SteamCleanerGUI:
                     self._select_all_btn,
                     ft.Container(expand=True),
                     self._total_label,
-                    self._dry_btn,
                     self._clean_btn,
                 ],
                 alignment=ft.MainAxisAlignment.START,
@@ -185,7 +177,6 @@ class SteamCleanerGUI:
         self._total_label.value = f"{sel} / {total} selected ({len(self._selected)}/{len(self._result.entries)})"
         has_selection = len(self._selected) > 0
         self._clean_btn.disabled = not has_selection
-        self._dry_btn.disabled = not has_selection
         self._select_all_btn.disabled = len(self._result.entries) == 0
 
     def _on_toggle(self, index: int, checked: bool):
@@ -246,25 +237,16 @@ class SteamCleanerGUI:
         threading.Thread(target=do_scan, daemon=True).start()
 
     def _on_clean(self, _e):
-        self._do_clean(dry_run=False)
-
-    def _on_dry_run(self, _e):
-        self._do_clean(dry_run=True)
-
-    def _do_clean(self, *, dry_run: bool):
         if not self._selected:
             return
 
         entries = [self._result.entries[i] for i in sorted(self._selected)]
         selected_result = ScanResult(entries=entries)
-        cleaner = CleanEngine(use_trash=True, dry_run=dry_run)
+        cleaner = CleanEngine(use_trash=True, dry_run=False)
         stats = cleaner.clean(selected_result)
 
-        if dry_run:
-            self._show_snackbar(f"[DRY RUN] Would delete {stats.deleted} items ({format_size(stats.bytes_freed)})")
-        else:
-            self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
-            self._on_scan(None)
+        self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+        self._on_scan(None)
 
     def _show_snackbar(self, message: str):
         self._page.open(ft.SnackBar(content=ft.Text(message), duration=4000))
