@@ -94,6 +94,7 @@ class SteamCleanerGUI:
         self._visible_entries: list[JunkEntry] = []
         self._sort_key = "size_desc"
         self._category_filter: str | None = None
+        self._search_query = ""
         self._cancel_event: threading.Event | None = None
         self._window_hider = window_hider or _WindowHider()
         self._status = ft.Text("Ready")
@@ -104,6 +105,7 @@ class SteamCleanerGUI:
         self._select_all_button = ft.TextButton("Select All", disabled=True)
         self._sort_dropdown = ft.Dropdown(width=160)
         self._filter_dropdown = ft.Dropdown(width=160)
+        self._search_field = ft.TextField()
         self._progress = ft.ProgressBar(visible=False)
         self._results_list = ft.ListView()
         self._setup_page()
@@ -224,6 +226,15 @@ class SteamCleanerGUI:
             text_size=13,
         )
 
+        self._search_field = ft.TextField(
+            label="Search",
+            prefix_icon=ft.Icons.SEARCH,
+            expand=True,
+            dense=True,
+            text_size=13,
+            on_change=self._on_search_changed,
+        )
+
         self._progress = ft.ProgressBar(visible=False)
 
         self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.Padding.symmetric(horizontal=16))
@@ -251,7 +262,7 @@ class SteamCleanerGUI:
                     self._select_all_button,
                     self._sort_dropdown,
                     self._filter_dropdown,
-                    ft.Container(expand=True),
+                    self._search_field,
                     self._total_label,
                     self._clean_button,
                 ],
@@ -346,6 +357,9 @@ class SteamCleanerGUI:
         entries = self._result.entries
         if self._category_filter and self._category_filter != "all":
             entries = [entry for entry in entries if entry.category.value == self._category_filter]
+        if self._search_query:
+            query = self._search_query.lower()
+            entries = [entry for entry in entries if query in str(entry.path).lower()]
         match self._sort_key:
             case "size_desc":
                 entries = sorted(entries, key=lambda entry: entry.size_bytes, reverse=True)
@@ -446,6 +460,10 @@ class SteamCleanerGUI:
         self._category_filter = None if value == "all" else value
         self._refresh_list()
 
+    def _on_search_changed(self, event):
+        self._search_query = event.control.value or ""
+        self._refresh_list()
+
     def _on_toggle_theme(self, _event):
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
@@ -470,6 +488,7 @@ class SteamCleanerGUI:
         self._select_all_button.disabled = locked or len(self._result.entries) == 0
         self._sort_dropdown.disabled = locked
         self._filter_dropdown.disabled = locked
+        self._search_field.disabled = locked
         self._results_list.disabled = locked
 
     def _on_scan(self, _event):
