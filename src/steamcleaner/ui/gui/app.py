@@ -41,11 +41,24 @@ class SteamCleanerGUI:
             color_scheme_seed=ft.Colors.BLUE,
             visual_density=ft.VisualDensity.COMPACT,
         )
-        self._page.window.width = 960
-        self._page.window.height = 640
+        self._page.window.width = int(get_value("window", "width", "960"))
+        self._page.window.height = int(get_value("window", "height", "640"))
         self._page.window.min_width = 720
         self._page.window.min_height = 480
+        saved_left = get_value("window", "left")
+        saved_top = get_value("window", "top")
+        if saved_left is not None and saved_top is not None:
+            self._page.window.left = int(saved_left)
+            self._page.window.top = int(saved_top)
+        self._page.window.on_event = self._on_window_event
         self._page.padding = 0
+
+    def _on_window_event(self, e: ft.WindowEvent):
+        if e.data == "close":
+            save_value("window", "width", str(int(self._page.window.width)))
+            save_value("window", "height", str(int(self._page.window.height)))
+            save_value("window", "left", str(int(self._page.window.left)))
+            save_value("window", "top", str(int(self._page.window.top)))
 
     def _build_ui(self):
         self._status = ft.Text("Ready", size=14)
