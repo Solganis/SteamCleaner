@@ -29,9 +29,12 @@ class TestSteamClientDetection:
 
 class TestSteamRedistScan:
     def test_finds_redist_dir(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {"_CommonRedist": ["vcredist.exe", "dxsetup.cab"]},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {"_CommonRedist": ["vcredist.exe", "dxsetup.cab"]},
+            },
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
@@ -40,21 +43,27 @@ class TestSteamRedistScan:
         assert entries[0].size_bytes == 2048
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {"_CommonRedist": ["readme.txt", "notes.pdf"]},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {"_CommonRedist": ["readme.txt", "notes.pdf"]},
+            },
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         assert len(entries) == 0
 
     def test_nested_redist_no_duplicates(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {
-                "__Installer": ["setup.exe"],
-                "__Installer/directx/redist": ["dxsetup.exe"],
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {
+                    "__Installer": ["setup.exe"],
+                    "__Installer/directx/redist": ["dxsetup.exe"],
+                },
             },
-        })
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = [e for e in client.scan_junk() if e.category == JunkCategory.REDISTRIBUTABLE]
@@ -62,27 +71,36 @@ class TestSteamRedistScan:
         assert "__Installer" in str(entries[0].path)
 
     def test_exclusion_filters(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "Steamworks Shared": {"redist": ["vcredist.exe"]},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "Steamworks Shared": {"redist": ["vcredist.exe"]},
+            },
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         safe_entries = list(client.scan_safe())
         assert len(safe_entries) == 0
 
     def test_unicode_game_name(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "Игра Тест": {"_CommonRedist": ["vcredist.exe"]},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "Игра Тест": {"_CommonRedist": ["vcredist.exe"]},
+            },
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         assert len(entries) == 1
 
     def test_cjk_game_name(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "ゲームテスト": {"redist": ["setup.msi"]},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "ゲームテスト": {"redist": ["setup.msi"]},
+            },
+        )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
@@ -91,9 +109,12 @@ class TestSteamRedistScan:
 
 class TestSteamDumpScan:
     def test_finds_crash_dumps(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {"": []},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {"": []},
+            },
+        )
         game_dir = steam / "steamapps" / "common" / "TestGame"
         (game_dir / "crash.dmp").write_bytes(b"\x00" * 512)
         (game_dir / "mini.mdmp").write_bytes(b"\x00" * 256)
@@ -105,9 +126,12 @@ class TestSteamDumpScan:
 
 class TestSteamLogScan:
     def test_finds_large_logs(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {"": []},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {"": []},
+            },
+        )
         game_dir = steam / "steamapps" / "common" / "TestGame"
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         platform = FakePlatformAdapter(install_path=steam)
@@ -116,9 +140,12 @@ class TestSteamLogScan:
         assert len(logs) == 1
 
     def test_ignores_small_logs(self, tmp_path: Path):
-        steam = build_fake_steam_tree(tmp_path, {
-            "TestGame": {"": []},
-        })
+        steam = build_fake_steam_tree(
+            tmp_path,
+            {
+                "TestGame": {"": []},
+            },
+        )
         game_dir = steam / "steamapps" / "common" / "TestGame"
         (game_dir / "small.log").write_bytes(b"\x00" * 100)
         platform = FakePlatformAdapter(install_path=steam)

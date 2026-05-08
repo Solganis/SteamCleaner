@@ -122,10 +122,7 @@ class SteamClient(GameClient):
                     continue
                 if any(subdir.is_relative_to(p) for p in found):
                     continue
-                junk_files = [
-                    f for f in subdir.rglob("*")
-                    if f.is_file() and f.suffix.lower() in _JUNK_EXTENSIONS
-                ]
+                junk_files = [f for f in subdir.rglob("*") if f.is_file() and f.suffix.lower() in _JUNK_EXTENSIONS]
                 if junk_files:
                     size = sum(_file_size(f) for f in junk_files)
                     rel = subdir.relative_to(game_dir)
