@@ -30,10 +30,15 @@ def _print_results(result: ScanResult):
     click.echo(f"\n  Total: {format_size(result.total_bytes)} in {len(result.entries)} items")
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(package_name="steamcleaner")
-def cli():
+@click.pass_context
+def cli(ctx: click.Context):
     """SteamCleaner — reclaim disk space from game clients."""
+    if ctx.invoked_subcommand is None:
+        from steamcleaner.ui.tui.app import run_tui
+
+        run_tui()
 
 
 @cli.command()
