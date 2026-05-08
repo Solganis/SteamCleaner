@@ -400,15 +400,58 @@ class SteamCleanerGUI:
             return
 
         entries = [self._result.entries[entry_index] for entry_index in sorted(self._selected)]
-        selected_result = ScanResult(entries=entries)
-        cleaner = CleanEngine(use_trash=True, dry_run=False)
-        stats = cleaner.clean(selected_result)
+        selected_bytes = sum(entry.size_bytes for entry in entries)
 
-        self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
-        self._on_scan(None)
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Confirm deletion"),
+            content=ft.Text(f"Move {len(entries)} items ({format_size(selected_bytes)}) to trash?"),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dialog)),
+                ft.Button(
+                    "Delete",
+                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.RED_700,
+                    on_click=lambda _: self._confirm_clean(dialog, entries),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self._page.show_dialog(dialog)
+
+    def _close_dialog(self, dialog: ft.AlertDialog):
+        self._page.pop_dialog()
+
+    def _confirm_clean(self, dialog: ft.AlertDialog, entries: list[JunkEntry]):
+        self._page.pop_dialog()
+        self._status.value = "Cleaning..."
+        self._progress.visible = True
+        self._set_controls_locked(locked=True)
+        self._scan_button.disabled = True
+        self._page.update()
+
+        def do_clean():
+            selected_result = ScanResult(entries=entries)
+            cleaner = CleanEngine(use_trash=True, dry_run=False)
+            stats = cleaner.clean(selected_result)
+
+            self._scan_button.disabled = False
+            self._progress.visible = False
+
+            if stats.errors:
+                error_summary = f"Deleted {stats.deleted}, failed {stats.skipped}: {stats.errors[0]}"
+                self._show_snackbar(error_summary)
+            else:
+                self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+
+            self._on_scan(None)
+
+        threading.Thread(target=do_clean, daemon=True).start()
 
     def _show_snackbar(self, message: str):
-        self._page.open(ft.SnackBar(content=ft.Text(message), duration=4000))
+        snackbar = ft.SnackBar(content=ft.Text(message), duration=4000, open=True)
+        self._page.overlay.append(snackbar)
+        self._page.update()
 
 
 def run_gui():
