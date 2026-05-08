@@ -71,7 +71,21 @@ class SteamClient(GameClient):
                 if p.is_dir():
                     self._install_path = p
                     return p
+        for candidate in self._linux_steam_paths():
+            if candidate.is_dir() and (candidate / "steamapps").is_dir():
+                self._install_path = candidate
+                return candidate
         return None
+
+    def _linux_steam_paths(self) -> list[Path]:
+        home = self._platform.home()
+        data_home = self._platform.appdata_local()
+        return [
+            home / ".steam" / "steam",
+            data_home / "Steam",
+            home / ".var" / "app" / "com.valvesoftware.Steam" / ".local" / "share" / "Steam",
+            Path("/snap/steam/common/.steam/steam"),
+        ]
 
     def is_installed(self) -> bool:
         return self._find_install_path() is not None
