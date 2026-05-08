@@ -295,6 +295,24 @@ class SteamCleanerGUI:
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
 
+        actions_menu = ft.PopupMenuButton(
+            icon=ft.Icons.MORE_VERT,
+            icon_size=16,
+            padding=0,
+            items=[
+                ft.PopupMenuItem(
+                    "Open in Explorer",
+                    icon=ft.Icons.FOLDER_OPEN,
+                    on_click=lambda _, path=entry_path: self._open_in_explorer(path),
+                ),
+                ft.PopupMenuItem(
+                    "Copy path",
+                    icon=ft.Icons.CONTENT_COPY,
+                    on_click=lambda _, path=entry_path: self._copy_path(path),
+                ),
+            ],
+        )
+
         return ft.Container(
             content=ft.Row(
                 [
@@ -313,6 +331,7 @@ class SteamCleanerGUI:
                         overflow=ft.TextOverflow.ELLIPSIS,
                         tooltip=str(entry.path),
                     ),
+                    actions_menu,
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=12,
@@ -385,6 +404,28 @@ class SteamCleanerGUI:
         else:
             self._selected.add(path)
         self._refresh_list()
+
+    def _copy_path(self, path: Path):
+        async def do_copy():
+            clipboard = ft.Clipboard()
+            await clipboard.set(str(path))
+            self._show_snackbar("Path copied to clipboard")
+
+        self._page.run_task(do_copy)
+
+    def _open_in_explorer(self, path: Path):
+        import subprocess
+
+        if sys.platform == "win32":
+            if path.is_file():
+                subprocess.Popen(["explorer", "/select,", str(path)])
+            else:
+                subprocess.Popen(["explorer", str(path)])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(path)])
+        else:
+            parent = path.parent if path.is_file() else path
+            subprocess.Popen(["xdg-open", str(parent)])
 
     def _on_select_all(self, _event):
         visible_paths = {entry.path for entry in self._visible_entries}
