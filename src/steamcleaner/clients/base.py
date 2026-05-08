@@ -15,12 +15,10 @@ class GameClient(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @abc.abstractmethod
-    def is_installed(self) -> bool:
-        ...
+    def is_installed(self) -> bool: ...
 
     @abc.abstractmethod
     def scan_junk(self) -> Iterator[JunkEntry]:
