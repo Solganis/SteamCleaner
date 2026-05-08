@@ -230,9 +230,9 @@ class SteamCleanerGUI:
         self._page.update()
 
         def do_scan():
-            from steamcleaner.platform.windows import WindowsAdapter
+            from steamcleaner.platform import create_adapter
 
-            platform = WindowsAdapter()
+            platform = create_adapter()
             exclusions = ExclusionRegistry()
             engine = ScanEngine(platform, exclusions)
             self._result = engine.scan()

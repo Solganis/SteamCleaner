@@ -9,8 +9,9 @@ from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
 class FakePlatformAdapter(PlatformAdapter):
-    def __init__(self, *, install_path: Path | None = None):
+    def __init__(self, *, install_path: Path | None = None, home_dir: Path | None = None):
         self._install_path = install_path
+        self._home = home_dir or Path.home()
         self._registry: dict[tuple[str, str, str], str] = {}
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
@@ -19,13 +20,13 @@ class FakePlatformAdapter(PlatformAdapter):
         return self._registry.get((key, subkey, value_name))
 
     def appdata_local(self) -> Path:
-        return Path.home() / "AppData" / "Local"
+        return self._home / ".local" / "share"
 
     def appdata_roaming(self) -> Path:
-        return Path.home() / "AppData" / "Roaming"
+        return self._home / ".config"
 
     def home(self) -> Path:
-        return Path.home()
+        return self._home
 
     def program_files(self) -> list[Path]:
         return []

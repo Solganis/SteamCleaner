@@ -10,9 +10,9 @@ from steamcleaner.utils.fs import format_size
 
 
 def _build_scanner() -> ScanEngine:
-    from steamcleaner.platform.windows import WindowsAdapter
+    from steamcleaner.platform import create_adapter
 
-    platform = WindowsAdapter()
+    platform = create_adapter()
     exclusions = ExclusionRegistry()
     return ScanEngine(platform, exclusions)
 

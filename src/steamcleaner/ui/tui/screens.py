@@ -7,7 +7,7 @@ from textual.widgets import Button, DataTable, Footer, Header, Label
 
 from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.scan_result import ScanResult
-from steamcleaner.platform.windows import WindowsAdapter
+from steamcleaner.platform import create_adapter
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import format_size
@@ -49,7 +49,7 @@ class ScanScreen(Screen):
         status = self.query_one("#status-label", Label)
         status.update("Scanning...")
 
-        platform = WindowsAdapter()
+        platform = create_adapter()
         exclusions = ExclusionRegistry()
         engine = ScanEngine(platform, exclusions)
         self._result = engine.scan()
