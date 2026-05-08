@@ -595,16 +595,30 @@ class SteamCleanerGUI:
         deleted_set = set(id(entry) for entry in entries)
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
+        total = len(entries)
+        progress_state: list[str | int] = [0, ""]
+
+        def on_entry_cleaned(entry: JunkEntry, success: bool):
+            progress_state[0] = int(progress_state[0]) + 1
+            name = entry.path.name
+            status = "Deleted" if success else "Failed"
+            progress_state[1] = f"{status}: {name} ({progress_state[0]}/{total})"
 
         def run_clean():
             selected_result = ScanResult(entries=entries)
             cleaner = CleanEngine(use_trash=True, dry_run=False)
-            stats_holder.append(cleaner.clean(selected_result))
+            stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
             clean_done.set()
 
         threading.Thread(target=run_clean, daemon=True).start()
 
+        self._progress.value = 0
+
         while not clean_done.is_set():
+            processed = int(progress_state[0])
+            self._progress.value = processed / total if total else 0
+            self._status.value = str(progress_state[1]) or f"Cleaning 0/{total}..."
+            self._page.update()
             await asyncio.sleep(0.1)
 
         stats = stats_holder[0]
@@ -614,6 +628,7 @@ class SteamCleanerGUI:
         self._selected -= deleted_paths
         self._scan_button.disabled = False
         self._progress.visible = False
+        self._progress.value = None
 
         entry_count = len(self._result.entries)
         if stats.errors:
