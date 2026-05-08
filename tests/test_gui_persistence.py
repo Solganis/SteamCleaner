@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import flet as ft
 
@@ -20,9 +19,8 @@ def _make_fake_page() -> MagicMock:
     page.window.top = 200
     page.window.min_width = 720
     page.window.min_height = 480
+    page.window.visible = True
     page.window.on_event = None
-    page.window.prevent_close = False
-    page.window.destroy = AsyncMock()
     page.padding = 0
     page.add = MagicMock()
     return page
@@ -35,24 +33,37 @@ def _make_event(event_type: ft.WindowEventType) -> MagicMock:
 
 
 class TestWindowPositionPersistence:
-    def test_saves_position_on_close(self, tmp_path: Path):
+    def test_saves_position_on_moved(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
 
+            page.window.left = 200
+            page.window.top = 300
             page.window.width = 1024
             page.window.height = 768
-            page.window.left = 150
-            page.window.top = 250
 
-            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.CLOSE)))
+            gui._on_window_event(_make_event(ft.WindowEventType.MOVED))
 
-            assert get_value("window", "width") == "1024"
-            assert get_value("window", "height") == "768"
-            assert get_value("window", "left") == "150"
-            assert get_value("window", "top") == "250"
-            page.window.destroy.assert_awaited_once()
+            assert get_value("window", "left") == "200"
+            assert get_value("window", "top") == "300"
+
+    def test_saves_size_on_resized(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            page.window.width = 1200
+            page.window.height = 800
+            page.window.left = 100
+            page.window.top = 100
+
+            gui._on_window_event(_make_event(ft.WindowEventType.RESIZED))
+
+            assert get_value("window", "width") == "1200"
+            assert get_value("window", "height") == "800"
 
     def test_restores_position_on_startup(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
@@ -79,41 +90,13 @@ class TestWindowPositionPersistence:
             assert page.window.width == 960
             assert page.window.height == 640
 
-    def test_saves_position_on_moved(self, tmp_path: Path):
-        config_path = tmp_path / "config.toml"
-        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            page = _make_fake_page()
-            gui = SteamCleanerGUI(page)
-
-            page.window.left = 200
-            page.window.top = 300
-
-            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.MOVED)))
-
-            assert get_value("window", "left") == "200"
-            assert get_value("window", "top") == "300"
-
-    def test_saves_size_on_resized(self, tmp_path: Path):
-        config_path = tmp_path / "config.toml"
-        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            page = _make_fake_page()
-            gui = SteamCleanerGUI(page)
-
-            page.window.width = 1200
-            page.window.height = 800
-
-            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.RESIZED)))
-
-            assert get_value("window", "width") == "1200"
-            assert get_value("window", "height") == "800"
-
     def test_ignores_irrelevant_events(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
 
-            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.FOCUS)))
+            gui._on_window_event(_make_event(ft.WindowEventType.FOCUS))
 
             assert get_value("window", "left") is None
 
