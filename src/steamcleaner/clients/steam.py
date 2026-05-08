@@ -102,12 +102,20 @@ class SteamClient(GameClient):
 
     def scan_junk(self) -> Iterator[JunkEntry]:
         for library in self._library_folders():
+            if self.cancelled:
+                return
             yield from self._scan_common(library)
+            if self.cancelled:
+                return
             yield from self._scan_shader_cache(library)
 
         install = self._find_install_path()
         if install:
+            if self.cancelled:
+                return
             yield from self._scan_steam_logs(install)
+            if self.cancelled:
+                return
             yield from self._scan_steam_dumps(install)
 
     def _scan_common(self, library: Path) -> Iterator[JunkEntry]:
@@ -214,7 +222,7 @@ class SteamClient(GameClient):
 
     def _scan_steam_logs(self, install: Path) -> Iterator[JunkEntry]:
         logs_dir = install / "logs"
-        if not logs_dir.is_dir():
+        if not logs_dir.is_dir() or self.cancelled:
             return
         total = _dir_size(logs_dir)
         if total >= _LOG_MIN_SIZE:
@@ -228,7 +236,7 @@ class SteamClient(GameClient):
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:
         dumps_dir = install / "dumps"
-        if not dumps_dir.is_dir():
+        if not dumps_dir.is_dir() or self.cancelled:
             return
         total = _dir_size(dumps_dir)
         if total > 0:
