@@ -73,4 +73,3 @@ class TestSteamLinuxScan:
         entries = list(client.scan_junk())
         dump_entries = [e for e in entries if e.category.value == "crash_dump"]
         assert len(dump_entries) == 1
-
