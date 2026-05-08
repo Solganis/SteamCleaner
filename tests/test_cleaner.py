@@ -268,10 +268,12 @@ class TestCleanEngineMultipleEntries:
         large = tmp_path / "large.dmp"
         large.write_bytes(b"\x00" * 5000)
 
-        result = ScanResult(entries=[
-            _make_entry(small, size=100, category=JunkCategory.CRASH_DUMP),
-            _make_entry(large, size=5000, category=JunkCategory.CRASH_DUMP),
-        ])
+        result = ScanResult(
+            entries=[
+                _make_entry(small, size=100, category=JunkCategory.CRASH_DUMP),
+                _make_entry(large, size=5000, category=JunkCategory.CRASH_DUMP),
+            ]
+        )
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
