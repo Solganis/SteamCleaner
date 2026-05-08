@@ -1,15 +1,13 @@
 [project]
 name = "steamcleaner"
 version = "0.2.0"
-description = "Cross-platform CLI/TUI tool for reclaiming disk space from game clients"
+description = "Cross-platform tool for reclaiming disk space from game clients"
 requires-python = ">=3.14"
 license = "GPL-3.0-or-later"
 dependencies = [
-    "click>=8.1",
     "darkdetect>=0.8",
     "flet>=0.25",
     "send2trash>=1.8",
-    "textual>=3.0",
 ]
 
 [project.scripts]
