@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from steamcleaner.ui.cli import cli
+from steamcleaner.ui.gui.app import run_gui
 
 
 def main():
-    cli()
+    run_gui()
