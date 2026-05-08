@@ -73,6 +73,8 @@ class ScanScreen(Screen):
         status.update(f"Found {count} items — {total} total")
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected):
+        if event.row_key.value is None:
+            return
         idx = int(event.row_key.value)
         table = self.query_one("#results-table", DataTable)
         if idx in self._selected:
