@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import flet as ft
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 from steamcleaner.utils.config import get_value, save_value
@@ -18,9 +21,17 @@ def _make_fake_page() -> MagicMock:
     page.window.min_width = 720
     page.window.min_height = 480
     page.window.on_event = None
+    page.window.prevent_close = False
+    page.window.destroy = AsyncMock()
     page.padding = 0
     page.add = MagicMock()
     return page
+
+
+def _make_event(event_type: ft.WindowEventType) -> MagicMock:
+    event = MagicMock()
+    event.type = event_type
+    return event
 
 
 class TestWindowPositionPersistence:
@@ -35,14 +46,13 @@ class TestWindowPositionPersistence:
             page.window.left = 150
             page.window.top = 250
 
-            event = MagicMock()
-            event.data = "close"
-            gui._on_window_event(event)
+            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.CLOSE)))
 
             assert get_value("window", "width") == "1024"
             assert get_value("window", "height") == "768"
             assert get_value("window", "left") == "150"
             assert get_value("window", "top") == "250"
+            page.window.destroy.assert_awaited_once()
 
     def test_restores_position_on_startup(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
@@ -78,9 +88,7 @@ class TestWindowPositionPersistence:
             page.window.left = 200
             page.window.top = 300
 
-            event = MagicMock()
-            event.data = "moved"
-            gui._on_window_event(event)
+            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.MOVED)))
 
             assert get_value("window", "left") == "200"
             assert get_value("window", "top") == "300"
@@ -94,9 +102,7 @@ class TestWindowPositionPersistence:
             page.window.width = 1200
             page.window.height = 800
 
-            event = MagicMock()
-            event.data = "resized"
-            gui._on_window_event(event)
+            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.RESIZED)))
 
             assert get_value("window", "width") == "1200"
             assert get_value("window", "height") == "800"
@@ -107,9 +113,7 @@ class TestWindowPositionPersistence:
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
 
-            event = MagicMock()
-            event.data = "focus"
-            gui._on_window_event(event)
+            asyncio.run(gui._on_window_event(_make_event(ft.WindowEventType.FOCUS)))
 
             assert get_value("window", "left") is None
 
@@ -118,8 +122,6 @@ class TestThemePersistence:
     def test_saves_dark_theme(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            import flet as ft
-
             save_value("ui", "theme", "light")
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
@@ -131,8 +133,6 @@ class TestThemePersistence:
     def test_saves_light_theme(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            import flet as ft
-
             save_value("ui", "theme", "dark")
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
@@ -144,8 +144,6 @@ class TestThemePersistence:
     def test_restores_saved_theme(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            import flet as ft
-
             save_value("ui", "theme", "light")
             page = _make_fake_page()
             SteamCleanerGUI(page)
