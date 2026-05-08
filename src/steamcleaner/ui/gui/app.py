@@ -1,0 +1,249 @@
+from __future__ import annotations
+
+import threading
+
+import flet as ft
+
+from steamcleaner.cleaner.engine import CleanEngine
+from steamcleaner.models.junk import JunkEntry
+from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.platform.windows import WindowsAdapter
+from steamcleaner.scanner.engine import ScanEngine
+from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.utils.fs import format_size
+
+
+class SteamCleanerGUI:
+    def __init__(self, page: ft.Page):
+        self._page = page
+        self._result = ScanResult()
+        self._selected: set[int] = set()
+        self._setup_page()
+        self._build_ui()
+
+    def _setup_page(self):
+        self._page.title = "SteamCleaner"
+        self._page.theme_mode = ft.ThemeMode.DARK
+        self._page.theme = ft.Theme(
+            color_scheme_seed=ft.Colors.BLUE,
+            visual_density=ft.VisualDensity.COMPACT,
+        )
+        self._page.window.width = 960
+        self._page.window.height = 640
+        self._page.window.min_width = 720
+        self._page.window.min_height = 480
+        self._page.padding = 0
+
+    def _build_ui(self):
+        self._status = ft.Text("Ready", size=14)
+        self._total_label = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
+
+        self._scan_btn = ft.ElevatedButton(
+            "Scan",
+            icon=ft.Icons.SEARCH,
+            on_click=self._on_scan,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+        )
+        self._clean_btn = ft.ElevatedButton(
+            "Clean Selected",
+            icon=ft.Icons.DELETE_SWEEP,
+            on_click=self._on_clean,
+            disabled=True,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            color=ft.Colors.WHITE,
+            bgcolor=ft.Colors.RED_700,
+        )
+        self._dry_btn = ft.OutlinedButton(
+            "Dry Run",
+            icon=ft.Icons.PREVIEW,
+            on_click=self._on_dry_run,
+            disabled=True,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+        )
+        self._select_all_btn = ft.TextButton(
+            "Select All",
+            on_click=self._on_select_all,
+            disabled=True,
+        )
+
+        self._progress = ft.ProgressBar(visible=False)
+
+        self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.padding.symmetric(horizontal=16))
+
+        header = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Icon(ft.Icons.CLEANING_SERVICES, size=28, color=ft.Colors.BLUE_400),
+                    ft.Text("SteamCleaner", size=22, weight=ft.FontWeight.BOLD),
+                    ft.Container(expand=True),
+                    self._status,
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+        )
+
+        toolbar = ft.Container(
+            content=ft.Row(
+                [
+                    self._scan_btn,
+                    self._select_all_btn,
+                    ft.Container(expand=True),
+                    self._total_label,
+                    self._dry_btn,
+                    self._clean_btn,
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.padding.symmetric(horizontal=20, vertical=8),
+        )
+
+        self._page.add(
+            header,
+            self._progress,
+            toolbar,
+            ft.Divider(height=1),
+            ft.Container(content=self._results_list, expand=True),
+        )
+
+    def _make_row(self, index: int, entry: JunkEntry) -> ft.Container:
+        cb = ft.Checkbox(
+            value=index in self._selected,
+            on_change=lambda e, i=index: self._on_toggle(i, e.control.value),
+        )
+
+        category_colors = {
+            "redistributable": ft.Colors.ORANGE_700,
+            "shader_cache": ft.Colors.PURPLE_700,
+            "crash_dump": ft.Colors.RED_700,
+            "old_log": ft.Colors.BLUE_GREY_700,
+            "installer": ft.Colors.AMBER_700,
+            "cross_platform": ft.Colors.TEAL_700,
+        }
+
+        badge = ft.Container(
+            content=ft.Text(entry.category.value.replace("_", " "), size=11, color=ft.Colors.WHITE),
+            bgcolor=category_colors.get(entry.category.value, ft.Colors.GREY_700),
+            border_radius=4,
+            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+        )
+
+        return ft.Container(
+            content=ft.Row(
+                [
+                    cb,
+                    ft.Text(
+                        format_size(entry.size_bytes),
+                        width=80,
+                        text_align=ft.TextAlign.RIGHT,
+                        weight=ft.FontWeight.W_500,
+                    ),
+                    badge,
+                    ft.Text(
+                        str(entry.path),
+                        expand=True,
+                        size=13,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                        tooltip=str(entry.path),
+                    ),
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=12,
+            ),
+            padding=ft.padding.symmetric(horizontal=4, vertical=2),
+            border_radius=6,
+            ink=True,
+            on_click=lambda e, i=index: self._on_row_click(i),
+        )
+
+    def _refresh_list(self):
+        self._results_list.controls.clear()
+        for i, entry in enumerate(self._result.entries):
+            self._results_list.controls.append(self._make_row(i, entry))
+        self._update_totals()
+        self._page.update()
+
+    def _update_totals(self):
+        selected_bytes = sum(self._result.entries[i].size_bytes for i in self._selected)
+        total = format_size(self._result.total_bytes)
+        sel = format_size(selected_bytes)
+        self._total_label.value = f"{sel} / {total} selected ({len(self._selected)}/{len(self._result.entries)})"
+        has_selection = len(self._selected) > 0
+        self._clean_btn.disabled = not has_selection
+        self._dry_btn.disabled = not has_selection
+        self._select_all_btn.disabled = len(self._result.entries) == 0
+
+    def _on_toggle(self, index: int, checked: bool):
+        if checked:
+            self._selected.add(index)
+        else:
+            self._selected.discard(index)
+        self._update_totals()
+        self._page.update()
+
+    def _on_row_click(self, index: int):
+        if index in self._selected:
+            self._selected.discard(index)
+        else:
+            self._selected.add(index)
+        self._refresh_list()
+
+    def _on_select_all(self, _e):
+        if len(self._selected) == len(self._result.entries):
+            self._selected.clear()
+            self._select_all_btn.text = "Select All"
+        else:
+            self._selected = set(range(len(self._result.entries)))
+            self._select_all_btn.text = "Deselect All"
+        self._refresh_list()
+
+    def _on_scan(self, _e):
+        self._scan_btn.disabled = True
+        self._progress.visible = True
+        self._status.value = "Scanning..."
+        self._page.update()
+
+        def do_scan():
+            platform = WindowsAdapter()
+            exclusions = ExclusionRegistry()
+            engine = ScanEngine(platform, exclusions)
+            self._result = engine.scan()
+            self._selected.clear()
+            self._scan_btn.disabled = False
+            self._progress.visible = False
+            count = len(self._result.entries)
+            self._status.value = f"Found {count} items — {format_size(self._result.total_bytes)}"
+            self._refresh_list()
+
+        threading.Thread(target=do_scan, daemon=True).start()
+
+    def _on_clean(self, _e):
+        self._do_clean(dry_run=False)
+
+    def _on_dry_run(self, _e):
+        self._do_clean(dry_run=True)
+
+    def _do_clean(self, *, dry_run: bool):
+        if not self._selected:
+            return
+
+        entries = [self._result.entries[i] for i in sorted(self._selected)]
+        selected_result = ScanResult(entries=entries)
+        cleaner = CleanEngine(use_trash=True, dry_run=dry_run)
+        stats = cleaner.clean(selected_result)
+
+        if dry_run:
+            self._show_snackbar(f"[DRY RUN] Would delete {stats.deleted} items ({format_size(stats.bytes_freed)})")
+        else:
+            self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+            self._on_scan(None)
+
+    def _show_snackbar(self, message: str):
+        self._page.open(ft.SnackBar(content=ft.Text(message), duration=4000))
+
+
+def run_gui():
+    ft.app(target=lambda page: SteamCleanerGUI(page))
