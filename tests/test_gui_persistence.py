@@ -69,14 +69,46 @@ class TestWindowPositionPersistence:
             assert page.window.width == 960
             assert page.window.height == 640
 
-    def test_ignores_non_close_events(self, tmp_path: Path):
+    def test_saves_position_on_moved(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            page.window.left = 200
+            page.window.top = 300
+
+            event = MagicMock()
+            event.data = "moved"
+            gui._on_window_event(event)
+
+            assert get_value("window", "left") == "200"
+            assert get_value("window", "top") == "300"
+
+    def test_saves_size_on_resized(self, tmp_path: Path):
+        config_path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+            page = _make_fake_page()
+            gui = SteamCleanerGUI(page)
+
+            page.window.width = 1200
+            page.window.height = 800
+
+            event = MagicMock()
+            event.data = "resized"
+            gui._on_window_event(event)
+
+            assert get_value("window", "width") == "1200"
+            assert get_value("window", "height") == "800"
+
+    def test_ignores_irrelevant_events(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
 
             event = MagicMock()
-            event.data = "move"
+            event.data = "focus"
             gui._on_window_event(event)
 
             assert get_value("window", "left") is None
@@ -99,11 +131,12 @@ class TestThemePersistence:
     def test_saves_light_theme(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-            page = _make_fake_page()
             import flet as ft
 
-            page.theme_mode = ft.ThemeMode.DARK
+            save_value("ui", "theme", "dark")
+            page = _make_fake_page()
             gui = SteamCleanerGUI(page)
+            assert page.theme_mode == ft.ThemeMode.DARK
             gui._on_toggle_theme(None)
 
             assert get_value("ui", "theme") == "light"
