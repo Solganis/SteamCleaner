@@ -349,6 +349,11 @@ class SteamCleanerGUI:
         self._progress.visible = False
         self._cancel_event = None
 
+    def _set_controls_locked(self, locked: bool):
+        self._clean_button.disabled = locked or not self._selected
+        self._select_all_button.disabled = locked or len(self._result.entries) == 0
+        self._results_list.disabled = locked
+
     def _on_scan(self, _event):
         if self._cancel_event is not None:
             self._cancel_event.set()
@@ -359,6 +364,11 @@ class SteamCleanerGUI:
         self._scan_button.icon = ft.Icons.STOP
         self._progress.visible = True
         self._status.value = "Scanning..."
+        self._result = ScanResult()
+        self._selected.clear()
+        self._results_list.controls.clear()
+        self._total_label.value = ""
+        self._set_controls_locked(locked=True)
         self._page.update()
 
         cancel = self._cancel_event
@@ -371,7 +381,6 @@ class SteamCleanerGUI:
                 exclusions = ExclusionRegistry()
                 engine = ScanEngine(platform, exclusions)
                 self._result = engine.scan(cancel=cancel)
-                self._selected.clear()
                 entry_count = len(self._result.entries)
                 if cancel.is_set():
                     self._status.value = f"Stopped: {entry_count} items found so far"
@@ -381,6 +390,7 @@ class SteamCleanerGUI:
                 self._status.value = "Scan failed"
             finally:
                 self._reset_scan_ui()
+                self._set_controls_locked(locked=False)
                 self._refresh_list()
 
         threading.Thread(target=do_scan, daemon=True).start()
