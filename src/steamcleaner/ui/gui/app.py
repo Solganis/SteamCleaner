@@ -466,21 +466,30 @@ class SteamCleanerGUI:
         self._scan_button.disabled = True
         self._page.update()
 
+        deleted_set = set(id(entry) for entry in entries)
+
         def do_clean():
             selected_result = ScanResult(entries=entries)
             cleaner = CleanEngine(use_trash=True, dry_run=False)
             stats = cleaner.clean(selected_result)
 
+            self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
+            self._selected.clear()
+
             self._scan_button.disabled = False
             self._progress.visible = False
 
+            entry_count = len(self._result.entries)
             if stats.errors:
                 error_summary = f"Deleted {stats.deleted}, failed {stats.skipped}: {stats.errors[0]}"
                 self._show_snackbar(error_summary)
+                self._status.value = f"{entry_count} items remaining, {stats.skipped} failed"
             else:
                 self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+                self._status.value = f"{entry_count} items remaining"
 
-            self._on_scan(None)
+            self._set_controls_locked(locked=False)
+            self._refresh_list()
 
         threading.Thread(target=do_clean, daemon=True).start()
 
