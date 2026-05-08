@@ -18,6 +18,7 @@ class SteamCleanerGUI:
         self._page = page
         self._result = ScanResult()
         self._selected: set[int] = set()
+        self._cancel_event: threading.Event | None = None
         self._setup_page()
         self._build_ui()
 
@@ -215,10 +216,18 @@ class SteamCleanerGUI:
         self._page.update()
 
     def _on_scan(self, _e):
-        self._scan_btn.disabled = True
+        if self._cancel_event is not None:
+            self._cancel_event.set()
+            return
+
+        self._cancel_event = threading.Event()
+        self._scan_btn.text = "Stop"
+        self._scan_btn.icon = ft.Icons.STOP
         self._progress.visible = True
         self._status.value = "Scanning..."
         self._page.update()
+
+        cancel = self._cancel_event
 
         def do_scan():
             from steamcleaner.platform import create_adapter
@@ -226,12 +235,17 @@ class SteamCleanerGUI:
             platform = create_adapter()
             exclusions = ExclusionRegistry()
             engine = ScanEngine(platform, exclusions)
-            self._result = engine.scan()
+            self._result = engine.scan(cancel=cancel)
             self._selected.clear()
-            self._scan_btn.disabled = False
+            self._scan_btn.text = "Scan"
+            self._scan_btn.icon = ft.Icons.SEARCH
             self._progress.visible = False
+            self._cancel_event = None
             count = len(self._result.entries)
-            self._status.value = f"Found {count} items — {format_size(self._result.total_bytes)}"
+            if cancel.is_set():
+                self._status.value = f"Stopped — {count} items found so far"
+            else:
+                self._status.value = f"Found {count} items — {format_size(self._result.total_bytes)}"
             self._refresh_list()
 
         threading.Thread(target=do_scan, daemon=True).start()

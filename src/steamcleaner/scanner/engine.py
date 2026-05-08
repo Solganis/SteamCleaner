@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
 
 from steamcleaner.clients.registry import ClientRegistry
@@ -16,11 +17,18 @@ class ScanEngine:
         self._platform = platform
         self._exclusions = exclusions or ExclusionRegistry()
 
-    def scan(self, progress: ProgressCallback | None = None) -> ScanResult:
+    def scan(
+        self,
+        progress: ProgressCallback | None = None,
+        cancel: threading.Event | None = None,
+    ) -> ScanResult:
         all_entries: list[JunkEntry] = []
         clients = list(ClientRegistry.create_all(self._platform, self._exclusions))
 
         for client in clients:
+            if cancel and cancel.is_set():
+                break
+
             if not client.is_installed():
                 if progress:
                     progress(f"{client.name}: not installed", 0)
@@ -29,12 +37,9 @@ class ScanEngine:
             if progress:
                 progress(f"Scanning {client.name}...", 0)
 
-            count = 0
             for entry in client.scan_safe():
+                if cancel and cancel.is_set():
+                    break
                 all_entries.append(entry)
-                count += 1
-
-            if progress:
-                progress(f"{client.name}: found {count} items", count)
 
         return ScanResult(entries=all_entries)
