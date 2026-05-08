@@ -71,13 +71,13 @@ class SteamCleanerGUI:
             on_click=self._on_toggle_theme,
         )
 
-        self._scan_btn = ft.ElevatedButton(
+        self._scan_btn = ft.Button(
             "Scan",
             icon=ft.Icons.SEARCH,
             on_click=self._on_scan,
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         )
-        self._clean_btn = ft.ElevatedButton(
+        self._clean_btn = ft.Button(
             "Clean Selected",
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
@@ -94,7 +94,7 @@ class SteamCleanerGUI:
 
         self._progress = ft.ProgressBar(visible=False)
 
-        self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.padding.symmetric(horizontal=16))
+        self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.Padding.symmetric(horizontal=16))
 
         header = ft.Container(
             content=ft.Row(
@@ -108,7 +108,7 @@ class SteamCleanerGUI:
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=12),
             bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
         )
 
@@ -124,7 +124,7 @@ class SteamCleanerGUI:
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=20, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=8),
         )
 
         self._page.add(
@@ -154,7 +154,7 @@ class SteamCleanerGUI:
             content=ft.Text(entry.category.value.replace("_", " "), size=11, color=ft.Colors.WHITE),
             bgcolor=category_colors.get(entry.category.value, ft.Colors.GREY_700),
             border_radius=4,
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
 
         return ft.Container(
@@ -179,7 +179,7 @@ class SteamCleanerGUI:
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=12,
             ),
-            padding=ft.padding.symmetric(horizontal=4, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=4, vertical=2),
             border_radius=6,
             ink=True,
             on_click=lambda e, i=index: self._on_row_click(i),
