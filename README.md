@@ -27,20 +27,6 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Determinate progress bar with per-file status during scan and deletion
 - Safe by default: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
 
-## Supported clients
-
-| Client | Status |
-|--------|--------|
-| Steam  | Done   |
-| Epic Games | Planned |
-| EA App | Planned |
-| GOG Galaxy | Planned |
-| Ubisoft Connect | Planned |
-| Xbox | Planned |
-| Battle.net | Planned |
-
-Adding a new client: subclass `GameClient`, decorate with `@ClientRegistry.register`, implement abstract methods. Discovery is automatic, no wiring needed.
-
 ## What it finds
 
 | Category | Examples | Typical savings |
