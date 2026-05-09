@@ -28,7 +28,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libglib2.0-dev ninja-build pkg-config cmake clang
       - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - run: uv sync
+      - name: Cache Flutter SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.flet/bin
+            ~/AppData/Local/flet/bin
+          key: flutter-${{ matrix.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: flutter-${{ matrix.os }}-
       - name: Build
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
         env:
