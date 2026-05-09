@@ -574,6 +574,7 @@ class SteamCleanerGUI:
         self._filter_dropdown.disabled = locked
         self._search_field.disabled = locked
         self._results_list.disabled = locked
+        self._results_list.opacity = 0.4 if locked else 1.0
 
     def _on_scan(self, _event):
         if self._cancel_event is not None:
