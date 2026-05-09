@@ -241,3 +241,107 @@ class TestGogEdgeCases:
         client_with_excl = GogClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
         assert len(safe_entries) == 0
+
+
+class TestGogWinePrefix:
+    def test_installed_via_wine_prefix_galaxy(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        (prefix / "Program Files (x86)" / "GOG Galaxy" / "Games" / "Witcher3").mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        assert client.is_installed()
+
+    def test_installed_via_wine_prefix_gog_games(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        (prefix / "GOG Games" / "Witcher3").mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        assert client.is_installed()
+
+    def test_not_installed_empty_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        prefix.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        assert not client.is_installed()
+
+    def test_discovers_from_galaxy_games_in_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "Program Files (x86)" / "GOG Galaxy" / "Games" / "Witcher3"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert game_dir in paths
+
+    def test_discovers_from_gog_games_in_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "GOG Games" / "Witcher3"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert game_dir in paths
+
+    def test_discovers_from_program_files_gog_games_in_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "Program Files" / "GOG Games" / "Witcher3"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert game_dir in paths
+
+    def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "GOG Games" / "Witcher3"
+        redist = game_dir / "_CommonRedist"
+        redist.mkdir(parents=True)
+        (redist / "vcredist.exe").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
+        assert len(redist_entries) == 1
+
+    def test_no_duplicate_with_program_files(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "GOG Games" / "Witcher3"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            programdata_dir=tmp_path / "ProgramData",
+            program_files_dirs=[prefix],
+            wine_prefix_dirs=[prefix],
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert paths.count(game_dir) == 1

@@ -21,7 +21,16 @@ class GogClient(GameClient):
         return "GOG Galaxy"
 
     def is_installed(self) -> bool:
-        return self._galaxy_data_dir().is_dir()
+        if self._galaxy_data_dir().is_dir():
+            return True
+        for prefix in self._platform.wine_prefixes():
+            for gog_path in (
+                prefix / "Program Files (x86)" / "GOG Galaxy" / "Games",
+                prefix / "GOG Games",
+            ):
+                if gog_path.is_dir():
+                    return True
+        return False
 
     def _galaxy_data_dir(self) -> Path:
         return self._platform.programdata() / "GOG.com" / "Galaxy"
@@ -41,6 +50,17 @@ class GogClient(GameClient):
                 games_dir = program_dir / dir_name
                 if games_dir.is_dir():
                     for game_dir in list_subdirs(games_dir):
+                        if game_dir not in paths:
+                            paths.append(game_dir)
+
+        for prefix in self._platform.wine_prefixes():
+            for gog_path in (
+                prefix / "Program Files (x86)" / "GOG Galaxy" / "Games",
+                prefix / "GOG Games",
+                prefix / "Program Files" / "GOG Games",
+            ):
+                if gog_path.is_dir():
+                    for game_dir in list_subdirs(gog_path):
                         if game_dir not in paths:
                             paths.append(game_dir)
 

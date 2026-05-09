@@ -22,7 +22,14 @@ class EaAppClient(GameClient):
         return "EA App"
 
     def is_installed(self) -> bool:
-        return self._ea_desktop_data_dir().is_dir() or self._origin_data_dir().is_dir()
+        if self._ea_desktop_data_dir().is_dir() or self._origin_data_dir().is_dir():
+            return True
+        for prefix in self._platform.wine_prefixes():
+            for dir_name in _GAME_DIR_NAMES:
+                for program_dir_name in ("Program Files", "Program Files (x86)"):
+                    if (prefix / program_dir_name / dir_name).is_dir():
+                        return True
+        return False
 
     def _ea_desktop_data_dir(self) -> Path:
         return self._platform.appdata_local() / "Electronic Arts" / "EA Desktop"
@@ -49,6 +56,15 @@ class EaAppClient(GameClient):
                     for game_dir in list_subdirs(games_dir):
                         if game_dir not in paths:
                             paths.append(game_dir)
+
+        for prefix in self._platform.wine_prefixes():
+            for dir_name in _GAME_DIR_NAMES:
+                for program_dir_name in ("Program Files", "Program Files (x86)"):
+                    games_dir = prefix / program_dir_name / dir_name
+                    if games_dir.is_dir():
+                        for game_dir in list_subdirs(games_dir):
+                            if game_dir not in paths:
+                                paths.append(game_dir)
 
         return paths
 
