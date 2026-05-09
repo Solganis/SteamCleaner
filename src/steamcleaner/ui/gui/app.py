@@ -20,7 +20,7 @@ from steamcleaner.utils.fs import format_size
 
 _VERSION = "0.2.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
-_DONATE_URL = "https://github.com/sponsors/Solganis"
+_BOOSTY_URL = "https://boosty.to/solganis"
 
 
 class _WindowHider:
@@ -844,7 +844,7 @@ class SteamCleanerGUI:
                     ft.Row(
                         [
                             ft.TextButton("GitHub", icon=ft.Icons.CODE, url=_GITHUB_URL),
-                            ft.TextButton("Donate", icon=ft.Icons.FAVORITE, url=_DONATE_URL),
+                            ft.TextButton("Boosty", icon=ft.Icons.FAVORITE, url=_BOOSTY_URL),
                         ],
                         spacing=8,
                     ),
