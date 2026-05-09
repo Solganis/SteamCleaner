@@ -22,7 +22,7 @@ class EaAppClient(GameClient):
         return "EA App"
 
     def is_installed(self) -> bool:
-        if self._ea_desktop_data_dir().is_dir() or self._origin_data_dir().is_dir():
+        if self._ea_desktop_data_dir().is_dir() or self._ea_app_data_dir().is_dir() or self._origin_data_dir().is_dir():
             return True
         for prefix in self._platform.wine_prefixes():
             for dir_name in _GAME_DIR_NAMES:
@@ -33,6 +33,9 @@ class EaAppClient(GameClient):
 
     def _ea_desktop_data_dir(self) -> Path:
         return self._platform.appdata_local() / "Electronic Arts" / "EA Desktop"
+
+    def _ea_app_data_dir(self) -> Path:
+        return self._platform.appdata_local() / "Electronic Arts" / "EA app"
 
     def _origin_data_dir(self) -> Path:
         return self._platform.appdata_local() / "Origin"
@@ -128,6 +131,7 @@ class EaAppClient(GameClient):
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
         for logs_dir in (
             self._ea_desktop_data_dir() / "Logs",
+            self._ea_app_data_dir() / "Logs",
             self._platform.programdata() / "EA Desktop" / "Logs",
         ):
             if not logs_dir.is_dir():
@@ -160,6 +164,23 @@ class EaAppClient(GameClient):
                     size_bytes=total,
                     client_name=self.name,
                     description=f"{cache_dir_name} cache",
+                )
+
+        home = self._platform.home()
+        for bundle_id in ("com.ea.Origin", "com.EA.EA-app-Migrator", "Origin", "EA app", "EALaunchHelper"):
+            if self.cancelled:
+                return
+            cache_dir = home / "Library" / "Caches" / bundle_id
+            if not cache_dir.is_dir():
+                continue
+            total = dir_size(cache_dir)
+            if total > 0:
+                yield JunkEntry(
+                    path=cache_dir,
+                    category=JunkCategory.SHADER_CACHE,
+                    size_bytes=total,
+                    client_name=self.name,
+                    description=f"EA App cache ({bundle_id})",
                 )
 
 

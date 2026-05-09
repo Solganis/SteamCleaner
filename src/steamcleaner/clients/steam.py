@@ -51,13 +51,13 @@ class SteamClient(GameClient):
                 if candidate_path.is_dir():
                     self._install_path = candidate_path
                     return candidate_path
-        for candidate in self._linux_steam_paths():
+        for candidate in self._fallback_steam_paths():
             if candidate.is_dir() and (candidate / "steamapps").is_dir():
                 self._install_path = candidate
                 return candidate
         return None
 
-    def _linux_steam_paths(self) -> list[Path]:
+    def _fallback_steam_paths(self) -> list[Path]:
         home = self._platform.home()
         data_home = self._platform.appdata_local()
         return [
