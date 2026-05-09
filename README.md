@@ -21,8 +21,6 @@ Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCl
 
 Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
-<!-- TODO: add screenshot when UI is finalized -->
-
 ## Features
 
 - Desktop GUI built on [Flet](https://flet.dev/) with automatic OS theme detection (dark/light)
@@ -39,17 +37,17 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 
 | Client | Game discovery | Launcher junk |
 |--------|---------------|---------------|
-| Steam | Registry, `libraryfolders.vdf`, Linux paths (native, Flatpak, Snap) | Shader cache, crash dumps |
-| Epic Games | JSON manifests, Program Files, Wine/Proton prefixes | Logs, webcache |
-| EA App (Origin) | Registry (`Origin Games`), Program Files, Wine/Proton prefixes | Logs, launcher cache |
-| GOG Galaxy | Registry (`GOG.com\Games`), Program Files, Wine/Proton prefixes | Logs, crashdumps, webcache |
+| Steam | Registry, `libraryfolders.vdf`, macOS/Linux paths (native, Flatpak, Snap) | Shader cache, crash dumps |
+| Epic Games | JSON manifests, Program Files, macOS Application Support, Wine/Proton prefixes | Logs, webcache |
+| EA App (Origin) | Registry (`Origin Games`), Program Files, macOS Application Support, Wine/Proton prefixes | Logs, launcher cache |
+| GOG Galaxy | Registry (`GOG.com\Games`), Program Files, macOS Application Support, Wine/Proton prefixes | Logs, crashdumps, webcache |
 | Ubisoft Connect | Registry (`Ubisoft\Launcher\Installs`), default games dir, Wine/Proton prefixes | Cache, crashes, logs |
 
 ## What it finds
 
 | Category | Examples | Typical savings |
 |----------|----------|-----------------|
-| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `__Installer` | 5-15 GB per library |
+| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `installer` | 5-15 GB per library |
 | Shader/web cache | Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache | Up to 500+ MB per client |
 | Crash dumps | `.dmp`, `.mdmp` files in game directories and launcher crash folders | Varies |
 | Old logs | Log files over 1 MB in game directories and launcher logs | Varies |
