@@ -15,7 +15,7 @@ from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from steamcleaner.utils.config import get_list, get_value, save_value
+from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
 
 _VERSION = "0.2.0"
@@ -419,10 +419,6 @@ class SteamCleanerGUI:
 
     def _apply_sort_filter(self):
         entries = self._result.entries
-        min_size_mb = int(get_value("clean", "min_size_mb", "0") or "0")
-        if min_size_mb > 0:
-            min_size_bytes = min_size_mb * 1024 * 1024
-            entries = [entry for entry in entries if entry.size_bytes >= min_size_bytes]
         if self._category_filter and self._category_filter != "all":
             entries = [entry for entry in entries if entry.category.value == self._category_filter]
         if self._search_query:
@@ -619,9 +615,8 @@ class SteamCleanerGUI:
 
                 platform = create_adapter()
                 exclusions = ExclusionRegistry()
-                custom_paths = [Path(path) for path in get_list("scan", "custom_paths")]
                 engine = ScanEngine(platform, exclusions)
-                engine.scan(progress=on_progress, on_found=on_found, cancel=cancel, custom_paths=custom_paths)
+                engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
             except Exception:
                 status_text[0] = "Scan failed"
             finally:
@@ -765,84 +760,17 @@ class SteamCleanerGUI:
 
     def _on_settings_click(self, _event):
         use_trash = get_value("clean", "use_trash", "true") == "true"
-        min_size_mb = get_value("clean", "min_size_mb", "0") or "0"
-        custom_paths = get_list("scan", "custom_paths")
-
         trash_switch = ft.Switch(label="Move to trash instead of permanent delete", value=use_trash)
-        min_size_field = ft.TextField(
-            label="Minimum file size (MB)",
-            value=min_size_mb,
-            width=200,
-            keyboard_type=ft.KeyboardType.NUMBER,
-            dense=True,
-        )
-
-        paths_column = ft.Column(spacing=4)
-        path_refs: list[str] = list(custom_paths)
-
-        def rebuild_paths_list():
-            paths_column.controls.clear()
-            for index, scan_path in enumerate(path_refs):
-                row = ft.Row(
-                    [
-                        ft.Text(scan_path, expand=True, size=13, overflow=ft.TextOverflow.ELLIPSIS),
-                        ft.IconButton(
-                            icon=ft.Icons.DELETE,
-                            icon_size=18,
-                            on_click=lambda _, idx=index: remove_path(idx),
-                        ),
-                    ],
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                )
-                paths_column.controls.append(row)
-            self._page.update()
-
-        def remove_path(index: int):
-            path_refs.pop(index)
-            rebuild_paths_list()
-
-        async def add_path(_event):
-            picker = ft.FilePicker()
-            selected = await picker.get_directory_path(dialog_title="Select directory to scan")
-            if selected:
-                path_refs.append(selected)
-                rebuild_paths_list()
-
-        rebuild_paths_list()
-
-        add_path_button = ft.TextButton("Add directory", icon=ft.Icons.CREATE_NEW_FOLDER, on_click=add_path)
 
         def save_settings(_event):
             save_value("clean", "use_trash", "true" if trash_switch.value else "false")
-            try:
-                size_val = int(min_size_field.value or "0")
-                if size_val < 0:
-                    size_val = 0
-            except ValueError:
-                size_val = 0
-            save_value("clean", "min_size_mb", str(size_val))
-            save_value("scan", "custom_paths", path_refs)
             self._page.pop_dialog()
-            self._refresh_list()
             self._show_snackbar("Settings saved")
 
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("Settings"),
-            content=ft.Column(
-                [
-                    trash_switch,
-                    ft.Divider(height=16),
-                    min_size_field,
-                    ft.Divider(height=16),
-                    ft.Text("Custom scan directories", weight=ft.FontWeight.BOLD, size=14),
-                    paths_column,
-                    add_path_button,
-                ],
-                tight=True,
-                scroll=ft.ScrollMode.AUTO,
-                width=500,
-            ),
+            content=ft.Column([trash_switch], tight=True, width=400),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda _: self._page.pop_dialog()),
                 ft.Button("Save", on_click=save_settings),
