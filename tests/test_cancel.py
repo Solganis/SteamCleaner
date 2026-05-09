@@ -70,9 +70,6 @@ class TestCancelMidScan:
         platform = _make_steam_with_games(tmp_path, 5)
         cancel = threading.Event()
 
-        def cancel_after_first(msg: str, count: int):
-            pass
-
         engine = ScanEngine(platform, ExclusionRegistry())
         result_holder: list = []
 
