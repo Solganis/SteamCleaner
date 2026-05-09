@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import flet as ft
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
+from steamcleaner.ui.gui.i18n import t
 from steamcleaner.utils.config import get_value, save_value
 
 
@@ -146,7 +147,7 @@ class TestScanCancelCycles:
 
             self._start_scan(gui)
             assert gui._cancel_event is not None
-            assert gui._scan_button.text == "Stop"
+            assert gui._scan_button.text == t("stop")
 
     def test_second_click_cancels(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
@@ -168,7 +169,7 @@ class TestScanCancelCycles:
             gui._reset_scan_ui()
 
             assert gui._cancel_event is None
-            assert gui._scan_button.text == "Scan"
+            assert gui._scan_button.text == t("scan")
             assert gui._progress.opacity == 0
 
     def test_multiple_cancel_cycles_keep_working(self, tmp_path: Path):
@@ -200,4 +201,4 @@ class TestScanCancelCycles:
             self._start_scan(gui)
             assert gui._cancel_event is not None
             assert not gui._cancel_event.is_set()
-            assert gui._scan_button.text == "Stop"
+            assert gui._scan_button.text == t("stop")
