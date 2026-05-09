@@ -13,6 +13,7 @@ from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t, t_category
 from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
 
@@ -20,17 +21,19 @@ _VERSION = "0.2.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 
+_PADDING_H = 16
+_CATEGORY_COLORS = {
+    "redistributable": ft.Colors.ORANGE_700,
+    "shader_cache": ft.Colors.PURPLE_700,
+    "crash_dump": ft.Colors.RED_700,
+    "old_log": ft.Colors.BLUE_GREY_700,
+    "installer": ft.Colors.AMBER_700,
+    "cross_platform": ft.Colors.TEAL_700,
+}
+
 
 class _WindowHider:
-    """Hides the Flutter window before Python gets control via WebSocket.
-
-    Flet's Flutter runtime creates and shows a native window before any
-    Python code runs. This class polls for the Flutter window class at 1ms
-    intervals and immediately moves it off-screen + hides it, preventing
-    the visible "jump" when restoring saved window geometry.
-
-    Windows-only. On other platforms this is a no-op.
-    """
+    """Hides the Flutter window before Python gets control via WebSocket."""
 
     def __init__(self):
         self._hwnd: int | None = None
@@ -39,8 +42,7 @@ class _WindowHider:
     def start(self):
         if sys.platform != "win32":
             return
-        thread = threading.Thread(target=self._monitor, daemon=True)
-        thread.start()
+        threading.Thread(target=self._monitor, daemon=True).start()
 
     def stop(self):
         self._stop.set()
@@ -50,39 +52,34 @@ class _WindowHider:
             return
         import ctypes
 
-        ctypes.windll.user32.ShowWindow(self._hwnd, 5)  # SW_SHOW
+        ctypes.windll.user32.ShowWindow(self._hwnd, 5)
 
     def _monitor(self):
         import ctypes
         import ctypes.wintypes
 
         user32 = ctypes.windll.user32
-        sw_hide = 0
-        swp_nosize = 0x0001
-        swp_nozorder = 0x0004
-        swp_noactivate = 0x0010
-
-        enum_callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+        enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
         def find_flutter():
             found = [None]
 
             def callback(hwnd, _):
-                class_name = ctypes.create_unicode_buffer(256)
-                user32.GetClassNameW(hwnd, class_name, 256)
-                if "FLUTTER" in class_name.value.upper():
+                buf = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(hwnd, buf, 256)
+                if "FLUTTER" in buf.value.upper():
                     found[0] = hwnd
                     return False
                 return True
 
-            user32.EnumWindows(enum_callback_type(callback), 0)
+            user32.EnumWindows(enum_cb(callback), 0)
             return found[0]
 
         while not self._stop.is_set():
             hwnd = find_flutter()
             if hwnd:
-                user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, swp_nosize | swp_nozorder | swp_noactivate)
-                user32.ShowWindow(hwnd, sw_hide)
+                user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010)
+                user32.ShowWindow(hwnd, 0)
                 self._hwnd = hwnd
                 return
             time.sleep(0.001)
@@ -90,6 +87,7 @@ class _WindowHider:
 
 class SteamCleanerGUI:
     def __init__(self, page: ft.Page, window_hider: _WindowHider | None = None):
+        init_lang()
         self._page = page
         self._result = ScanResult()
         self._selected: set[Path] = set()
@@ -100,12 +98,12 @@ class SteamCleanerGUI:
         self._cancel_event: threading.Event | None = None
         self._text_input_focused = False
         self._window_hider = window_hider or _WindowHider()
-        self._status = ft.Text("Ready")
-        self._total_label = ft.Text("")
+        self._status = ft.Text(t("ready"), size=12)
+        self._total_label = ft.Text("", size=12)
         self._theme_button = ft.IconButton()
-        self._scan_button = ft.Button("Scan")
-        self._clean_button = ft.Button("Clean Selected", disabled=True)
-        self._select_all_button = ft.TextButton("Select All", disabled=True)
+        self._scan_button = ft.Button(t("scan"))
+        self._clean_button = ft.Button(t("clean_selected"), disabled=True)
+        self._select_all_button = ft.TextButton(t("select_all"), disabled=True)
         self._sort_dropdown = ft.Dropdown(width=160)
         self._filter_dropdown = ft.Dropdown(width=160)
         self._search_field = ft.TextField()
@@ -150,6 +148,7 @@ class SteamCleanerGUI:
         self._page.window.on_event = self._on_window_event
         self._page.on_keyboard_event = self._on_keyboard
         self._page.padding = 0
+        self._page.spacing = 0
 
     def _save_window_geometry(self):
         window = self._page.window
@@ -174,7 +173,7 @@ class SteamCleanerGUI:
                 self._cancel_event.set()
             elif self._selected:
                 self._selected.clear()
-                self._select_all_button.text = "Select All"
+                self._select_all_button.text = t("select_all")
                 self._refresh_list()
             elif self._text_input_focused:
                 self._search_field.value = ""
@@ -192,24 +191,26 @@ class SteamCleanerGUI:
             self._on_clean(None)
 
     def _build_ui(self):
-        self._status = ft.Text("Ready", size=14)
-        self._total_label = ft.Text("", size=14, weight=ft.FontWeight.BOLD)
-
         is_dark = self._page.theme_mode == ft.ThemeMode.DARK
+
+        self._status = ft.Text(t("ready"), size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE))
+        self._total_label = ft.Text("", size=12, weight=ft.FontWeight.W_500)
+
         self._theme_button = ft.IconButton(
             icon=ft.Icons.LIGHT_MODE if is_dark else ft.Icons.DARK_MODE,
-            tooltip="Switch to light theme" if is_dark else "Switch to dark theme",
+            tooltip=t("theme_to_light") if is_dark else t("theme_to_dark"),
             on_click=self._on_toggle_theme,
+            icon_size=20,
         )
 
         self._scan_button = ft.Button(
-            "Scan",
+            t("scan"),
             icon=ft.Icons.SEARCH,
             on_click=self._on_scan,
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         )
         self._clean_button = ft.Button(
-            "Clean Selected",
+            t("clean_selected"),
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
             disabled=True,
@@ -227,20 +228,20 @@ class SteamCleanerGUI:
             ),
         )
         self._select_all_button = ft.TextButton(
-            "Select All",
+            t("select_all"),
             on_click=self._on_select_all,
             disabled=True,
         )
 
         self._sort_dropdown = ft.Dropdown(
-            width=200,
+            width=180,
             value="size_desc",
-            label="Sort by",
+            label=t("sort_by"),
             options=[
-                ft.dropdown.Option("size_desc", "Size (largest)"),
-                ft.dropdown.Option("size_asc", "Size (smallest)"),
-                ft.dropdown.Option("category", "Category"),
-                ft.dropdown.Option("path", "Path"),
+                ft.dropdown.Option("size_desc", t("size_largest")),
+                ft.dropdown.Option("size_asc", t("size_smallest")),
+                ft.dropdown.Option("category", t("category")),
+                ft.dropdown.Option("path", t("path")),
             ],
             on_select=self._on_sort_changed,
             dense=True,
@@ -248,17 +249,17 @@ class SteamCleanerGUI:
         )
 
         self._filter_dropdown = ft.Dropdown(
-            width=200,
+            width=180,
             value="all",
-            label="Filter",
-            options=[ft.dropdown.Option("all", "All categories")],
+            label=t("filter"),
+            options=[ft.dropdown.Option("all", t("all_categories"))],
             on_select=self._on_filter_changed,
             dense=True,
             text_size=13,
         )
 
         self._search_field = ft.TextField(
-            label="Search",
+            label=t("search"),
             prefix_icon=ft.Icons.SEARCH,
             expand=True,
             dense=True,
@@ -269,36 +270,35 @@ class SteamCleanerGUI:
         )
 
         self._progress = ft.ProgressBar(opacity=0)
-
-        self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.Padding.symmetric(horizontal=16))
+        self._results_list = ft.ListView(expand=True, spacing=1, padding=ft.Padding.symmetric(horizontal=_PADDING_H))
 
         settings_button = ft.IconButton(
             icon=ft.Icons.SETTINGS,
-            tooltip="Settings",
+            tooltip=t("settings"),
             on_click=self._on_settings_click,
+            icon_size=20,
         )
         about_button = ft.IconButton(
             icon=ft.Icons.INFO_OUTLINE,
-            tooltip="About",
+            tooltip=t("about"),
             on_click=self._on_about_click,
+            icon_size=20,
         )
 
         header = ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(ft.Icons.CLEANING_SERVICES, size=28, color=ft.Colors.BLUE_400),
-                    ft.Text("SteamCleaner", size=22, weight=ft.FontWeight.BOLD),
+                    ft.Icon(ft.Icons.CLEANING_SERVICES, size=24, color=ft.Colors.BLUE_400),
+                    ft.Text("SteamCleaner", size=18, weight=ft.FontWeight.BOLD),
                     ft.Container(expand=True),
-                    self._status,
                     settings_button,
                     about_button,
                     self._theme_button,
                 ],
-                alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=4,
             ),
-            padding=ft.Padding.symmetric(horizontal=20, vertical=12),
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            padding=ft.Padding.symmetric(horizontal=_PADDING_H, vertical=8),
         )
 
         toolbar = ft.Container(
@@ -306,26 +306,27 @@ class SteamCleanerGUI:
                 [
                     self._scan_button,
                     self._select_all_button,
+                    ft.VerticalDivider(width=1),
                     self._sort_dropdown,
                     self._filter_dropdown,
                     self._search_field,
-                    self._total_label,
+                    ft.VerticalDivider(width=1),
                     self._clean_button,
                 ],
-                alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=8,
             ),
-            padding=ft.Padding.symmetric(horizontal=20, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=_PADDING_H, vertical=6),
         )
 
         self._empty_state = ft.Column(
             [
                 ft.Container(expand=True),
-                ft.Icon(ft.Icons.SEARCH_OFF, size=48, color=ft.Colors.with_opacity(0.4, ft.Colors.ON_SURFACE)),
+                ft.Icon(ft.Icons.SEARCH_OFF, size=48, color=ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE)),
                 ft.Text(
-                    "Click Scan to find junk files",
-                    size=16,
-                    color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE),
+                    t("empty_scan"),
+                    size=15,
+                    color=ft.Colors.with_opacity(0.4, ft.Colors.ON_SURFACE),
                 ),
                 ft.Container(expand=True),
             ],
@@ -334,36 +335,45 @@ class SteamCleanerGUI:
             expand=True,
         )
 
+        status_bar = ft.Container(
+            content=ft.Row(
+                [
+                    self._status,
+                    ft.Container(expand=True),
+                    self._total_label,
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding.symmetric(horizontal=_PADDING_H, vertical=6),
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_SURFACE),
+        )
+
         self._page.add(
             header,
-            self._progress,
+            ft.Divider(height=1),
             toolbar,
             ft.Divider(height=1),
             ft.Stack([self._results_list, self._empty_state], expand=True),
+            self._progress,
+            status_bar,
         )
         self._window_hider.show()
         self._page.window.visible = True
         self._page.update()
 
-    _CATEGORY_COLORS = {
-        "redistributable": ft.Colors.ORANGE_700,
-        "shader_cache": ft.Colors.PURPLE_700,
-        "crash_dump": ft.Colors.RED_700,
-        "old_log": ft.Colors.BLUE_GREY_700,
-        "installer": ft.Colors.AMBER_700,
-        "cross_platform": ft.Colors.TEAL_700,
-    }
-
-    def _make_row(self, entry: JunkEntry) -> ft.Container:
+    def _make_row(self, entry: JunkEntry, index: int) -> ft.Container:
         entry_path = entry.path
+        is_selected = entry_path in self._selected
+
         checkbox = ft.Checkbox(
-            value=entry_path in self._selected,
+            value=is_selected,
             on_change=lambda event, path=entry_path: self._on_toggle(path, event.control.value),
         )
 
+        badge_color = _CATEGORY_COLORS.get(entry.category.value, ft.Colors.GREY_700)
         badge = ft.Container(
-            content=ft.Text(entry.category.value.replace("_", " "), size=11, color=ft.Colors.WHITE),
-            bgcolor=self._CATEGORY_COLORS.get(entry.category.value, ft.Colors.GREY_700),
+            content=ft.Text(t_category(entry.category.value), size=11, color=ft.Colors.WHITE),
+            bgcolor=badge_color,
             border_radius=4,
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
@@ -374,17 +384,21 @@ class SteamCleanerGUI:
             padding=0,
             items=[
                 ft.PopupMenuItem(
-                    "Open in Explorer",
+                    t("open_in_explorer"),
                     icon=ft.Icons.FOLDER_OPEN,
                     on_click=lambda _, path=entry_path: self._open_in_explorer(path),
                 ),
                 ft.PopupMenuItem(
-                    "Copy path",
+                    t("copy_path"),
                     icon=ft.Icons.CONTENT_COPY,
                     on_click=lambda _, path=entry_path: self._copy_path(path),
                 ),
             ],
         )
+
+        row_bg = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+        if is_selected:
+            row_bg = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
 
         return ft.Container(
             content=ft.Row(
@@ -395,6 +409,7 @@ class SteamCleanerGUI:
                         width=80,
                         text_align=ft.TextAlign.RIGHT,
                         weight=ft.FontWeight.W_500,
+                        size=13,
                     ),
                     badge,
                     ft.Text(
@@ -410,7 +425,8 @@ class SteamCleanerGUI:
                 spacing=12,
             ),
             padding=ft.Padding.symmetric(horizontal=4, vertical=2),
-            border_radius=6,
+            border_radius=4,
+            bgcolor=row_bg,
             ink=True,
             on_click=lambda event, path=entry_path: self._on_row_click(path),
         )
@@ -420,8 +436,8 @@ class SteamCleanerGUI:
         if self._category_filter and self._category_filter != "all":
             entries = [entry for entry in entries if entry.category.value == self._category_filter]
         if self._search_query:
-            query = self._search_query.lower()
-            entries = [entry for entry in entries if query in str(entry.path).lower()]
+            query_lower = self._search_query.lower()
+            entries = [entry for entry in entries if query_lower in str(entry.path).lower()]
         match self._sort_key:
             case "size_desc":
                 entries = sorted(entries, key=lambda entry: entry.size_bytes, reverse=True)
@@ -436,8 +452,8 @@ class SteamCleanerGUI:
     def _refresh_list(self):
         self._apply_sort_filter()
         self._results_list.controls.clear()
-        for entry in self._visible_entries:
-            self._results_list.controls.append(self._make_row(entry))
+        for index, entry in enumerate(self._visible_entries):
+            self._results_list.controls.append(self._make_row(entry, index))
         self._update_empty_state()
         self._update_totals()
         self._page.update()
@@ -454,19 +470,18 @@ class SteamCleanerGUI:
             self._empty_state.visible = False
         elif has_results:
             icon_control.name = ft.Icons.FILTER_LIST_OFF
-            text_control.value = "No results matching your filters"
+            text_control.value = t("empty_filter")
             self._empty_state.visible = True
         else:
             icon_control.name = ft.Icons.SEARCH_OFF
-            text_control.value = "Click Scan to find junk files"
+            text_control.value = t("empty_scan")
             self._empty_state.visible = True
 
     def _rebuild_filter_options(self):
         categories = sorted({entry.category.value for entry in self._result.entries})
-        options: list[ft.dropdown.Option] = [ft.dropdown.Option("all", "All categories")]
+        options: list[ft.dropdown.Option] = [ft.dropdown.Option("all", t("all_categories"))]
         for category in categories:
-            label = category.replace("_", " ").title()
-            options.append(ft.dropdown.Option(category, label))
+            options.append(ft.dropdown.Option(category, t_category(category)))
         self._filter_dropdown.options = options
         if self._category_filter not in categories:
             self._category_filter = None
@@ -478,9 +493,16 @@ class SteamCleanerGUI:
         selected_formatted = format_size(selected_bytes)
         visible_count = len(self._visible_entries)
         total_count = len(self._result.entries)
-        filter_note = f" ({visible_count} shown)" if visible_count != total_count else ""
+        filter_note = t("total_shown", shown=visible_count) if visible_count != total_count else ""
         self._total_label.value = (
-            f"{selected_formatted} / {total_formatted} selected ({len(self._selected)}/{total_count}){filter_note}"
+            t(
+                "total_selected",
+                selected=selected_formatted,
+                total=total_formatted,
+                sel_count=len(self._selected),
+                total_count=total_count,
+            )
+            + filter_note
         )
         has_selection = len(self._selected) > 0
         self._clean_button.disabled = not has_selection
@@ -505,7 +527,7 @@ class SteamCleanerGUI:
         async def do_copy():
             clipboard = ft.Clipboard()
             await clipboard.set(str(path))
-            self._show_snackbar("Path copied to clipboard")
+            self._show_snackbar(t("path_copied"))
 
         self._page.run_task(do_copy)
 
@@ -527,10 +549,10 @@ class SteamCleanerGUI:
         visible_paths = {entry.path for entry in self._visible_entries}
         if visible_paths.issubset(self._selected):
             self._selected -= visible_paths
-            self._select_all_button.text = "Select All"
+            self._select_all_button.text = t("select_all")
         else:
             self._selected |= visible_paths
-            self._select_all_button.text = "Deselect All"
+            self._select_all_button.text = t("deselect_all")
         self._refresh_list()
 
     def _on_sort_changed(self, event):
@@ -550,17 +572,17 @@ class SteamCleanerGUI:
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
             self._theme_button.icon = ft.Icons.DARK_MODE
-            self._theme_button.tooltip = "Switch to dark theme"
+            self._theme_button.tooltip = t("theme_to_dark")
             save_value("ui", "theme", "light")
         else:
             self._page.theme_mode = ft.ThemeMode.DARK
             self._theme_button.icon = ft.Icons.LIGHT_MODE
-            self._theme_button.tooltip = "Switch to light theme"
+            self._theme_button.tooltip = t("theme_to_light")
             save_value("ui", "theme", "dark")
         self._page.update()
 
     def _reset_scan_ui(self):
-        self._scan_button.text = "Scan"
+        self._scan_button.text = t("scan")
         self._scan_button.icon = ft.Icons.SEARCH
         self._progress.opacity = 0
         self._cancel_event = None
@@ -580,10 +602,10 @@ class SteamCleanerGUI:
             return
 
         self._cancel_event = threading.Event()
-        self._scan_button.text = "Stop"
+        self._scan_button.text = t("stop")
         self._scan_button.icon = ft.Icons.STOP
         self._progress.opacity = 1
-        self._status.value = "Scanning..."
+        self._status.value = t("scanning")
         self._result = ScanResult()
         self._selected.clear()
         self._results_list.controls.clear()
@@ -597,7 +619,7 @@ class SteamCleanerGUI:
         assert self._cancel_event is not None
         cancel = self._cancel_event
         found_queue: queue.Queue[JunkEntry] = queue.Queue()
-        status_text = ["Scanning..."]
+        status_text = [t("scanning")]
         scan_done = threading.Event()
 
         def on_progress(message: str, _count: int):
@@ -617,7 +639,7 @@ class SteamCleanerGUI:
                 engine = ScanEngine(platform, exclusions)
                 engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
             except Exception:
-                status_text[0] = "Scan failed"
+                status_text[0] = t("scan_failed")
             finally:
                 scan_done.set()
 
@@ -633,11 +655,11 @@ class SteamCleanerGUI:
 
         entry_count = len(self._result.entries)
         if cancel.is_set():
-            self._status.value = f"Stopped: {entry_count} items found so far"
-        elif status_text[0] == "Scan failed":
-            self._status.value = "Scan failed"
+            self._status.value = t("stopped", count=entry_count)
+        elif status_text[0] == t("scan_failed"):
+            self._status.value = t("scan_failed")
         else:
-            self._status.value = f"Found {entry_count} items: {format_size(self._result.total_bytes)}"
+            self._status.value = t("found_items", count=entry_count, size=format_size(self._result.total_bytes))
 
         self._reset_scan_ui()
         self._set_controls_locked(locked=False)
@@ -654,9 +676,11 @@ class SteamCleanerGUI:
             self._rebuild_filter_options()
             self._apply_sort_filter()
             self._results_list.controls.clear()
-            for visible_entry in self._visible_entries:
-                self._results_list.controls.append(self._make_row(visible_entry))
-            self._total_label.value = f"{len(self._result.entries)} items, {format_size(self._result.total_bytes)}"
+            for index, visible_entry in enumerate(self._visible_entries):
+                self._results_list.controls.append(self._make_row(visible_entry, index))
+            self._total_label.value = t(
+                "scan_progress", items=len(self._result.entries), size=format_size(self._result.total_bytes)
+            )
 
     def _on_clean(self, _event):
         if not self._selected:
@@ -669,18 +693,18 @@ class SteamCleanerGUI:
         item_summary = f"{len(entries)} items ({format_size(selected_bytes)})"
 
         if use_trash:
-            content = ft.Text(f"Move {item_summary} to trash?")
+            content = ft.Text(t("move_to_trash", summary=item_summary))
         else:
             content = ft.Column(
                 [
                     ft.Row(
                         [
                             ft.Icon(ft.Icons.WARNING_AMBER, color=ft.Colors.RED_700, size=24),
-                            ft.Text("Permanent deletion", weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700),
+                            ft.Text(t("permanent_deletion"), weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700),
                         ],
                         spacing=8,
                     ),
-                    ft.Text(f"{item_summary} will be deleted permanently. This cannot be undone."),
+                    ft.Text(t("permanent_warning", summary=item_summary)),
                 ],
                 tight=True,
                 spacing=12,
@@ -688,12 +712,12 @@ class SteamCleanerGUI:
 
         dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("Confirm deletion"),
+            title=ft.Text(t("confirm_deletion")),
             content=content,
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dialog)),
+                ft.TextButton(t("cancel"), on_click=lambda _: self._page.pop_dialog()),
                 ft.Button(
-                    "Delete permanently" if not use_trash else "Delete",
+                    t("delete_permanently") if not use_trash else t("delete"),
                     color=ft.Colors.WHITE,
                     bgcolor=ft.Colors.RED_700,
                     on_click=lambda _: self._confirm_clean(dialog, entries),
@@ -703,12 +727,9 @@ class SteamCleanerGUI:
         )
         self._page.show_dialog(dialog)
 
-    def _close_dialog(self, dialog: ft.AlertDialog):
-        self._page.pop_dialog()
-
     def _confirm_clean(self, dialog: ft.AlertDialog, entries: list[JunkEntry]):
         self._page.pop_dialog()
-        self._status.value = "Cleaning..."
+        self._status.value = t("cleaning")
         self._progress.opacity = 1
         self._set_controls_locked(locked=True)
         self._scan_button.disabled = True
@@ -725,7 +746,7 @@ class SteamCleanerGUI:
         def on_entry_cleaned(entry: JunkEntry, success: bool):
             progress_state[0] = int(progress_state[0]) + 1
             name = entry.path.name
-            status = "Deleted" if success else "Failed"
+            status = t("deleted") if success else t("failed")
             progress_state[1] = f"{status}: {name} ({progress_state[0]}/{total})"
 
         def run_clean():
@@ -742,7 +763,7 @@ class SteamCleanerGUI:
         while not clean_done.is_set():
             processed = int(progress_state[0])
             self._progress.value = processed / total if total else 0
-            self._status.value = str(progress_state[1]) or f"Cleaning 0/{total}..."
+            self._status.value = str(progress_state[1]) or t("cleaning_progress", total=total)
             self._page.update()
             await asyncio.sleep(0.1)
 
@@ -757,11 +778,11 @@ class SteamCleanerGUI:
 
         entry_count = len(self._result.entries)
         if stats.errors:
-            self._status.value = f"{entry_count} items remaining, {stats.skipped} failed"
+            self._status.value = t("items_remaining_errors", count=entry_count, errors=stats.skipped)
             self._show_error_dialog(stats)
         else:
-            self._status.value = f"{entry_count} items remaining"
-            self._show_snackbar(f"Deleted {stats.deleted} items ({format_size(stats.bytes_freed)})")
+            self._status.value = t("items_remaining", count=entry_count)
+            self._show_snackbar(t("deleted_summary", count=stats.deleted, size=format_size(stats.bytes_freed)))
 
         self._set_controls_locked(locked=False)
         self._rebuild_filter_options()
@@ -770,28 +791,45 @@ class SteamCleanerGUI:
     def _show_error_dialog(self, stats: CleanStats):
         error_lines: list[ft.Control] = [ft.Text(error, size=12) for error in stats.errors]
         dialog = ft.AlertDialog(
-            title=ft.Text(f"Deleted {stats.deleted}, failed {stats.skipped}"),
+            title=ft.Text(t("deleted_failed_title", deleted=stats.deleted, failed=stats.skipped)),
             content=ft.Column(error_lines, tight=True, scroll=ft.ScrollMode.AUTO, height=200),
-            actions=[ft.TextButton("OK", on_click=lambda _: self._page.pop_dialog())],
+            actions=[ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog())],
         )
         self._page.show_dialog(dialog)
 
     def _on_settings_click(self, _event):
         use_trash = get_value("clean", "use_trash", "true") == "true"
-        trash_switch = ft.Switch(label="Move to trash instead of permanent delete", value=use_trash)
+        trash_switch = ft.Switch(label=t("use_trash"), value=use_trash)
+        lang_dropdown = ft.Dropdown(
+            width=200,
+            label=t("language"),
+            value=get_lang(),
+            options=[ft.dropdown.Option(code, label) for code, label in LANGUAGES.items()],
+            dense=True,
+        )
 
         def save_settings(_event):
             save_value("clean", "use_trash", "true" if trash_switch.value else "false")
-            self._page.pop_dialog()
-            self._show_snackbar("Settings saved")
+            new_lang = lang_dropdown.value
+            if new_lang and new_lang != get_lang():
+                set_lang(new_lang)
+                self._page.pop_dialog()
+                self._page.controls.clear()
+                self._page.update()
+                self._build_ui()
+                self._rebuild_filter_options()
+                self._refresh_list()
+            else:
+                self._page.pop_dialog()
+            self._show_snackbar(t("settings_saved"))
 
         dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("Settings"),
-            content=ft.Column([trash_switch], tight=True, width=400),
+            title=ft.Text(t("settings")),
+            content=ft.Column([trash_switch, lang_dropdown], tight=True, width=400, spacing=16),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: self._page.pop_dialog()),
-                ft.Button("Save", on_click=save_settings),
+                ft.TextButton(t("cancel"), on_click=lambda _: self._page.pop_dialog()),
+                ft.Button(t("save"), on_click=save_settings),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -801,24 +839,24 @@ class SteamCleanerGUI:
         dialog = ft.AlertDialog(
             title=ft.Row(
                 [
-                    ft.Icon(ft.Icons.CLEANING_SERVICES, size=32, color=ft.Colors.BLUE_400),
-                    ft.Text("SteamCleaner", size=20, weight=ft.FontWeight.BOLD),
+                    ft.Icon(ft.Icons.CLEANING_SERVICES, size=28, color=ft.Colors.BLUE_400),
+                    ft.Text("SteamCleaner", size=18, weight=ft.FontWeight.BOLD),
                 ],
                 spacing=12,
             ),
             content=ft.Column(
                 [
-                    ft.Text(f"Version {_VERSION}", size=14),
+                    ft.Text(t("version", version=_VERSION), size=13),
                     ft.Text(
-                        "Reclaim disk space from game clients",
-                        size=13,
+                        t("description"),
+                        size=12,
                         color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE),
                     ),
                     ft.Divider(height=16),
-                    ft.Text("Keyboard shortcuts", weight=ft.FontWeight.BOLD, size=13),
-                    ft.Text("Ctrl+A — select / deselect all", size=12),
-                    ft.Text("Delete — clean selected items", size=12),
-                    ft.Text("Escape — cancel scan / deselect / clear search", size=12),
+                    ft.Text(t("keyboard_shortcuts"), weight=ft.FontWeight.BOLD, size=13),
+                    ft.Text(t("shortcut_select_all"), size=12),
+                    ft.Text(t("shortcut_delete"), size=12),
+                    ft.Text(t("shortcut_escape"), size=12),
                     ft.Divider(height=16),
                     ft.Row(
                         [
@@ -830,9 +868,9 @@ class SteamCleanerGUI:
                 ],
                 tight=True,
                 width=360,
-                spacing=8,
+                spacing=6,
             ),
-            actions=[ft.TextButton("Close", on_click=lambda _: self._page.pop_dialog())],
+            actions=[ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog())],
         )
         self._page.show_dialog(dialog)
 
