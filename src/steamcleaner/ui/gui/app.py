@@ -40,6 +40,7 @@ class _WindowHider:
         self._stop = threading.Event()
 
     def start(self):
+
         if sys.platform != "win32":
             return
         threading.Thread(target=self._monitor, daemon=True).start()
@@ -52,8 +53,10 @@ class _WindowHider:
             return
         import ctypes
 
+        # noinspection PyUnresolvedReferences
         ctypes.windll.user32.ShowWindow(self._hwnd, 5)
 
+    # noinspection PyUnresolvedReferences
     def _monitor(self):
         import ctypes
         import ctypes.wintypes
@@ -61,14 +64,16 @@ class _WindowHider:
         user32 = ctypes.windll.user32
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
-        def find_flutter():
-            found = [None]
+        # noinspection PyUnresolvedReferences
+        def find_flutter() -> int | None:
+            found: list[int | None] = [None]
 
-            def callback(hwnd, _):
+            # noinspection PyUnresolvedReferences
+            def callback(window_handle, _):
                 buf = ctypes.create_unicode_buffer(256)
-                user32.GetClassNameW(hwnd, buf, 256)
+                user32.GetClassNameW(window_handle, buf, 256)
                 if "FLUTTER" in buf.value.upper():
-                    found[0] = hwnd
+                    found[0] = window_handle
                     return False
                 return True
 
@@ -178,6 +183,7 @@ class SteamCleanerGUI:
             elif self._text_input_focused:
                 self._search_field.value = ""
                 self._search_query = ""
+                # noinspection PyUnresolvedReferences
                 self._page.focus()
                 self._refresh_list()
             return
@@ -531,7 +537,8 @@ class SteamCleanerGUI:
 
         self._page.run_task(do_copy)
 
-    def _open_in_explorer(self, path: Path):
+    @staticmethod
+    def _open_in_explorer(path: Path):
         import subprocess
 
         if sys.platform == "win32":
@@ -638,7 +645,7 @@ class SteamCleanerGUI:
                 exclusions = ExclusionRegistry()
                 engine = ScanEngine(platform, exclusions)
                 engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
-            except Exception:
+            except OSError, ValueError, KeyError:
                 status_text[0] = t("scan_failed")
             finally:
                 scan_done.set()
@@ -720,14 +727,14 @@ class SteamCleanerGUI:
                     t("delete_permanently") if not use_trash else t("delete"),
                     color=ft.Colors.WHITE,
                     bgcolor=ft.Colors.RED_700,
-                    on_click=lambda _: self._confirm_clean(dialog, entries),
+                    on_click=lambda _: self._confirm_clean(entries),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self._page.show_dialog(dialog)
 
-    def _confirm_clean(self, dialog: ft.AlertDialog, entries: list[JunkEntry]):
+    def _confirm_clean(self, entries: list[JunkEntry]):
         self._page.pop_dialog()
         self._status.value = t("cleaning")
         self._progress.opacity = 1
@@ -737,7 +744,7 @@ class SteamCleanerGUI:
         self._page.run_task(self._clean_task, entries)
 
     async def _clean_task(self, entries: list[JunkEntry]):
-        deleted_set = set(id(entry) for entry in entries)
+        deleted_set = {id(entry) for entry in entries}
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
         total = len(entries)
