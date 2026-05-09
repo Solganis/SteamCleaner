@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from steamcleaner.utils.config import _config_dir, get_value, load_config, save_value
+from steamcleaner.utils.config import _config_dir, get_list, get_value, load_config, save_value
 
 
 class TestConfigDir:
@@ -66,3 +66,32 @@ class TestConfig:
         path.write_text('broken = "not a section"\n', encoding="utf-8")
         with patch("steamcleaner.utils.config._config_path", return_value=path):
             assert get_value("broken", "key", "fallback") == "fallback"
+
+    def test_save_and_get_list(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            save_value("scan", "custom_paths", ["C:\\Games", "D:\\Library"])
+            result = get_list("scan", "custom_paths")
+            assert result == ["C:\\Games", "D:\\Library"]
+
+    def test_get_list_empty(self, tmp_path: Path):
+        with patch("steamcleaner.utils.config._config_path", return_value=tmp_path / "missing.toml"):
+            assert get_list("scan", "custom_paths") == []
+
+    def test_get_value_returns_default_for_list_key(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            save_value("scan", "custom_paths", ["C:\\Games"])
+            assert get_value("scan", "custom_paths", "fallback") == "fallback"
+
+    def test_get_list_non_dict_section(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        path.write_text('broken = "not a section"\n', encoding="utf-8")
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            assert get_list("broken", "key") == []
+
+    def test_save_list_empty(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            save_value("scan", "custom_paths", [])
+            assert get_list("scan", "custom_paths") == []
