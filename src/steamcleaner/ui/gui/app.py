@@ -667,15 +667,34 @@ class SteamCleanerGUI:
         selected_bytes = sum(entry.size_bytes for entry in entries)
 
         use_trash = get_value("clean", "use_trash", "true") == "true"
-        action_text = "Move to trash" if use_trash else "Permanently delete"
+        item_summary = f"{len(entries)} items ({format_size(selected_bytes)})"
+
+        if use_trash:
+            content = ft.Text(f"Move {item_summary} to trash?")
+        else:
+            content = ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.WARNING_AMBER, color=ft.Colors.RED_700, size=24),
+                            ft.Text("Permanent deletion", weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700),
+                        ],
+                        spacing=8,
+                    ),
+                    ft.Text(f"{item_summary} will be deleted permanently. This cannot be undone."),
+                ],
+                tight=True,
+                spacing=12,
+            )
+
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("Confirm deletion"),
-            content=ft.Text(f"{action_text} {len(entries)} items ({format_size(selected_bytes)})?"),
+            content=content,
             actions=[
                 ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dialog)),
                 ft.Button(
-                    "Delete",
+                    "Delete permanently" if not use_trash else "Delete",
                     color=ft.Colors.WHITE,
                     bgcolor=ft.Colors.RED_700,
                     on_click=lambda _: self._confirm_clean(dialog, entries),
