@@ -284,6 +284,12 @@ class TestEaEdgeCases:
         entries = list(client.scan_junk())
         assert entries == []
 
+    def test_exe_outside_redist_ignored(self, tmp_path: Path):
+        platform, client = _make_ea_env(tmp_path, games={"BF2042": {"Binaries": ["game.exe"]}})
+        entries = list(client.scan_junk())
+        redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
+        assert len(redist) == 0
+
     def test_empty_game_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"EmptyGame": {"": []}})
         entries = list(client.scan_junk())
