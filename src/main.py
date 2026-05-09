@@ -1,5 +1,6 @@
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 
-def main(page):
-    SteamCleanerGUI(page)
+async def main(page):
+    gui = SteamCleanerGUI(page)
+    await gui.initialize()
