@@ -16,7 +16,7 @@
 
 Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
 
-Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities, modern UI, and active development.
+Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities and modern UI.
 
 Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
