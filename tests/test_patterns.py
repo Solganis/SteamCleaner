@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.patterns import COMMON_PATTERNS, JunkPattern
 
