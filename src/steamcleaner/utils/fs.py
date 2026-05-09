@@ -8,7 +8,7 @@ def is_reparse_point(path: Path) -> bool:
     try:
         attrs = path.lstat().st_file_attributes  # type: ignore[attr-defined]
         return bool(attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT)
-    except (AttributeError, OSError):  # fmt: skip
+    except (AttributeError, OSError):  # fmt: skip — ruff py314 removes parens (PEP 758), but flet build bundles older Python
         return path.is_symlink()
 
 
