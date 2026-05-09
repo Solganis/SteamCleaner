@@ -23,6 +23,9 @@ class GogClient(GameClient):
     def is_installed(self) -> bool:
         if self._galaxy_data_dir().is_dir():
             return True
+        gog_games = self._platform.home() / "GOG Games"
+        if gog_games.is_dir():
+            return True
         for prefix in self._platform.wine_prefixes():
             for gog_path in (
                 prefix / "Program Files (x86)" / "GOG Galaxy" / "Games",
@@ -52,6 +55,12 @@ class GogClient(GameClient):
                     for game_dir in list_subdirs(games_dir):
                         if game_dir not in paths:
                             paths.append(game_dir)
+
+        gog_games = self._platform.home() / "GOG Games"
+        if gog_games.is_dir():
+            for game_dir in list_subdirs(gog_games):
+                if game_dir not in paths:
+                    paths.append(game_dir)
 
         for prefix in self._platform.wine_prefixes():
             for gog_path in (
@@ -155,18 +164,23 @@ class GogClient(GameClient):
             )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
-        webcache_dir = self._galaxy_data_dir() / "webcache"
-        if not webcache_dir.is_dir() or self.cancelled:
-            return
-        total = dir_size(webcache_dir)
-        if total > 0:
-            yield JunkEntry(
-                path=webcache_dir,
-                category=JunkCategory.SHADER_CACHE,
-                size_bytes=total,
-                client_name=self.name,
-                description="GOG Galaxy web cache",
-            )
+        cache_dirs = [self._galaxy_data_dir() / "webcache"]
+        home = self._platform.home()
+        for bundle_id in ("com.gog.galaxy", "5b6cd92d.com.gog.galaxy"):
+            cache_dirs.append(home / "Library" / "Caches" / bundle_id)
+
+        for webcache_dir in cache_dirs:
+            if not webcache_dir.is_dir() or self.cancelled:
+                continue
+            total = dir_size(webcache_dir)
+            if total > 0:
+                yield JunkEntry(
+                    path=webcache_dir,
+                    category=JunkCategory.SHADER_CACHE,
+                    size_bytes=total,
+                    client_name=self.name,
+                    description="GOG Galaxy web cache",
+                )
 
 
 def _has_redist_ancestor(file_path: Path, root: Path) -> bool:

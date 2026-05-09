@@ -15,12 +15,14 @@ class FakePlatformAdapter(PlatformAdapter):
         program_files_dirs: list[Path] | None = None,
         programdata_dir: Path | None = None,
         wine_prefix_dirs: list[Path] | None = None,
+        appdata_local_dir: Path | None = None,
     ):
         self._install_path = install_path
         self._home = home_dir or Path.home()
         self._program_files = program_files_dirs or []
         self._programdata = programdata_dir
         self._wine_prefixes = wine_prefix_dirs or []
+        self._appdata_local_override = appdata_local_dir
         self._registry: dict[tuple[str, str, str], str] = {}
         self._registry_subkeys: dict[tuple[str, str], list[str]] = {}
         if install_path:
@@ -39,6 +41,8 @@ class FakePlatformAdapter(PlatformAdapter):
         return self._registry_subkeys.get((key, subkey), [])
 
     def appdata_local(self) -> Path:
+        if self._appdata_local_override:
+            return self._appdata_local_override
         return self._home / ".local" / "share"
 
     def appdata_roaming(self) -> Path:
