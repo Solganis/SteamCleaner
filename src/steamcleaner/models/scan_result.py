@@ -27,8 +27,8 @@ class ScanResult:
             result.setdefault(entry.client_name, []).append(entry)
         return result
 
-    def filter_min_size(self, min_bytes: int) -> ScanResult:
+    def filter_min_size(self, min_bytes: int) -> "ScanResult":
         return ScanResult(entries=[entry for entry in self.entries if entry.size_bytes >= min_bytes])
 
-    def merge(self, other: ScanResult) -> ScanResult:
+    def merge(self, other: "ScanResult") -> "ScanResult":
         return ScanResult(entries=self.entries + other.entries)
