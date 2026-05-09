@@ -17,7 +17,7 @@ from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t
 from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
 
-_VERSION = "0.2.0"
+_VERSION = "0.3.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 
