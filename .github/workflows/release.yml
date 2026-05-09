@@ -37,7 +37,7 @@ jobs:
           path: |
             ~/.flet/bin
             ~/AppData/Local/flet/bin
-          key: flutter-${{ matrix.os }}-${{ hashFiles('uv.lock') }}
+          key: flutter-${{ matrix.os }}-flet0.85
           restore-keys: flutter-${{ matrix.os }}-
       - name: Build
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
@@ -48,10 +48,10 @@ jobs:
         run: find dist -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
-        run: 7z a -mx=9 ${{ matrix.artifact }}.zip ./dist/*
+        run: 7z a -mx=5 ${{ matrix.artifact }}.zip ./dist/*
       - name: Archive (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: tar -cf - -C dist . | xz -9e > ${{ matrix.artifact }}.tar.xz
+        run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
