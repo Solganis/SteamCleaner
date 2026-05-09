@@ -42,7 +42,7 @@ class EpicClient(GameClient):
                             candidate = Path(install_location)
                             if candidate.is_dir() and candidate not in paths:
                                 paths.append(candidate)
-                    except (json.JSONDecodeError, OSError):
+                    except json.JSONDecodeError, OSError:
                         continue
 
         for program_dir in self._platform.program_files():
