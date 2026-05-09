@@ -109,7 +109,7 @@ class SteamCleanerGUI:
         self._sort_dropdown = ft.Dropdown(width=160)
         self._filter_dropdown = ft.Dropdown(width=160)
         self._search_field = ft.TextField()
-        self._progress = ft.ProgressBar(visible=False)
+        self._progress = ft.ProgressBar(opacity=0)
         self._results_list = ft.ListView()
         self._empty_state = ft.Column()
         self._setup_page()
@@ -268,7 +268,7 @@ class SteamCleanerGUI:
             on_blur=lambda _: self._set_text_input_focus(False),
         )
 
-        self._progress = ft.ProgressBar(visible=False)
+        self._progress = ft.ProgressBar(opacity=0)
 
         self._results_list = ft.ListView(expand=True, spacing=2, padding=ft.Padding.symmetric(horizontal=16))
 
@@ -562,7 +562,7 @@ class SteamCleanerGUI:
     def _reset_scan_ui(self):
         self._scan_button.text = "Scan"
         self._scan_button.icon = ft.Icons.SEARCH
-        self._progress.visible = False
+        self._progress.opacity = 0
         self._cancel_event = None
 
     def _set_controls_locked(self, locked: bool):
@@ -582,7 +582,7 @@ class SteamCleanerGUI:
         self._cancel_event = threading.Event()
         self._scan_button.text = "Stop"
         self._scan_button.icon = ft.Icons.STOP
-        self._progress.visible = True
+        self._progress.opacity = 1
         self._status.value = "Scanning..."
         self._result = ScanResult()
         self._selected.clear()
@@ -709,7 +709,7 @@ class SteamCleanerGUI:
     def _confirm_clean(self, dialog: ft.AlertDialog, entries: list[JunkEntry]):
         self._page.pop_dialog()
         self._status.value = "Cleaning..."
-        self._progress.visible = True
+        self._progress.opacity = 1
         self._set_controls_locked(locked=True)
         self._scan_button.disabled = True
         self._page.update()
@@ -752,7 +752,7 @@ class SteamCleanerGUI:
         self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
         self._selected -= deleted_paths
         self._scan_button.disabled = False
-        self._progress.visible = False
+        self._progress.opacity = 0
         self._progress.value = None
 
         entry_count = len(self._result.entries)
