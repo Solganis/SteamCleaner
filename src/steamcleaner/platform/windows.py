@@ -39,3 +39,6 @@ class WindowsAdapter(PlatformAdapter):
                 if program_path.is_dir() and program_path not in paths:
                     paths.append(program_path)
         return paths
+
+    def programdata(self) -> Path:
+        return Path(os.environ.get("PROGRAMDATA", "C:/ProgramData"))
