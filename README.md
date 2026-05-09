@@ -66,6 +66,7 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 ## Supported platforms
 
 - Windows 10/11
+- macOS (Apple Silicon and Intel)
 - Linux (native, Flatpak, Snap)
 - Wine/Proton: all non-Steam clients scan games installed through Wine, Proton (Steam Play), Bottles, and Lutris
 

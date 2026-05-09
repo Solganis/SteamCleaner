@@ -21,21 +21,30 @@ class EpicClient(GameClient):
         return "Epic Games"
 
     def is_installed(self) -> bool:
-        if self._launcher_data_dir().is_dir():
+        if any(data_dir.is_dir() for data_dir in self._launcher_data_dirs()):
             return True
         return any((prefix / "Program Files" / "Epic Games").is_dir() for prefix in self._platform.wine_prefixes())
 
-    def _launcher_data_dir(self) -> Path:
-        return self._platform.appdata_local() / "EpicGamesLauncher"
+    def _launcher_data_dirs(self) -> list[Path]:
+        appdata = self._platform.appdata_local()
+        return [
+            appdata / "EpicGamesLauncher",
+            appdata / "Epic" / "EpicGamesLauncher",
+        ]
 
-    def _manifests_dir(self) -> Path:
-        return self._platform.programdata() / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
+    def _manifests_dirs(self) -> list[Path]:
+        return [
+            self._platform.programdata() / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests",
+            self._platform.appdata_local() / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests",
+        ]
 
     def _game_install_paths(self) -> list[Path]:
         paths: list[Path] = []
-        manifests = self._manifests_dir()
-        if manifests.is_dir():
-            for item_file in manifests.iterdir():
+
+        for manifests_dir in self._manifests_dirs():
+            if not manifests_dir.is_dir():
+                continue
+            for item_file in manifests_dir.iterdir():
                 if item_file.suffix == ".item" and item_file.is_file():
                     try:
                         data = json.loads(item_file.read_text(encoding="utf-8", errors="replace"))
@@ -55,6 +64,14 @@ class EpicClient(GameClient):
                         continue
                     if game_dir not in paths:
                         paths.append(game_dir)
+
+        shared_epic = self._platform.programdata() / "Epic Games"
+        if shared_epic.is_dir():
+            for game_dir in list_subdirs(shared_epic):
+                if game_dir.name == "Launcher":
+                    continue
+                if game_dir not in paths:
+                    paths.append(game_dir)
 
         for prefix in self._platform.wine_prefixes():
             epic_dir = prefix / "Program Files" / "Epic Games"
@@ -125,38 +142,57 @@ class EpicClient(GameClient):
                         )
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
-        logs_dir = self._launcher_data_dir() / "Saved" / "Logs"
-        if not logs_dir.is_dir():
-            return
-        for file_path, size in walk_files(logs_dir):
-            if self.cancelled:
-                return
-            if file_path.suffix.lower() == ".log" and size >= _LOG_MIN_SIZE:
-                yield JunkEntry(
-                    path=file_path,
-                    category=JunkCategory.OLD_LOG,
-                    size_bytes=size,
-                    client_name=self.name,
-                    description="Epic Games Launcher log",
-                )
+        log_dirs = [data_dir / "Saved" / "Logs" for data_dir in self._launcher_data_dirs()]
+        log_dirs.append(self._platform.home() / "Library" / "Logs" / "Unreal Engine" / "EpicGamesLauncher")
+        for logs_dir in log_dirs:
+            if not logs_dir.is_dir():
+                continue
+            for file_path, size in walk_files(logs_dir):
+                if self.cancelled:
+                    return
+                if file_path.suffix.lower() == ".log" and size >= _LOG_MIN_SIZE:
+                    yield JunkEntry(
+                        path=file_path,
+                        category=JunkCategory.OLD_LOG,
+                        size_bytes=size,
+                        client_name=self.name,
+                        description="Epic Games Launcher log",
+                    )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
-        saved_dir = self._launcher_data_dir() / "Saved"
-        if not saved_dir.is_dir():
-            return
-        for candidate in saved_dir.iterdir():
-            if self.cancelled:
-                return
-            if not candidate.is_dir() or not candidate.name.startswith("webcache"):
+        scanned: set[Path] = set()
+        for data_dir in self._launcher_data_dirs():
+            saved_dir = data_dir / "Saved"
+            if not saved_dir.is_dir():
                 continue
-            total = dir_size(candidate)
+            for candidate in saved_dir.iterdir():
+                if self.cancelled:
+                    return
+                if not candidate.is_dir() or not candidate.name.startswith("webcache"):
+                    continue
+                if candidate in scanned:
+                    continue
+                scanned.add(candidate)
+                total = dir_size(candidate)
+                if total > 0:
+                    yield JunkEntry(
+                        path=candidate,
+                        category=JunkCategory.SHADER_CACHE,
+                        size_bytes=total,
+                        client_name=self.name,
+                        description="Epic Games Launcher web cache",
+                    )
+
+        macos_cache = self._platform.home() / "Library" / "Caches" / "com.epicgames.EpicGamesLauncher"
+        if macos_cache.is_dir() and macos_cache not in scanned:
+            total = dir_size(macos_cache)
             if total > 0:
                 yield JunkEntry(
-                    path=candidate,
+                    path=macos_cache,
                     category=JunkCategory.SHADER_CACHE,
                     size_bytes=total,
                     client_name=self.name,
-                    description="Epic Games Launcher web cache",
+                    description="Epic Games Launcher cache",
                 )
 
 
