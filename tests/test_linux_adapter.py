@@ -31,3 +31,11 @@ class TestLinuxAdapter:
         monkeypatch.setenv("XDG_CONFIG_HOME", "/custom/config")
         adapter = LinuxAdapter()
         assert adapter.appdata_roaming() == Path("/custom/config")
+
+    def test_list_registry_subkeys_returns_empty(self):
+        adapter = LinuxAdapter()
+        assert adapter.list_registry_subkeys("HKLM", r"SOFTWARE\Test") == []
+
+    def test_programdata(self):
+        adapter = LinuxAdapter()
+        assert adapter.programdata() == Path("/var/lib")
