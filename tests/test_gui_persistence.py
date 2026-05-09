@@ -156,6 +156,7 @@ class TestScanCancelCycles:
             gui = SteamCleanerGUI(page)
 
             self._start_scan(gui)
+            assert gui._cancel_event is not None
             gui._on_scan(None)
             assert gui._cancel_event.is_set()
 
