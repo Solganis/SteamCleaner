@@ -20,6 +20,7 @@ from steamcleaner.utils.fs import format_size
 _VERSION = "0.5.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
+_DONATE_URL = "https://www.donationalerts.com/r/Solganis"
 
 _PADDING_H = 16
 _CATEGORY_COLORS = {
@@ -911,6 +912,7 @@ class SteamCleanerGUI:
                     ft.Row(
                         [
                             ft.TextButton("GitHub", icon=ft.Icons.CODE, url=_GITHUB_URL),
+                            ft.TextButton("Donate", icon=ft.Icons.VOLUNTEER_ACTIVISM, url=_DONATE_URL),
                             ft.TextButton("Boosty", icon=ft.Icons.FAVORITE, url=_BOOSTY_URL),
                         ],
                         spacing=8,
