@@ -226,6 +226,29 @@ class TestEpicWebcache:
         assert len(cache) == 1
         assert cache[0].size_bytes == 4096
 
+    def test_finds_webcache_with_port_suffix(self, tmp_path: Path):
+        platform, client = _make_epic_env(tmp_path)
+        home = tmp_path / "home"
+        webcache = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "webcache_4430"
+        webcache.mkdir(parents=True)
+        (webcache / "data.bin").write_bytes(b"\x00" * 2048)
+        entries = list(client.scan_junk())
+        cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
+        assert len(cache) == 1
+        assert "webcache_4430" in str(cache[0].path)
+
+    def test_finds_multiple_webcache_dirs(self, tmp_path: Path):
+        platform, client = _make_epic_env(tmp_path)
+        home = tmp_path / "home"
+        saved = home / ".local" / "share" / "EpicGamesLauncher" / "Saved"
+        for name in ("webcache", "webcache_4430", "webcache_8888"):
+            cache_dir = saved / name
+            cache_dir.mkdir(parents=True)
+            (cache_dir / "data.bin").write_bytes(b"\x00" * 1024)
+        entries = list(client.scan_junk())
+        cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
+        assert len(cache) == 3
+
     def test_ignores_empty_webcache(self, tmp_path: Path):
         platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
