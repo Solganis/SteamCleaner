@@ -1,6 +1,9 @@
 # Steam Cleaner
 
 [![Version](https://img.shields.io/github/v/release/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/releases)
+[![GitHub stars](https://img.shields.io/github/stars/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/issues)
+
 [![CI](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/Solganis/SteamCleaner/graph/badge.svg?token=HFL1FA47T3)](https://codecov.io/github/Solganis/SteamCleaner)
 
@@ -11,8 +14,6 @@
 
 [![i18n: EN | RU | ZH | ES | PT-BR](https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg)](#languages)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![GitHub stars](https://img.shields.io/github/stars/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/issues)
 
 Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
 
