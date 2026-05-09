@@ -7,9 +7,18 @@ from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
 class FakePlatformAdapter(PlatformAdapter):
-    def __init__(self, *, install_path: Path | None = None, home_dir: Path | None = None):
+    def __init__(
+        self,
+        *,
+        install_path: Path | None = None,
+        home_dir: Path | None = None,
+        program_files_dirs: list[Path] | None = None,
+        programdata_dir: Path | None = None,
+    ):
         self._install_path = install_path
         self._home = home_dir or Path.home()
+        self._program_files = program_files_dirs or []
+        self._programdata = programdata_dir
         self._registry: dict[tuple[str, str, str], str] = {}
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
@@ -27,7 +36,10 @@ class FakePlatformAdapter(PlatformAdapter):
         return self._home
 
     def program_files(self) -> list[Path]:
-        return []
+        return self._program_files
+
+    def programdata(self) -> Path:
+        return self._programdata or self._home / "ProgramData"
 
 
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:

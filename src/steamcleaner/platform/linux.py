@@ -24,3 +24,6 @@ class LinuxAdapter(PlatformAdapter):
             if dir_path.is_dir():
                 paths.append(dir_path)
         return paths
+
+    def programdata(self) -> Path:
+        return Path("/var/lib")
