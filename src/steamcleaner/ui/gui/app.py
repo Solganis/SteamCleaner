@@ -100,6 +100,7 @@ class SteamCleanerGUI:
         self._category_filter: str | None = None
         self._search_query = ""
         self._cancel_event: threading.Event | None = None
+        self._text_input_focused = False
         self._window_hider = window_hider or _WindowHider()
         self._status = ft.Text("Ready")
         self._total_label = ft.Text("")
@@ -149,6 +150,7 @@ class SteamCleanerGUI:
             self._page.window.left = int(saved_left)
             self._page.window.top = int(saved_top)
         self._page.window.on_event = self._on_window_event
+        self._page.on_keyboard_event = self._on_keyboard
         self._page.padding = 0
 
     def _save_window_geometry(self):
@@ -164,6 +166,32 @@ class SteamCleanerGUI:
         match event.type:
             case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
                 self._save_window_geometry()
+
+    def _set_text_input_focus(self, focused: bool):
+        self._text_input_focused = focused
+
+    def _on_keyboard(self, event: ft.KeyboardEvent):
+        if event.key == "Escape":
+            if self._cancel_event is not None:
+                self._cancel_event.set()
+            elif self._selected:
+                self._selected.clear()
+                self._select_all_button.text = "Select All"
+                self._refresh_list()
+            elif self._text_input_focused:
+                self._search_field.value = ""
+                self._search_query = ""
+                self._page.focus()
+                self._refresh_list()
+            return
+
+        if self._text_input_focused:
+            return
+
+        if event.key == "A" and event.ctrl:
+            self._on_select_all(None)
+        elif event.key == "Delete" and self._selected and self._cancel_event is None:
+            self._on_clean(None)
 
     def _build_ui(self):
         self._status = ft.Text("Ready", size=14)
@@ -238,6 +266,8 @@ class SteamCleanerGUI:
             dense=True,
             text_size=13,
             on_change=self._on_search_changed,
+            on_focus=lambda _: self._set_text_input_focus(True),
+            on_blur=lambda _: self._set_text_input_focus(False),
         )
 
         self._progress = ft.ProgressBar(visible=False)
@@ -840,6 +870,11 @@ class SteamCleanerGUI:
                     ),
                     ft.Divider(height=16),
                     ft.Text("License: GPL-3.0-or-later", size=13),
+                    ft.Divider(height=16),
+                    ft.Text("Keyboard shortcuts", weight=ft.FontWeight.BOLD, size=13),
+                    ft.Text("Ctrl+A — select / deselect all", size=12),
+                    ft.Text("Delete — clean selected items", size=12),
+                    ft.Text("Escape — cancel scan / deselect / clear search", size=12),
                     ft.Divider(height=16),
                     ft.Row(
                         [
