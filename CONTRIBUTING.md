@@ -20,4 +20,4 @@ Contributions are welcome! Please open an issue first to discuss what you'd like
 
 - Keep PRs focused on a single change
 - Ensure all checks pass (lint, format, type check, tests)
-- Follow commit message convention: `type(scope): description`
+- Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
