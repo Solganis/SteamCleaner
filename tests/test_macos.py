@@ -170,6 +170,13 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         assert client.is_installed()
 
+    def test_installed_via_ea_app(self, tmp_path: Path):
+        ea_dir = tmp_path / "Library" / "Application Support" / "Electronic Arts" / "EA app"
+        ea_dir.mkdir(parents=True)
+        platform = _macos_platform(tmp_path)
+        client = EaAppClient(platform, ExclusionRegistry())
+        assert client.is_installed()
+
     def test_installed_via_origin(self, tmp_path: Path):
         origin_dir = tmp_path / "Library" / "Application Support" / "Origin"
         origin_dir.mkdir(parents=True)
@@ -211,6 +218,36 @@ class TestEaAppMacOS:
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
         assert len(cache_entries) == 1
 
+    def test_scans_macos_migrator_cache(self, tmp_path: Path):
+        cache_dir = tmp_path / "Library" / "Caches" / "com.EA.EA-app-Migrator"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "migrator.bin").write_bytes(b"\x00" * 4096)
+        platform = _macos_platform(tmp_path)
+        client = EaAppClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
+        assert len(cache_entries) == 1
+
+    def test_scans_macos_origin_library_cache(self, tmp_path: Path):
+        cache_dir = tmp_path / "Library" / "Caches" / "Origin"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "origin.bin").write_bytes(b"\x00" * 2048)
+        platform = _macos_platform(tmp_path)
+        client = EaAppClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
+        assert len(cache_entries) == 1
+
+    def test_scans_ea_app_logs(self, tmp_path: Path):
+        logs_dir = tmp_path / "Library" / "Application Support" / "Electronic Arts" / "EA app" / "Logs"
+        logs_dir.mkdir(parents=True)
+        (logs_dir / "EAApp.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+        platform = _macos_platform(tmp_path)
+        client = EaAppClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
+        assert len(log_entries) == 1
+
 
 class TestGogMacOS:
     def test_installed_via_shared_data(self, tmp_path: Path):
@@ -223,6 +260,13 @@ class TestGogMacOS:
     def test_installed_via_gog_games_dir(self, tmp_path: Path):
         gog_games = tmp_path / "GOG Games"
         gog_games.mkdir()
+        platform = _macos_platform(tmp_path)
+        client = GogClient(platform, ExclusionRegistry())
+        assert client.is_installed()
+
+    def test_installed_via_application_support(self, tmp_path: Path):
+        galaxy_dir = tmp_path / "Library" / "Application Support" / "GOG.com" / "Galaxy"
+        galaxy_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
         assert client.is_installed()
@@ -272,6 +316,16 @@ class TestGogMacOS:
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category == JunkCategory.CRASH_DUMP]
         assert len(dump_entries) == 1
+
+    def test_scans_macos_library_logs(self, tmp_path: Path):
+        logs_dir = tmp_path / "Library" / "Logs" / "GOG.com" / "Galaxy"
+        logs_dir.mkdir(parents=True)
+        (logs_dir / "GalaxyClient.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+        platform = _macos_platform(tmp_path)
+        client = GogClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
+        assert len(log_entries) == 1
 
     def test_scans_game_redist(self, tmp_path: Path):
         gog_games = tmp_path / "GOG Games"
