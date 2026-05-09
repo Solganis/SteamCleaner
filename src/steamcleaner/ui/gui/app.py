@@ -305,7 +305,7 @@ class SteamCleanerGUI:
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=4,
             ),
-            padding=ft.Padding.symmetric(horizontal=_PADDING_H, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=_PADDING_H, vertical=10),
         )
 
         toolbar = ft.Container(
