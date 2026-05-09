@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            artifact: SteamCleaner-windows
+          - os: ubuntu-latest
+            platform: linux
+            artifact: SteamCleaner-linux
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - name: Build
+        run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
+      - name: Archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact }}.zip
+      - name: Archive (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: tar -czf ${{ matrix.artifact }}.tar.gz -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
