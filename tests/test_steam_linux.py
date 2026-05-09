@@ -34,7 +34,8 @@ class TestSteamLinuxDetection:
 
 
 class TestSteamLinuxScan:
-    def _make_steam(self, tmp_path: Path) -> tuple[FakePlatformAdapter, Path]:
+    @staticmethod
+    def _make_steam(tmp_path: Path) -> tuple[FakePlatformAdapter, Path]:
         steam_dir = tmp_path / ".local" / "share" / "Steam"
         common = steam_dir / "steamapps" / "common"
         common.mkdir(parents=True)

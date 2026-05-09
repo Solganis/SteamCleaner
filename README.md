@@ -68,6 +68,10 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Linux (native, Flatpak, Snap)
 - Wine/Proton: all non-Steam clients scan games installed through Wine, Proton (Steam Play), Bottles, and Lutris
 
+## Languages
+
+English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil).
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you'd like to change.
