@@ -37,17 +37,13 @@ jobs:
       - name: Cache Flutter SDK
         uses: actions/cache@v4
         with:
-          path: ~/.flet
+          path: ~/flutter
           key: flutter-${{ matrix.os }}-flet0.85
           restore-keys: flutter-${{ matrix.os }}-
       - name: Build
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
         env:
           PYTHONIOENCODING: utf-8
-      - name: Debug Flutter cache location
-        if: always()
-        shell: bash
-        run: find ~ -maxdepth 4 -name "flutter" -o -name "flet" -o -name "flet-desktop*" 2>/dev/null | head -20 || true
       - name: Strip debug symbols (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: find dist -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
