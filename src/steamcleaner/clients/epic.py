@@ -130,18 +130,23 @@ class EpicClient(GameClient):
                 )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
-        webcache = self._launcher_data_dir() / "Saved" / "webcache"
-        if not webcache.is_dir() or self.cancelled:
+        saved_dir = self._launcher_data_dir() / "Saved"
+        if not saved_dir.is_dir():
             return
-        total = dir_size(webcache)
-        if total > 0:
-            yield JunkEntry(
-                path=webcache,
-                category=JunkCategory.SHADER_CACHE,
-                size_bytes=total,
-                client_name=self.name,
-                description="Epic Games Launcher web cache",
-            )
+        for candidate in saved_dir.iterdir():
+            if self.cancelled:
+                return
+            if not candidate.is_dir() or not candidate.name.startswith("webcache"):
+                continue
+            total = dir_size(candidate)
+            if total > 0:
+                yield JunkEntry(
+                    path=candidate,
+                    category=JunkCategory.SHADER_CACHE,
+                    size_bytes=total,
+                    client_name=self.name,
+                    description="Epic Games Launcher web cache",
+                )
 
 
 def _has_redist_ancestor(file_path: Path, root: Path) -> bool:
