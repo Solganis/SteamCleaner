@@ -43,12 +43,15 @@ jobs:
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
         env:
           PYTHONIOENCODING: utf-8
+      - name: Strip debug symbols (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: find dist -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
-        run: Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact }}.zip
+        run: 7z a -mx=9 ${{ matrix.artifact }}.zip ./dist/*
       - name: Archive (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: tar -czf ${{ matrix.artifact }}.tar.gz -C dist .
+        run: tar -cf - -C dist . | xz -9e > ${{ matrix.artifact }}.tar.xz
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}

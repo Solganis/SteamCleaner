@@ -801,8 +801,9 @@ class SteamCleanerGUI:
         use_trash = get_value("clean", "use_trash", "true") == "true"
         delete_hint = ft.Text(
             t("delete_mode_hint_trash") if use_trash else t("delete_mode_hint_permanent"),
-            size=11,
-            color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
+            size=13,
+            weight=ft.FontWeight.BOLD,
+            color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE) if use_trash else ft.Colors.RED_700,
         )
 
         def on_delete_mode_changed(event: ft.Event[ft.SegmentedButton]):
@@ -813,7 +814,7 @@ class SteamCleanerGUI:
                 delete_hint.color = ft.Colors.RED_700
             else:
                 delete_hint.value = t("delete_mode_hint_trash")
-                delete_hint.color = ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE)
+                delete_hint.color = ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)
             self._page.update()
 
         delete_mode = ft.SegmentedButton(
