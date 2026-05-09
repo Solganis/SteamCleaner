@@ -1,4 +1,4 @@
-# SteamCleaner
+# Steam Cleaner
 
 [![Version](https://img.shields.io/github/v/release/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/releases)
 [![CI](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml)
@@ -16,9 +16,9 @@
 
 Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
 
-Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python.
+Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities, modern UI, and active development.
 
-Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. SteamCleaner finds them and lets you safely remove what you don't need.
+Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
 <!-- TODO: add screenshot when UI is finalized -->
 
@@ -39,10 +39,10 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 | Client | Game discovery | Launcher junk |
 |--------|---------------|---------------|
 | Steam | Registry, `libraryfolders.vdf`, Linux paths (native, Flatpak, Snap) | Shader cache, crash dumps |
-| Epic Games | JSON manifests, Program Files scanning | Logs, webcache |
-| EA App (Origin) | Registry (`Origin Games`), Program Files scanning | Logs, launcher cache |
-| GOG Galaxy | Registry (`GOG.com\Games`), Program Files scanning | Logs, crashdumps, webcache |
-| Ubisoft Connect | Registry (`Ubisoft\Launcher\Installs`), default games dir | Cache, crashes, logs |
+| Epic Games | JSON manifests, Program Files, Wine/Proton prefixes | Logs, webcache |
+| EA App (Origin) | Registry (`Origin Games`), Program Files, Wine/Proton prefixes | Logs, launcher cache |
+| GOG Galaxy | Registry (`GOG.com\Games`), Program Files, Wine/Proton prefixes | Logs, crashdumps, webcache |
+| Ubisoft Connect | Registry (`Ubisoft\Launcher\Installs`), default games dir, Wine/Proton prefixes | Cache, crashes, logs |
 
 ## What it finds
 
@@ -66,6 +66,7 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 
 - Windows 10/11
 - Linux (native, Flatpak, Snap)
+- Wine/Proton: all non-Steam clients scan games installed through Wine, Proton (Steam Play), Bottles, and Lutris
 
 ## Contributing
 

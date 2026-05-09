@@ -22,7 +22,14 @@ class UbisoftClient(GameClient):
         return "Ubisoft Connect"
 
     def is_installed(self) -> bool:
-        return self._launcher_install_dir() is not None or self._appdata_dir().is_dir()
+        if self._launcher_install_dir() is not None or self._appdata_dir().is_dir():
+            return True
+        for prefix in self._platform.wine_prefixes():
+            for program_dir_name in ("Program Files (x86)", "Program Files"):
+                launcher = prefix / program_dir_name / "Ubisoft" / "Ubisoft Game Launcher"
+                if launcher.is_dir():
+                    return True
+        return False
 
     def _launcher_install_dir(self) -> Path | None:
         install_dir = self._platform.read_registry_str("HKLM", _REGISTRY_LAUNCHER_PATH, "InstallDir")
@@ -54,6 +61,14 @@ class UbisoftClient(GameClient):
                 for game_dir in list_subdirs(games_dir):
                     if game_dir not in paths:
                         paths.append(game_dir)
+
+        for prefix in self._platform.wine_prefixes():
+            for program_dir_name in ("Program Files (x86)", "Program Files"):
+                games_dir = prefix / program_dir_name / "Ubisoft" / "Ubisoft Game Launcher" / "games"
+                if games_dir.is_dir():
+                    for game_dir in list_subdirs(games_dir):
+                        if game_dir not in paths:
+                            paths.append(game_dir)
 
         return paths
 

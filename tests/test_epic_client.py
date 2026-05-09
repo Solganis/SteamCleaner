@@ -305,3 +305,78 @@ class TestEpicEdgeCases:
         client_with_excl = EpicClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
         assert len(safe_entries) == 0
+
+
+class TestEpicWinePrefix:
+    def test_installed_via_wine_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        (prefix / "Program Files" / "Epic Games" / "Fortnite").mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        assert client.is_installed()
+
+    def test_not_installed_without_epic_dir(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        prefix.mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        assert not client.is_installed()
+
+    def test_discovers_games_from_wine_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "Program Files" / "Epic Games" / "Fortnite"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert game_dir in paths
+
+    def test_skips_launcher_dir_in_wine_prefix(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        epic_dir = prefix / "Program Files" / "Epic Games"
+        (epic_dir / "Launcher").mkdir(parents=True)
+        (epic_dir / "Fortnite").mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        names = [path.name for path in paths]
+        assert "Launcher" not in names
+        assert "Fortnite" in names
+
+    def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "Program Files" / "Epic Games" / "Fortnite"
+        redist = game_dir / "_CommonRedist"
+        redist.mkdir(parents=True)
+        (redist / "vcredist.exe").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
+        assert len(redist_entries) == 1
+
+    def test_no_duplicate_with_program_files(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        game_dir = prefix / "Program Files" / "Epic Games" / "Fortnite"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            program_files_dirs=[prefix / "Program Files"],
+            wine_prefix_dirs=[prefix],
+        )
+        client = EpicClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert paths.count(game_dir) == 1
+
+    def test_multiple_wine_prefixes(self, tmp_path: Path):
+        prefix1 = tmp_path / "wine1" / "drive_c"
+        prefix2 = tmp_path / "wine2" / "drive_c"
+        game1 = prefix1 / "Program Files" / "Epic Games" / "Fortnite"
+        game2 = prefix2 / "Program Files" / "Epic Games" / "RocketLeague"
+        game1.mkdir(parents=True)
+        game2.mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix1, prefix2])
+        client = EpicClient(platform, ExclusionRegistry())
+        paths = client._game_install_paths()
+        assert game1 in paths
+        assert game2 in paths

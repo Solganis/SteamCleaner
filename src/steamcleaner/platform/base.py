@@ -30,3 +30,7 @@ class PlatformAdapter(abc.ABC):
     @abc.abstractmethod
     def programdata(self) -> Path:
         """Return the shared application data directory (ProgramData on Windows)."""
+
+    def wine_prefixes(self) -> list[Path]:
+        """Return discovered Wine/Proton drive_c paths. Empty on Windows."""
+        return []

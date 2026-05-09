@@ -21,7 +21,9 @@ class EpicClient(GameClient):
         return "Epic Games"
 
     def is_installed(self) -> bool:
-        return self._launcher_data_dir().is_dir()
+        if self._launcher_data_dir().is_dir():
+            return True
+        return any((prefix / "Program Files" / "Epic Games").is_dir() for prefix in self._platform.wine_prefixes())
 
     def _launcher_data_dir(self) -> Path:
         return self._platform.appdata_local() / "EpicGamesLauncher"
@@ -47,6 +49,15 @@ class EpicClient(GameClient):
 
         for program_dir in self._platform.program_files():
             epic_dir = program_dir / "Epic Games"
+            if epic_dir.is_dir():
+                for game_dir in list_subdirs(epic_dir):
+                    if game_dir.name == "Launcher":
+                        continue
+                    if game_dir not in paths:
+                        paths.append(game_dir)
+
+        for prefix in self._platform.wine_prefixes():
+            epic_dir = prefix / "Program Files" / "Epic Games"
             if epic_dir.is_dir():
                 for game_dir in list_subdirs(epic_dir):
                     if game_dir.name == "Launcher":

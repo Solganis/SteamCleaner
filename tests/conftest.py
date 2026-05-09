@@ -14,11 +14,13 @@ class FakePlatformAdapter(PlatformAdapter):
         home_dir: Path | None = None,
         program_files_dirs: list[Path] | None = None,
         programdata_dir: Path | None = None,
+        wine_prefix_dirs: list[Path] | None = None,
     ):
         self._install_path = install_path
         self._home = home_dir or Path.home()
         self._program_files = program_files_dirs or []
         self._programdata = programdata_dir
+        self._wine_prefixes = wine_prefix_dirs or []
         self._registry: dict[tuple[str, str, str], str] = {}
         self._registry_subkeys: dict[tuple[str, str], list[str]] = {}
         if install_path:
@@ -50,6 +52,9 @@ class FakePlatformAdapter(PlatformAdapter):
 
     def programdata(self) -> Path:
         return self._programdata or self._home / "ProgramData"
+
+    def wine_prefixes(self) -> list[Path]:
+        return self._wine_prefixes
 
 
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:

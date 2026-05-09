@@ -46,3 +46,11 @@ class TestLinuxAdapterProgramFiles:
         with patch("steamcleaner.platform.linux.Path.is_dir", return_value=False):
             paths = adapter.program_files()
             assert paths == []
+
+
+class TestBaseAdapterWinePrefixes:
+    def test_default_wine_prefixes_returns_empty(self):
+        if sys.platform != "win32":
+            pytest.skip("Windows-only test")
+        adapter = create_adapter()
+        assert adapter.wine_prefixes() == []

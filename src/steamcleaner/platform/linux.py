@@ -30,3 +30,54 @@ class LinuxAdapter(PlatformAdapter):
 
     def programdata(self) -> Path:
         return Path("/var/lib")
+
+    def wine_prefixes(self) -> list[Path]:
+        prefixes: list[Path] = []
+        home = self.home()
+
+        default_wine = home / ".wine" / "drive_c"
+        if default_wine.is_dir():
+            prefixes.append(default_wine)
+
+        compatdata = home / ".local" / "share" / "Steam" / "steamapps" / "compatdata"
+        if compatdata.is_dir():
+            for app_dir in compatdata.iterdir():
+                drive_c = app_dir / "pfx" / "drive_c"
+                if drive_c.is_dir() and drive_c not in prefixes:
+                    prefixes.append(drive_c)
+
+        flatpak_compatdata = (
+            home
+            / ".var"
+            / "app"
+            / "com.valvesoftware.Steam"
+            / ".local"
+            / "share"
+            / "Steam"
+            / "steamapps"
+            / "compatdata"
+        )
+        if flatpak_compatdata.is_dir():
+            for app_dir in flatpak_compatdata.iterdir():
+                drive_c = app_dir / "pfx" / "drive_c"
+                if drive_c.is_dir() and drive_c not in prefixes:
+                    prefixes.append(drive_c)
+
+        for bottles_root in (
+            home / ".local" / "share" / "bottles" / "bottles",
+            home / ".var" / "app" / "com.usebottles.bottles" / "data" / "bottles" / "bottles",
+        ):
+            if bottles_root.is_dir():
+                for bottle_dir in bottles_root.iterdir():
+                    drive_c = bottle_dir / "drive_c"
+                    if drive_c.is_dir() and drive_c not in prefixes:
+                        prefixes.append(drive_c)
+
+        lutris_runners = home / ".local" / "share" / "lutris" / "runners" / "wine"
+        if lutris_runners.is_dir():
+            for prefix_dir in lutris_runners.iterdir():
+                drive_c = prefix_dir / "drive_c"
+                if drive_c.is_dir() and drive_c not in prefixes:
+                    prefixes.append(drive_c)
+
+        return prefixes
