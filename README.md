@@ -29,7 +29,7 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Context menu: open in file explorer, copy path to clipboard
 - Determinate progress bar with per-file status during scan and deletion
 - Keyboard shortcuts: Ctrl+A (select all), Delete (clean selected), Escape (cancel/deselect)
-- Settings: trash vs permanent delete, minimum file size filter, custom scan directories
+- Settings: trash vs permanent delete
 - Safe by default: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
 
 ## What it finds
