@@ -37,9 +37,7 @@ jobs:
       - name: Cache Flutter SDK
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.flet/bin
-            ~/AppData/Local/flet/bin
+          path: ~/.flet/client
           key: flutter-${{ matrix.os }}-flet0.85
           restore-keys: flutter-${{ matrix.os }}-
       - name: Build
