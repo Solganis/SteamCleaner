@@ -20,6 +20,9 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             artifact: SteamCleaner-linux
+          - os: macos-latest
+            platform: macos
+            artifact: SteamCleaner-macos
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux build dependencies
@@ -51,6 +54,9 @@ jobs:
         run: 7z a -mx=5 ${{ matrix.artifact }}.zip ./dist/*
       - name: Archive (Linux)
         if: matrix.os == 'ubuntu-latest'
+        run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
+      - name: Archive (macOS)
+        if: matrix.os == 'macos-latest'
         run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
       - uses: actions/upload-artifact@v4
         with:
