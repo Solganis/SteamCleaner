@@ -81,9 +81,9 @@ class TestUbisoftDetection:
 
 class TestUbisoftGameDiscovery:
     def test_discovers_from_default_games_dir(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"Assassins Creed": {"": []}})
+        platform, client = _make_ubisoft_env(tmp_path, games={"Assassin's Creed": {"": []}})
         paths = client._game_install_paths()
-        assert any(path.name == "Assassins Creed" for path in paths)
+        assert any(path.name == "Assassin's Creed" for path in paths)
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "FarCry6"
