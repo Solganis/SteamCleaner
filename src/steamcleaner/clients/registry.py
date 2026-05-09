@@ -1,14 +1,10 @@
-from __future__ import annotations
-
 import importlib
 import pkgutil
 from collections.abc import Iterator
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from steamcleaner.clients.base import GameClient
-    from steamcleaner.platform.base import PlatformAdapter
-    from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.clients.base import GameClient
+from steamcleaner.platform.base import PlatformAdapter
+from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 _SKIP_MODULES = frozenset({"base", "registry"})
 

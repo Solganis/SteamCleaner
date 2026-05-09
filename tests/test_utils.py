@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from steamcleaner.utils.fs import format_size, is_reparse_point, safe_rmtree
