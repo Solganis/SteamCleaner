@@ -22,3 +22,7 @@ class PlatformAdapter(abc.ABC):
     @abc.abstractmethod
     def program_files(self) -> list[Path]:
         """Return Program Files directories (or equivalent)."""
+
+    @abc.abstractmethod
+    def programdata(self) -> Path:
+        """Return the shared application data directory (ProgramData on Windows)."""
