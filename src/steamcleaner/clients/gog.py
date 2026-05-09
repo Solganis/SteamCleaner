@@ -21,7 +21,7 @@ class GogClient(GameClient):
         return "GOG Galaxy"
 
     def is_installed(self) -> bool:
-        if self._galaxy_data_dir().is_dir():
+        if self._galaxy_data_dir().is_dir() or self._galaxy_appdata_dir().is_dir():
             return True
         gog_games = self._platform.home() / "GOG Games"
         if gog_games.is_dir():
@@ -37,6 +37,9 @@ class GogClient(GameClient):
 
     def _galaxy_data_dir(self) -> Path:
         return self._platform.programdata() / "GOG.com" / "Galaxy"
+
+    def _galaxy_appdata_dir(self) -> Path:
+        return self._platform.appdata_local() / "GOG.com" / "Galaxy"
 
     def _game_install_paths(self) -> list[Path]:
         paths: list[Path] = []
@@ -134,20 +137,24 @@ class GogClient(GameClient):
                         )
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
-        logs_dir = self._galaxy_data_dir() / "logs"
-        if not logs_dir.is_dir():
-            return
-        for file_path, size in walk_files(logs_dir):
-            if self.cancelled:
-                return
-            if file_path.suffix.lower() == ".log" and size >= _LOG_MIN_SIZE:
-                yield JunkEntry(
-                    path=file_path,
-                    category=JunkCategory.OLD_LOG,
-                    size_bytes=size,
-                    client_name=self.name,
-                    description="GOG Galaxy launcher log",
-                )
+        home = self._platform.home()
+        for logs_dir in (
+            self._galaxy_data_dir() / "logs",
+            home / "Library" / "Logs" / "GOG.com" / "Galaxy",
+        ):
+            if not logs_dir.is_dir():
+                continue
+            for file_path, size in walk_files(logs_dir):
+                if self.cancelled:
+                    return
+                if file_path.suffix.lower() == ".log" and size >= _LOG_MIN_SIZE:
+                    yield JunkEntry(
+                        path=file_path,
+                        category=JunkCategory.OLD_LOG,
+                        size_bytes=size,
+                        client_name=self.name,
+                        description="GOG Galaxy launcher log",
+                    )
 
     def _scan_crashdumps(self) -> Iterator[JunkEntry]:
         crashdumps_dir = self._galaxy_data_dir() / "crashdumps"
