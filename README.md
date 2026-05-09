@@ -14,7 +14,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/issues)
 
-Cross-platform tool for reclaiming disk space from game clients.
+Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
 
 Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python.
 
@@ -25,7 +25,7 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 ## Features
 
 - Desktop GUI built on [Flet](https://flet.dev/) with automatic OS theme detection (dark/light)
-- Scans all detected Steam library folders, including external drives
+- Scans Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect
 - Per-item selection with category badges, size breakdown, and sorting
 - Search field for filtering results by path
 - Context menu: open in file explorer, copy path to clipboard
@@ -34,20 +34,30 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Settings: trash vs permanent delete
 - Safe by default: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
 
+## Supported clients
+
+| Client | Game discovery | Launcher junk |
+|--------|---------------|---------------|
+| Steam | Registry, `libraryfolders.vdf`, Linux paths (native, Flatpak, Snap) | Shader cache, crash dumps |
+| Epic Games | JSON manifests, Program Files scanning | Logs, webcache |
+| EA App (Origin) | Registry (`Origin Games`), Program Files scanning | Logs, launcher cache |
+| GOG Galaxy | Registry (`GOG.com\Games`), Program Files scanning | Logs, crashdumps, webcache |
+| Ubisoft Connect | Registry (`Ubisoft\Launcher\Installs`), default games dir | Cache, crashes, logs |
+
 ## What it finds
 
 | Category | Examples | Typical savings |
 |----------|----------|-----------------|
-| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `DirectX` | 5-15 GB per library |
-| Shader cache | `steamapps/shadercache/` entries for uninstalled games | Up to 500+ MB per game |
-| Crash dumps | `.dmp`, `.mdmp` files in game directories and `Steam/dumps/` | Varies |
-| Old logs | Log files over 1 MB in game directories | Varies |
+| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `__Installer` | 5-15 GB per library |
+| Shader/web cache | Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache | Up to 500+ MB per client |
+| Crash dumps | `.dmp`, `.mdmp` files in game directories and launcher crash folders | Varies |
+| Old logs | Log files over 1 MB in game directories and launcher logs | Varies |
 | Cross-platform binaries | Ren'Py `lib/darwin-*`, `lib/linux-*` on Windows (and vice versa) | Varies |
 | Bundled installers | Setup/installer executables inside game folders | Varies |
 
 ## Safety
 
-- Known game files are never touched (e.g. `Steamworks Shared`, game data misplaced in `redist/` directories)
+- Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
 - Symlinks and junction points are detected via `is_reparse_point()` and never followed or deleted through
 - Files go to system trash by default, not permanent deletion
 - Each detected item shows its exact path, category, and size before removal
