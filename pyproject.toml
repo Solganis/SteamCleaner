@@ -44,7 +44,7 @@ include = ["src/steamcleaner/platform/windows.py"]
 unresolved-attribute = "ignore"
 
 [[tool.ty.overrides]]
-include = ["src/steamcleaner/ui/gui/app.py"]
+include = ["src/steamcleaner/ui/gui/app.py", "src/main.py"]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"
 
