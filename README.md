@@ -58,7 +58,7 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 ## Safety
 
 - Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
-- Symlinks and junction points are detected via `is_reparse_point()` and never followed or deleted through
+- Symlinks and junction points are never followed or deleted through
 - Files go to system trash by default, not permanent deletion
 - Each detected item shows its exact path, category, and size before removal
 
