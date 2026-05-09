@@ -8,6 +8,10 @@ class PlatformAdapter(abc.ABC):
         """Read a string value from the platform registry (Windows-only concept)."""
 
     @abc.abstractmethod
+    def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
+        """List subkey names under a registry path."""
+
+    @abc.abstractmethod
     def appdata_local(self) -> Path:
         """Return the local application data directory."""
 
