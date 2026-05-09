@@ -1,4 +1,3 @@
-import contextlib
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -8,11 +7,12 @@ from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
 _DUMP_EXTENSIONS = frozenset({".dmp", ".mdmp"})
-_LOG_MIN_SIZE = 1024 * 1024  # 1 MB
+_LOG_MIN_SIZE = 1024 * 1024
 
 
 def _parse_library_folders_vdf(path: Path) -> list[Path]:
@@ -26,24 +26,6 @@ def _parse_library_folders_vdf(path: Path) -> list[Path]:
         if library_path.is_dir():
             paths.append(library_path)
     return paths
-
-
-def _dir_size(path: Path) -> int:
-    total = 0
-    try:
-        for file_path in path.rglob("*"):
-            if file_path.is_file():
-                with contextlib.suppress(OSError):
-                    total += file_path.stat().st_size
-    except OSError:
-        pass
-    return total
-
-
-def _file_size(path: Path) -> int:
-    with contextlib.suppress(OSError):
-        return path.stat().st_size
-    return 0
 
 
 @ClientRegistry.register
@@ -117,113 +99,80 @@ class SteamClient(GameClient):
         common = library / "steamapps" / "common"
         if not common.is_dir():
             return
-        try:
-            game_dirs = list(common.iterdir())
-        except OSError:
-            return
-        for game_dir in game_dirs:
+        for game_dir in list_subdirs(common):
             if self.cancelled:
                 return
-            if not game_dir.is_dir():
+            yield from self._scan_game(game_dir)
+
+    def _scan_game(self, game_dir: Path) -> Iterator[JunkEntry]:
+        """Single-pass scan of a game directory for redist, dumps, and logs."""
+        found_redist: list[Path] = []
+        for file_path, size in walk_files(game_dir):
+            if self.cancelled:
+                return
+            extension = file_path.suffix.lower()
+
+            if extension in _DUMP_EXTENSIONS and size > 0:
+                yield JunkEntry(
+                    path=file_path,
+                    category=JunkCategory.CRASH_DUMP,
+                    size_bytes=size,
+                    client_name=self.name,
+                    description=f"Crash dump in {game_dir.name}",
+                )
                 continue
-            yield from self._scan_game_redist(game_dir)
-            yield from self._scan_game_dumps(game_dir)
-            yield from self._scan_game_logs(game_dir)
 
-    def _scan_game_redist(self, game_dir: Path) -> Iterator[JunkEntry]:
-        """Recursive scan for redistributable directories, skipping nested matches."""
-        found: list[Path] = []
-        try:
-            for subdir in game_dir.rglob("*"):
-                if self.cancelled:
-                    return
-                if not subdir.is_dir():
-                    continue
-                if not _REDIST_DIR_RE.search(subdir.name):
-                    continue
-                if any(subdir.is_relative_to(parent) for parent in found):
-                    continue
-                junk_files = [
-                    file_path
-                    for file_path in subdir.rglob("*")
-                    if file_path.is_file() and file_path.suffix.lower() in _JUNK_EXTENSIONS
-                ]
-                if junk_files:
-                    size = sum(_file_size(junk_file) for junk_file in junk_files)
-                    rel = subdir.relative_to(game_dir)
-                    found.append(subdir)
-                    yield JunkEntry(
-                        path=subdir,
-                        category=JunkCategory.REDISTRIBUTABLE,
-                        size_bytes=size,
-                        client_name=self.name,
-                        description=f"{game_dir.name}/{rel}",
+            if extension == ".log" and size >= _LOG_MIN_SIZE:
+                yield JunkEntry(
+                    path=file_path,
+                    category=JunkCategory.OLD_LOG,
+                    size_bytes=size,
+                    client_name=self.name,
+                    description=f"Log file in {game_dir.name}",
+                )
+                continue
+
+            if extension in _JUNK_EXTENSIONS and _has_redist_ancestor(file_path, game_dir):
+                redist_dir = _find_redist_root(file_path, game_dir)
+                if redist_dir and not any(redist_dir.is_relative_to(existing) for existing in found_redist):
+                    junk_size = sum(
+                        file_size
+                        for file_item, file_size in walk_files(redist_dir)
+                        if file_item.suffix.lower() in _JUNK_EXTENSIONS
                     )
-        except OSError:
-            return
-
-    def _scan_game_dumps(self, game_dir: Path) -> Iterator[JunkEntry]:
-        try:
-            for file_path in game_dir.rglob("*"):
-                if self.cancelled:
-                    return
-                if file_path.is_file() and file_path.suffix.lower() in _DUMP_EXTENSIONS:
-                    size = _file_size(file_path)
-                    if size > 0:
+                    if junk_size > 0:
+                        found_redist.append(redist_dir)
+                        rel = redist_dir.relative_to(game_dir)
                         yield JunkEntry(
-                            path=file_path,
-                            category=JunkCategory.CRASH_DUMP,
-                            size_bytes=size,
+                            path=redist_dir,
+                            category=JunkCategory.REDISTRIBUTABLE,
+                            size_bytes=junk_size,
                             client_name=self.name,
-                            description=f"Crash dump in {game_dir.name}",
+                            description=f"{game_dir.name}/{rel}",
                         )
-        except OSError:
-            return
-
-    def _scan_game_logs(self, game_dir: Path) -> Iterator[JunkEntry]:
-        try:
-            for log_file in game_dir.rglob("*.log"):
-                if self.cancelled:
-                    return
-                if log_file.is_file():
-                    size = _file_size(log_file)
-                    if size >= _LOG_MIN_SIZE:
-                        yield JunkEntry(
-                            path=log_file,
-                            category=JunkCategory.OLD_LOG,
-                            size_bytes=size,
-                            client_name=self.name,
-                            description=f"Log file in {game_dir.name}",
-                        )
-        except OSError:
-            return
 
     def _scan_shader_cache(self, library: Path) -> Iterator[JunkEntry]:
         shader_cache = library / "steamapps" / "shadercache"
         if not shader_cache.is_dir():
             return
-        try:
-            for app_dir in shader_cache.iterdir():
-                if self.cancelled:
-                    return
-                if app_dir.is_dir():
-                    size = _dir_size(app_dir)
-                    if size > 0:
-                        yield JunkEntry(
-                            path=app_dir,
-                            category=JunkCategory.SHADER_CACHE,
-                            size_bytes=size,
-                            client_name=self.name,
-                            description=f"Shader cache (appid {app_dir.name})",
-                        )
-        except OSError:
-            return
+        for app_dir in list_subdirs(shader_cache):
+            if self.cancelled:
+                return
+            size = dir_size(app_dir)
+            if size > 0:
+                yield JunkEntry(
+                    path=app_dir,
+                    category=JunkCategory.SHADER_CACHE,
+                    size_bytes=size,
+                    client_name=self.name,
+                    description=f"Shader cache (appid {app_dir.name})",
+                )
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:
         dumps_dir = install / "dumps"
         if not dumps_dir.is_dir() or self.cancelled:
             return
-        total = _dir_size(dumps_dir)
+        total = dir_size(dumps_dir)
         if total > 0:
             yield JunkEntry(
                 path=dumps_dir,
@@ -232,3 +181,22 @@ class SteamClient(GameClient):
                 client_name=self.name,
                 description="Steam client crash dumps",
             )
+
+
+def _has_redist_ancestor(file_path: Path, root: Path) -> bool:
+    current = file_path.parent
+    while current != root:
+        if _REDIST_DIR_RE.search(current.name):
+            return True
+        current = current.parent
+    return False
+
+
+def _find_redist_root(file_path: Path, root: Path) -> Path | None:
+    current = file_path.parent
+    topmost = None
+    while current != root:
+        if _REDIST_DIR_RE.search(current.name):
+            topmost = current
+        current = current.parent
+    return topmost

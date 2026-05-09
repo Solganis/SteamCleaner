@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from steamcleaner.clients.steam import SteamClient, _dir_size, _file_size, _parse_library_folders_vdf
+from steamcleaner.clients.steam import SteamClient, _parse_library_folders_vdf
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.utils.fs import dir_size
 from tests.conftest import FakePlatformAdapter
 
 
@@ -46,28 +47,18 @@ class TestDirSize:
     def test_calculates_total(self, tmp_path: Path):
         (tmp_path / "a.txt").write_bytes(b"\x00" * 100)
         (tmp_path / "b.txt").write_bytes(b"\x00" * 200)
-        assert _dir_size(tmp_path) == 300
+        assert dir_size(tmp_path) == 300
 
     def test_empty_dir(self, tmp_path: Path):
         empty = tmp_path / "empty"
         empty.mkdir()
-        assert _dir_size(empty) == 0
+        assert dir_size(empty) == 0
 
     def test_nested_files(self, tmp_path: Path):
         sub = tmp_path / "sub"
         sub.mkdir()
         (sub / "file.bin").write_bytes(b"\x00" * 500)
-        assert _dir_size(tmp_path) == 500
-
-
-class TestFileSize:
-    def test_existing_file(self, tmp_path: Path):
-        target = tmp_path / "file.txt"
-        target.write_bytes(b"\x00" * 256)
-        assert _file_size(target) == 256
-
-    def test_nonexistent_file(self, tmp_path: Path):
-        assert _file_size(tmp_path / "missing.txt") == 0
+        assert dir_size(tmp_path) == 500
 
 
 class TestSteamNotInstalled:
