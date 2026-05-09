@@ -169,7 +169,7 @@ class TestScanCancelCycles:
 
             assert gui._cancel_event is None
             assert gui._scan_button.text == "Scan"
-            assert gui._progress.visible is False
+            assert gui._progress.opacity == 0
 
     def test_multiple_cancel_cycles_keep_working(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
