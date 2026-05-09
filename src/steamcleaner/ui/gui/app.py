@@ -797,8 +797,6 @@ class SteamCleanerGUI:
                         color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE),
                     ),
                     ft.Divider(height=16),
-                    ft.Text("License: GPL-3.0-or-later", size=13),
-                    ft.Divider(height=16),
                     ft.Text("Keyboard shortcuts", weight=ft.FontWeight.BOLD, size=13),
                     ft.Text("Ctrl+A — select / deselect all", size=12),
                     ft.Text("Delete — clean selected items", size=12),
