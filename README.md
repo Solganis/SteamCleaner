@@ -72,10 +72,6 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 
 English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil).
 
-## Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you'd like to change.
-
 ## License
 
 [MIT](LICENSE)
