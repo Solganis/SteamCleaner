@@ -13,7 +13,7 @@
 [![ty](https://img.shields.io/badge/type--checker-ty-D4AA00.svg)](https://github.com/astral-sh/ty)
 
 [![i18n: EN | RU | ZH | ES | PT-BR](https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg)](#languages)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
 
@@ -80,4 +80,4 @@ Contributions are welcome. Please open an issue first to discuss what you'd like
 
 ## License
 
-GPL-3.0-or-later
+[MIT](LICENSE)
