@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry

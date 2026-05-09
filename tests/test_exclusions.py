@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import PurePosixPath, PureWindowsPath
 
 from steamcleaner.scanner.exclusions import BUILTIN_EXCLUSIONS, ExclusionRegistry

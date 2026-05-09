@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from steamcleaner.clients.steam import SteamClient, _dir_size, _file_size, _parse_library_folders_vdf

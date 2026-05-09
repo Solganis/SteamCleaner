@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
