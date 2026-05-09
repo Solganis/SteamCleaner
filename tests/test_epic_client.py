@@ -289,6 +289,12 @@ class TestEpicEdgeCases:
         entries = list(client.scan_junk())
         assert entries == []
 
+    def test_exe_outside_redist_ignored(self, tmp_path: Path):
+        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"Binaries": ["game.exe"]}})
+        entries = list(client.scan_junk())
+        redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
+        assert len(redist) == 0
+
     def test_exclusion_filters(self, tmp_path: Path):
         platform, client = _make_epic_env(
             tmp_path,
