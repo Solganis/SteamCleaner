@@ -799,18 +799,44 @@ class SteamCleanerGUI:
 
     def _on_settings_click(self, _event):
         use_trash = get_value("clean", "use_trash", "true") == "true"
-        trash_switch = ft.Switch(label=t("use_trash"), value=use_trash)
-        lang_dropdown = ft.Dropdown(
-            width=200,
-            label=t("language"),
-            value=get_lang(),
-            options=[ft.dropdown.Option(code, label) for code, label in LANGUAGES.items()],
-            dense=True,
+        delete_hint = ft.Text(
+            t("delete_mode_hint_trash") if use_trash else t("delete_mode_hint_permanent"),
+            size=11,
+            color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
         )
 
-        def save_settings(_event):
-            save_value("clean", "use_trash", "true" if trash_switch.value else "false")
-            new_lang = lang_dropdown.value
+        def on_delete_mode_changed(event: ft.ControlEvent):
+            selected_mode = event.control.selected[0] if event.control.selected else "trash"
+            save_value("clean", "use_trash", "true" if selected_mode == "trash" else "false")
+            if selected_mode == "permanent":
+                delete_hint.value = t("delete_mode_hint_permanent")
+                delete_hint.color = ft.Colors.RED_700
+            else:
+                delete_hint.value = t("delete_mode_hint_trash")
+                delete_hint.color = ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE)
+            self._page.update()
+
+        delete_mode = ft.SegmentedButton(
+            selected=["trash" if use_trash else "permanent"],
+            segments=[
+                ft.Segment(
+                    value="trash",
+                    label=ft.Text(t("delete_mode_trash")),
+                    icon=ft.Icon(ft.Icons.DELETE_OUTLINE),
+                ),
+                ft.Segment(
+                    value="permanent",
+                    label=ft.Text(t("delete_mode_permanent")),
+                    icon=ft.Icon(ft.Icons.DELETE_FOREVER),
+                ),
+            ],
+            allow_multiple_selection=False,
+            allow_empty_selection=False,
+            on_change=on_delete_mode_changed,
+        )
+
+        def on_lang_changed(event: ft.ControlEvent):
+            new_lang = event.control.value
             if new_lang and new_lang != get_lang():
                 set_lang(new_lang)
                 self._page.pop_dialog()
@@ -819,17 +845,33 @@ class SteamCleanerGUI:
                 self._build_ui()
                 self._rebuild_filter_options()
                 self._refresh_list()
-            else:
-                self._page.pop_dialog()
-            self._show_snackbar(t("settings_saved"))
+
+        lang_dropdown = ft.Dropdown(
+            width=200,
+            label=t("language"),
+            value=get_lang(),
+            options=[ft.dropdown.Option(code, label) for code, label in LANGUAGES.items()],
+            dense=True,
+            on_select=on_lang_changed,
+        )
 
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text(t("settings")),
-            content=ft.Column([trash_switch, lang_dropdown], tight=True, width=400, spacing=16),
+            content=ft.Column(
+                [
+                    ft.Text(t("delete_mode"), size=13, weight=ft.FontWeight.W_500),
+                    delete_mode,
+                    delete_hint,
+                    ft.Divider(height=24),
+                    lang_dropdown,
+                ],
+                tight=True,
+                width=400,
+                spacing=8,
+            ),
             actions=[
-                ft.TextButton(t("cancel"), on_click=lambda _: self._page.pop_dialog()),
-                ft.Button(t("save"), on_click=save_settings),
+                ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog()),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
