@@ -25,6 +25,8 @@ jobs:
       - run: uv sync
       - name: Build
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
+        env:
+          PYTHONIOENCODING: utf-8
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
         run: Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact }}.zip
