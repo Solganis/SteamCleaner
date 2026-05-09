@@ -8,12 +8,10 @@ from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.scanner.patterns import COMMON_PATTERNS
+from steamcleaner.utils.fs import list_subdirs, walk_files
 
 ProgressCallback = Callable[[str, int], None]
 FoundCallback = Callable[[JunkEntry], None]
-
-_DUMP_EXTENSIONS = frozenset({".dmp", ".mdmp"})
-_LOG_MIN_SIZE = 1024 * 1024
 
 
 class ScanEngine:
@@ -70,24 +68,15 @@ class ScanEngine:
         return ScanResult(entries=all_entries)
 
     def _scan_custom_path(self, root: Path, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
-        for game_dir in root.iterdir():
+        for game_dir in list_subdirs(root):
             if cancel and cancel.is_set():
                 return
-            if not game_dir.is_dir():
-                continue
             yield from self._scan_game_dir(game_dir, cancel)
 
     def _scan_game_dir(self, game_dir: Path, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
-        try:
-            entries = list(game_dir.rglob("*"))
-        except OSError:
-            return
-
-        for file_path in entries:
+        for file_path, size in walk_files(game_dir):
             if cancel and cancel.is_set():
                 return
-            if not file_path.is_file():
-                continue
 
             parent_str = str(file_path.parent)
             extension = file_path.suffix.lower()
@@ -96,10 +85,6 @@ class ScanEngine:
                 matches_dir = pattern.dir_regex.search(parent_str)
                 matches_ext = not pattern.file_extensions or extension in pattern.file_extensions
                 if matches_dir and matches_ext:
-                    try:
-                        size = file_path.stat().st_size
-                    except OSError:
-                        continue
                     if self._exclusions.is_excluded(file_path):
                         continue
                     yield JunkEntry(

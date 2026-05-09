@@ -1,5 +1,7 @@
+import os
 import shutil
 import stat
+from collections.abc import Iterator
 from pathlib import Path
 
 
@@ -19,6 +21,51 @@ def safe_rmtree(path: Path) -> bool:
         return False
     shutil.rmtree(path)
     return True
+
+
+def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
+    """Walk directory tree via os.scandir, yielding (path, size) for each file.
+
+    Uses DirEntry.stat() to avoid extra syscalls. Skips reparse points.
+    """
+    try:
+        scanner = os.scandir(root)
+    except OSError:
+        return
+    with scanner:
+        for entry in scanner:
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    entry_path = Path(entry.path)
+                    if not is_reparse_point(entry_path):
+                        yield from walk_files(entry_path)
+                elif entry.is_file(follow_symlinks=False) and not entry.is_symlink():
+                    yield Path(entry.path), entry.stat(follow_symlinks=False).st_size
+            except OSError:
+                continue
+
+
+def dir_size(path: Path) -> int:
+    return sum(size for _, size in walk_files(path))
+
+
+def list_subdirs(path: Path) -> list[Path]:
+    """List immediate subdirectories via os.scandir, skipping reparse points."""
+    result: list[Path] = []
+    try:
+        scanner = os.scandir(path)
+    except OSError:
+        return result
+    with scanner:
+        for entry in scanner:
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    entry_path = Path(entry.path)
+                    if not is_reparse_point(entry_path):
+                        result.append(entry_path)
+            except OSError:
+                continue
+    return result
 
 
 def format_size(size_bytes: int) -> str:
