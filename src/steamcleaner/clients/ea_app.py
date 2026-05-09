@@ -162,6 +162,23 @@ class EaAppClient(GameClient):
                     description=f"{cache_dir_name} cache",
                 )
 
+        home = self._platform.home()
+        for bundle_id in ("com.ea.Origin", "EA app", "EALaunchHelper"):
+            if self.cancelled:
+                return
+            cache_dir = home / "Library" / "Caches" / bundle_id
+            if not cache_dir.is_dir():
+                continue
+            total = dir_size(cache_dir)
+            if total > 0:
+                yield JunkEntry(
+                    path=cache_dir,
+                    category=JunkCategory.SHADER_CACHE,
+                    size_bytes=total,
+                    client_name=self.name,
+                    description=f"EA App cache ({bundle_id})",
+                )
+
 
 def _has_redist_ancestor(file_path: Path, root: Path) -> bool:
     current = file_path.parent

@@ -13,5 +13,9 @@ def create_adapter() -> PlatformAdapter:
             from steamcleaner.platform.linux import LinuxAdapter
 
             return LinuxAdapter()
+        case "darwin":
+            from steamcleaner.platform.macos import MacOSAdapter
+
+            return MacOSAdapter()
         case _:
             raise RuntimeError(f"Unsupported platform: {sys.platform}")
