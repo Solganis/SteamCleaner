@@ -805,7 +805,7 @@ class SteamCleanerGUI:
             color=ft.Colors.with_opacity(0.6, ft.Colors.ON_SURFACE),
         )
 
-        def on_delete_mode_changed(event: ft.ControlEvent):
+        def on_delete_mode_changed(event: ft.Event[ft.SegmentedButton]):
             selected_mode = event.control.selected[0] if event.control.selected else "trash"
             save_value("clean", "use_trash", "true" if selected_mode == "trash" else "false")
             if selected_mode == "permanent":
@@ -835,7 +835,7 @@ class SteamCleanerGUI:
             on_change=on_delete_mode_changed,
         )
 
-        def on_lang_changed(event: ft.ControlEvent):
+        def on_lang_changed(event: ft.Event[ft.Dropdown]):
             new_lang = event.control.value
             if new_lang and new_lang != get_lang():
                 set_lang(new_lang)
