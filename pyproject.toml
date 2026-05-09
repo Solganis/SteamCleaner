@@ -38,6 +38,16 @@ ignore = ["UP037"]  # flet build bundles Python 3.12, forward-ref strings still 
 [tool.ty.rules]
 unresolved-attribute = "warn"
 
+[[tool.ty.overrides]]
+include = ["src/steamcleaner/platform/windows.py"]
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
+
+[[tool.ty.overrides]]
+include = ["src/steamcleaner/ui/gui/app.py"]
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
