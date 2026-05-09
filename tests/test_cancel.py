@@ -96,6 +96,7 @@ class TestCancelClientProperty:
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
         client._cancel = threading.Event()
+        assert client._cancel is not None
         client._cancel.set()
         assert client.cancelled
 
