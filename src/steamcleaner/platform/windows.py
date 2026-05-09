@@ -6,12 +6,13 @@ from steamcleaner.platform.base import PlatformAdapter
 
 
 class WindowsAdapter(PlatformAdapter):
+    _HKEY_MAP = {
+        "HKLM": winreg.HKEY_LOCAL_MACHINE,
+        "HKCU": winreg.HKEY_CURRENT_USER,
+    }
+
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
-        hkey_map = {
-            "HKLM": winreg.HKEY_LOCAL_MACHINE,
-            "HKCU": winreg.HKEY_CURRENT_USER,
-        }
-        hkey = hkey_map.get(key)
+        hkey = self._HKEY_MAP.get(key)
         if hkey is None:
             return None
         try:
@@ -20,6 +21,24 @@ class WindowsAdapter(PlatformAdapter):
                 return str(value) if value else None
         except OSError:
             return None
+
+    def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
+        hkey = self._HKEY_MAP.get(key)
+        if hkey is None:
+            return []
+        try:
+            with winreg.OpenKey(hkey, subkey) as reg_key:
+                subkeys = []
+                index = 0
+                while True:
+                    try:
+                        subkeys.append(winreg.EnumKey(reg_key, index))
+                        index += 1
+                    except OSError:
+                        break
+                return subkeys
+        except OSError:
+            return []
 
     def appdata_local(self) -> Path:
         return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))

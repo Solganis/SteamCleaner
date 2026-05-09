@@ -8,6 +8,9 @@ class LinuxAdapter(PlatformAdapter):
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
         return None
 
+    def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
+        return []
+
     def appdata_local(self) -> Path:
         return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
 

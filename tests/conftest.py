@@ -20,11 +20,21 @@ class FakePlatformAdapter(PlatformAdapter):
         self._program_files = program_files_dirs or []
         self._programdata = programdata_dir
         self._registry: dict[tuple[str, str, str], str] = {}
+        self._registry_subkeys: dict[tuple[str, str], list[str]] = {}
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
 
+    def set_registry(self, key: str, subkey: str, value_name: str, value: str):
+        self._registry[(key, subkey, value_name)] = value
+
+    def set_registry_subkeys(self, key: str, subkey: str, subkeys: list[str]):
+        self._registry_subkeys[(key, subkey)] = subkeys
+
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
         return self._registry.get((key, subkey, value_name))
+
+    def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
+        return self._registry_subkeys.get((key, subkey), [])
 
     def appdata_local(self) -> Path:
         return self._home / ".local" / "share"
