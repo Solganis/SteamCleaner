@@ -575,9 +575,24 @@ class SteamCleanerGUI:
     def _on_row_click(self, path: Path):
         if path in self._selected:
             self._selected.discard(path)
+            is_selected = False
         else:
             self._selected.add(path)
-        self._refresh_list()
+            is_selected = True
+        for index, container in enumerate(self._results_list.controls):
+            row = container.content
+            checkbox = row.controls[0]
+            if self._visible_entries[index].path == path:
+                checkbox.value = is_selected
+                if is_selected:
+                    container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+                else:
+                    container.bgcolor = (
+                        ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+                    )
+                break
+        self._update_totals()
+        self._page.update()
 
     def _copy_path(self, path: Path):
         async def do_copy():
@@ -607,10 +622,21 @@ class SteamCleanerGUI:
         if visible_paths.issubset(self._selected):
             self._selected -= visible_paths
             self._select_all_button.text = t("select_all")
+            new_state = False
         else:
             self._selected |= visible_paths
             self._select_all_button.text = t("deselect_all")
-        self._refresh_list()
+            new_state = True
+        for index, container in enumerate(self._results_list.controls):
+            row = container.content
+            checkbox = row.controls[0]
+            checkbox.value = new_state
+            if new_state:
+                container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+            else:
+                container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+        self._update_totals()
+        self._page.update()
 
     def _on_sort_changed(self, event):
         self._sort_key = event.control.value
