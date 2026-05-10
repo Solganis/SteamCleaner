@@ -19,7 +19,7 @@ from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
-_VERSION = "0.9.0"
+_VERSION = "0.9.3"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 _DONATE_URL = "https://www.donationalerts.com/r/Solganis"
@@ -122,9 +122,11 @@ class SteamCleanerGUI:
         self._search_query = ""
         self._cancel_event: threading.Event | None = None
         self._geometry_save_timer: threading.Timer | None = None
+        self._search_timer: threading.Timer | None = None
         self._text_input_focused = False
         self._dialog_open = False
         self._cleaning = False
+        self._row_cache: dict[Path, ft.Container] = {}
         self._initialized = False
         self._window_hider = window_hider or WindowHider()
         self._status = ft.Text(t("ready"), size=12)
@@ -328,7 +330,9 @@ class SteamCleanerGUI:
         )
 
         self._progress = ft.ProgressBar(opacity=0)
-        self._results_list = ft.ListView(expand=True, spacing=1, padding=ft.Padding.symmetric(horizontal=_PADDING_H))
+        self._results_list = ft.ListView(
+            expand=True, spacing=1, padding=ft.Padding.symmetric(horizontal=_PADDING_H), item_extent=36
+        )
 
         settings_button = ft.IconButton(
             icon=ft.Icons.SETTINGS,
@@ -509,7 +513,21 @@ class SteamCleanerGUI:
         self._apply_sort_filter()
         self._results_list.controls.clear()
         for index, entry in enumerate(self._visible_entries):
-            self._results_list.controls.append(self._make_row(entry, index))
+            container = self._row_cache.get(entry.path)
+            if container is None:
+                container = self._make_row(entry, index)
+                self._row_cache[entry.path] = container
+            else:
+                is_selected = entry.path in self._selected
+                row = container.content
+                row.controls[0].value = is_selected
+                if is_selected:
+                    container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+                else:
+                    container.bgcolor = (
+                        ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+                    )
+            self._results_list.controls.append(container)
         self._update_empty_state()
         self._update_totals()
         self._page.update()
@@ -649,6 +667,12 @@ class SteamCleanerGUI:
 
     def _on_search_changed(self, event):
         self._search_query = event.control.value or ""
+        if self._search_timer is not None:
+            self._search_timer.cancel()
+        self._search_timer = threading.Timer(0.1, lambda: self._page.run_task(self._do_search_refresh))
+        self._search_timer.start()
+
+    async def _do_search_refresh(self):
         self._refresh_list()
 
     def on_toggle_theme(self, _event):
@@ -691,6 +715,7 @@ class SteamCleanerGUI:
         self._status.value = t("scanning")
         self._result = ScanResult()
         self._selected.clear()
+        self._row_cache.clear()
         self._results_list.controls.clear()
         self._total_label.value = ""
         self._empty_state.visible = False
