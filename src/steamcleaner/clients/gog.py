@@ -94,9 +94,10 @@ class GogClient(GameClient):
         yield from self._scan_webcache()
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
+        galaxy_dir = self._galaxy_data_dir()
         home = self._platform.home()
         for logs_dir in (
-            self._galaxy_data_dir() / "logs",
+            galaxy_dir / "logs",
             home / "Library" / "Logs" / "GOG.com" / "Galaxy",
         ):
             if not logs_dir.is_dir():
@@ -111,10 +112,12 @@ class GogClient(GameClient):
                         size_bytes=size,
                         client_name=self.name,
                         description="GOG Galaxy launcher log",
+                        game_root=galaxy_dir,
                     )
 
     def _scan_crashdumps(self) -> Iterator[JunkEntry]:
-        crashdumps_dir = self._galaxy_data_dir() / "crashdumps"
+        galaxy_dir = self._galaxy_data_dir()
+        crashdumps_dir = galaxy_dir / "crashdumps"
         if not crashdumps_dir.is_dir() or self.cancelled:
             return
         total = dir_size(crashdumps_dir)
@@ -125,10 +128,12 @@ class GogClient(GameClient):
                 size_bytes=total,
                 client_name=self.name,
                 description="GOG Galaxy crash dumps",
+                game_root=galaxy_dir,
             )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
-        cache_dirs = [self._galaxy_data_dir() / "webcache"]
+        galaxy_dir = self._galaxy_data_dir()
+        cache_dirs = [galaxy_dir / "webcache"]
         home = self._platform.home()
         for bundle_id in ("com.gog.galaxy", "5b6cd92d.com.gog.galaxy"):
             cache_dirs.append(home / "Library" / "Caches" / bundle_id)
@@ -144,4 +149,5 @@ class GogClient(GameClient):
                     size_bytes=total,
                     client_name=self.name,
                     description="GOG Galaxy web cache",
+                    game_root=galaxy_dir,
                 )

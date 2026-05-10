@@ -116,21 +116,41 @@ class SteamClient(GameClient):
                 return
             yield from scan_game(game_dir, self.name, lambda: self.cancelled)
 
+    @staticmethod
+    def _build_appid_map(library: Path) -> dict[str, str]:
+        steamapps = library / "steamapps"
+        appid_map: dict[str, str] = {}
+        for manifest in steamapps.glob("appmanifest_*.acf"):
+            try:
+                text = manifest.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            appid_match = re.search(r'"appid"\s+"(\d+)"', text)
+            name_match = re.search(r'"name"\s+"([^"]+)"', text)
+            if appid_match and name_match:
+                appid_map[appid_match.group(1)] = name_match.group(1)
+        return appid_map
+
     def _scan_shader_cache(self, library: Path) -> Iterator[JunkEntry]:
         shader_cache = library / "steamapps" / "shadercache"
         if not shader_cache.is_dir():
             return
+        appid_map = self._build_appid_map(library)
         for app_dir in list_subdirs(shader_cache):
             if self.cancelled:
                 return
             size = dir_size(app_dir)
             if size > 0:
+                app_name = appid_map.get(app_dir.name)
+                display = f"{app_name} (shader cache)" if app_name else f"Steam shader cache (appid {app_dir.name})"
                 yield JunkEntry(
                     path=app_dir,
                     category=JunkCategory.SHADER_CACHE,
                     size_bytes=size,
                     client_name=self.name,
-                    description=f"Shader cache (appid {app_dir.name})",
+                    description=display,
+                    game_root=library,
+                    display_name=display,
                 )
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:
@@ -145,4 +165,5 @@ class SteamClient(GameClient):
                 size_bytes=total,
                 client_name=self.name,
                 description="Steam client crash dumps",
+                game_root=install,
             )

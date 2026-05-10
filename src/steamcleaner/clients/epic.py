@@ -117,6 +117,7 @@ class EpicClient(GameClient):
                         size_bytes=size,
                         client_name=self.name,
                         description="Epic Games Launcher log",
+                        game_root=logs_dir.parent,
                     )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
@@ -141,6 +142,7 @@ class EpicClient(GameClient):
                         size_bytes=total,
                         client_name=self.name,
                         description="Epic Games Launcher web cache",
+                        game_root=data_dir,
                     )
 
         macos_cache = self._platform.home() / "Library" / "Caches" / "com.epicgames.EpicGamesLauncher"
@@ -153,4 +155,5 @@ class EpicClient(GameClient):
                     size_bytes=total,
                     client_name=self.name,
                     description="Epic Games Launcher cache",
+                    game_root=macos_cache,
                 )

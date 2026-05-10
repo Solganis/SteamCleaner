@@ -134,7 +134,7 @@ class SteamCleanerGUI:
         self._theme_button = ft.IconButton()
         self._scan_button = ft.Button(t("scan"))
         self._clean_button = ft.Button(t("clean_selected"), disabled=True)
-        self._select_all_button = ft.TextButton(t("select_all"), disabled=True)
+        self._select_all_button = ft.Button(t("select_all"), disabled=True)
         self._sort_dropdown = ft.Dropdown(width=160)
         self._filter_dropdown = ft.Dropdown(width=160)
         self._search_field = ft.TextField()
@@ -173,8 +173,8 @@ class SteamCleanerGUI:
             visual_density=ft.VisualDensity.COMPACT,
         )
         self._page.window.visible = False
-        self._page.window.width = int(get_value("window", "width") or "960")
-        self._page.window.height = int(get_value("window", "height") or "640")
+        self._page.window.width = int(get_value("window", "width") or "1024")
+        self._page.window.height = int(get_value("window", "height") or "700")
         saved_left = get_value("window", "left")
         saved_top = get_value("window", "top")
         if saved_left is not None and saved_top is not None:
@@ -183,8 +183,8 @@ class SteamCleanerGUI:
             if left_val > -30000 and top_val > -30000:
                 self._page.window.left = left_val
                 self._page.window.top = top_val
-        self._page.window.min_width = 720
-        self._page.window.min_height = 480
+        self._page.window.min_width = 800
+        self._page.window.min_height = 540
         self._page.window.on_event = self.on_window_event
         self._page.on_keyboard_event = self._on_keyboard
         self._page.padding = 0
@@ -276,6 +276,7 @@ class SteamCleanerGUI:
             on_click=self._on_clean,
             disabled=True,
             height=44,
+            tooltip=t("select_items_first"),
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
                 text_style=ft.TextStyle(size=15),
@@ -397,6 +398,17 @@ class SteamCleanerGUI:
                     size=15,
                     color=ft.Colors.with_opacity(0.4, ft.Colors.ON_SURFACE),
                 ),
+                ft.Button(
+                    t("scan"),
+                    icon=ft.Icons.SEARCH,
+                    on_click=self.on_scan,
+                    height=56,
+                    width=200,
+                    style=ft.ButtonStyle(
+                        shape=ft.RoundedRectangleBorder(radius=12),
+                        text_style=ft.TextStyle(size=18),
+                    ),
+                ),
                 ft.Container(expand=True),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -427,6 +439,17 @@ class SteamCleanerGUI:
             status_bar,
         )
         self._page.update()
+
+    @staticmethod
+    def _display_path(entry: JunkEntry) -> str:
+        if entry.display_name is not None:
+            return entry.display_name
+        if entry.game_root is not None:
+            try:
+                return str(entry.path.relative_to(entry.game_root.parent))
+            except ValueError:
+                pass
+        return str(entry.path)
 
     def _make_row(self, entry: JunkEntry, index: int) -> ft.Container:
         entry_path = entry.path
@@ -480,7 +503,7 @@ class SteamCleanerGUI:
                     ),
                     badge,
                     ft.Text(
-                        str(entry.path),
+                        self._display_path(entry),
                         expand=True,
                         size=13,
                         overflow=ft.TextOverflow.ELLIPSIS,
