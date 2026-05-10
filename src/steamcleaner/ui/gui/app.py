@@ -1105,7 +1105,12 @@ class SteamCleanerGUI:
         self._page.run_task(do_copy)
 
     def _show_snackbar(self, message: str):
-        snackbar = ft.SnackBar(content=ft.Text(message), duration=4000, open=True)
+        snackbar = ft.SnackBar(
+            content=ft.Text(message, color=ft.Colors.ON_SURFACE),
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+            duration=4000,
+            open=True,
+        )
         self._page.overlay.append(snackbar)
         self._page.update()
 
