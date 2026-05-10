@@ -77,24 +77,24 @@ class TestEaAppDetection:
 class TestEaGameDiscovery:
     def test_discovers_from_ea_games_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Battlefield 2042": {"": []}})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Battlefield 2042" for path in paths)
 
     def test_discovers_from_origin_games_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Mass Effect": {"": []}}, game_dir_name="Origin Games")
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Mass Effect" for path in paths)
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "FIFA"
         game_dir.mkdir(parents=True)
         platform, client = _make_ea_env(tmp_path, registry_games={"OFB-EAST:109552639": game_dir})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, registry_games={"OFB-EAST:12345": tmp_path / "nonexistent"})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert len(paths) == 0
 
     def test_no_duplicate_paths(self, tmp_path: Path):
@@ -102,7 +102,7 @@ class TestEaGameDiscovery:
         game_path = tmp_path / "ProgramFiles" / "EA Games" / "Battlefield 2042"
         platform.set_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH, ["bf2042"])
         platform.set_registry("HKLM", rf"{_REGISTRY_GAMES_PATH}\bf2042", "Install Dir", str(game_path))
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_path) == 1
 
 
@@ -363,7 +363,7 @@ class TestEaWinePrefix:
         game_dir.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_discovers_ea_games_from_wine_prefix(self, tmp_path: Path):
@@ -372,7 +372,7 @@ class TestEaWinePrefix:
         game_dir.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
@@ -397,5 +397,5 @@ class TestEaWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = EaAppClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_dir) == 1

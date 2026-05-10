@@ -43,6 +43,7 @@ SHOW_CALLBACK_REPLACEMENT = """\
   flutter_controller_->ForceRedraw();"""
 
 
+# noinspection PyDeprecation
 def find_flutter_sdk(hint: Path | None = None) -> Path:
     if hint and (hint / "bin" / "flutter.bat").exists():
         return hint
@@ -74,6 +75,7 @@ def flutter_executable(sdk: Path) -> str:
     return str(sdk / "bin" / "flutter")
 
 
+# noinspection PyDeprecation
 def flet_build():
     print("=== Step 1/4: flet build windows ===")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}

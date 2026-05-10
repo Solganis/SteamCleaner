@@ -67,12 +67,12 @@ class TestEpicClientDetection:
 class TestEpicGameDiscovery:
     def test_discovers_from_program_files(self, tmp_path: Path):
         platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Fortnite" for path in paths)
 
     def test_skips_launcher_dir(self, tmp_path: Path):
         platform, client = _make_epic_env(tmp_path, games={"Launcher": {"": []}, "Fortnite": {"": []}})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         names = [path.name for path in paths]
         assert "Launcher" not in names
         assert "Fortnite" in names
@@ -81,12 +81,12 @@ class TestEpicGameDiscovery:
         game_dir = tmp_path / "CustomGames" / "MyGame"
         game_dir.mkdir(parents=True)
         platform, client = _make_epic_env(tmp_path, manifest_locations=[game_dir])
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_manifest_nonexistent_path_skipped(self, tmp_path: Path):
         platform, client = _make_epic_env(tmp_path, manifest_locations=[tmp_path / "nonexistent" / "game"])
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert len(paths) == 0
 
     def test_manifest_invalid_json_skipped(self, tmp_path: Path):
@@ -95,7 +95,7 @@ class TestEpicGameDiscovery:
         manifests = programdata / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
         manifests.mkdir(parents=True)
         (manifests / "broken.item").write_text("{invalid json", encoding="utf-8")
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert len(paths) == 0
 
     def test_no_duplicate_paths(self, tmp_path: Path):
@@ -106,7 +106,7 @@ class TestEpicGameDiscovery:
         manifests.mkdir(parents=True)
         manifest = {"InstallLocation": str(game_path)}
         (manifests / "fortnite.item").write_text(json.dumps(manifest), encoding="utf-8")
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_path) == 1
 
 
@@ -328,7 +328,7 @@ class TestEpicWinePrefix:
         game_dir.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_skips_launcher_dir_in_wine_prefix(self, tmp_path: Path):
@@ -338,7 +338,7 @@ class TestEpicWinePrefix:
         (epic_dir / "Fortnite").mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         names = [path.name for path in paths]
         assert "Launcher" not in names
         assert "Fortnite" in names
@@ -365,7 +365,7 @@ class TestEpicWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_dir) == 1
 
     def test_multiple_wine_prefixes(self, tmp_path: Path):
@@ -377,6 +377,6 @@ class TestEpicWinePrefix:
         game2.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix1, prefix2])
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game1 in paths
         assert game2 in paths

@@ -2,24 +2,24 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from steamcleaner.utils.config import _config_dir, get_list, get_value, load_config, save_value
+from steamcleaner.utils.config import config_dir, get_list, get_value, load_config, save_value
 
 
 class TestConfigDir:
     def test_win32_uses_appdata(self):
         with patch.object(sys, "platform", "win32"), patch.dict("os.environ", {"APPDATA": "/fake/appdata"}):
-            result = _config_dir()
+            result = config_dir()
             assert result == Path("/fake/appdata/steamcleaner")
 
     def test_linux_uses_xdg(self):
         with patch.object(sys, "platform", "linux"), patch.dict("os.environ", {"XDG_CONFIG_HOME": "/fake/xdg"}):
-            result = _config_dir()
+            result = config_dir()
             assert result == Path("/fake/xdg/steamcleaner")
 
     def test_linux_default_without_xdg(self, tmp_path: Path):
         env = {"HOME": str(tmp_path), "USERPROFILE": str(tmp_path)}
         with patch.object(sys, "platform", "linux"), patch.dict("os.environ", env, clear=True):
-            result = _config_dir()
+            result = config_dir()
             assert result == tmp_path / ".config" / "steamcleaner"
 
 

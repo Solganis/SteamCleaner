@@ -41,7 +41,7 @@ class EpicClient(GameClient):
             self._platform.appdata_local() / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests",
         ]
 
-    def _game_install_paths(self) -> list[Path]:
+    def game_install_paths(self) -> list[Path]:
         paths: list[Path] = []
 
         for manifests_dir in self._manifests_dirs():
@@ -90,7 +90,7 @@ class EpicClient(GameClient):
         return paths
 
     def scan_junk(self) -> Iterator[JunkEntry]:
-        for game_dir in self._game_install_paths():
+        for game_dir in self.game_install_paths():
             if self.cancelled:
                 return
             yield from self._scan_game(game_dir)

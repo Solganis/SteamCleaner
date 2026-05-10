@@ -14,7 +14,7 @@ from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t, t_category
-from steamcleaner.utils.config import get_value, save_value
+from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
@@ -34,12 +34,19 @@ _CATEGORY_COLORS = {
 }
 
 
-class _WindowHider:
+class WindowHider:
     """Finds the Flutter window handle so Python can show it when ready."""
 
     def __init__(self):
         self._hwnd: int | None = None
         self._stop = threading.Event()
+
+    @classmethod
+    def from_hwnd(cls, hwnd: int | None) -> "WindowHider":
+        instance = cls()
+        instance._stop.set()
+        instance._hwnd = hwnd
+        return instance
 
     def start(self):
         if sys.platform != "win32":
@@ -49,6 +56,7 @@ class _WindowHider:
     def stop(self):
         self._stop.set()
 
+    # noinspection PyUnresolvedReferences
     def show(self):
         if self._hwnd is None or sys.platform != "win32":
             return
@@ -57,6 +65,7 @@ class _WindowHider:
         user32 = ctypes.windll.user32  # noqa: E1101
         user32.ShowWindow(self._hwnd, 5)
 
+    # noinspection PyUnresolvedReferences
     def _find_window(self):
         import ctypes
         import ctypes.wintypes
@@ -64,9 +73,11 @@ class _WindowHider:
         user32 = ctypes.windll.user32  # noqa: E1101
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
+        # noinspection PyUnresolvedReferences
         def find_flutter() -> int | None:
             found: list[int | None] = [None]
 
+            # noinspection PyUnresolvedReferences
             def callback(window_handle, _):
                 buf = ctypes.create_unicode_buffer(256)
                 user32.GetClassNameW(window_handle, buf, 256)
@@ -87,7 +98,7 @@ class _WindowHider:
 
 
 class SteamCleanerGUI:
-    def __init__(self, page: ft.Page, window_hider: _WindowHider | None = None):
+    def __init__(self, page: ft.Page, window_hider: WindowHider | None = None):
         init_lang()
         self._page = page
         self._result = ScanResult()
@@ -99,7 +110,7 @@ class SteamCleanerGUI:
         self._cancel_event: threading.Event | None = None
         self._geometry_save_timer: threading.Timer | None = None
         self._text_input_focused = False
-        self._window_hider = window_hider or _WindowHider()
+        self._window_hider = window_hider or WindowHider()
         self._status = ft.Text(t("ready"), size=12)
         self._total_label = ft.Text("", size=12)
         self._theme_button = ft.IconButton()
@@ -154,7 +165,7 @@ class SteamCleanerGUI:
         self._page.window.height = int(get_value("window", "height") or "640")
         self._page.window.min_width = 720
         self._page.window.min_height = 480
-        self._page.window.on_event = self._on_window_event
+        self._page.window.on_event = self.on_window_event
         self._page.on_keyboard_event = self._on_keyboard
         self._page.padding = 0
         self._page.spacing = 0
@@ -165,23 +176,24 @@ class SteamCleanerGUI:
             return
         if int(window.left) <= -30000 or int(window.top) <= -30000:
             return
-        from steamcleaner.utils.config import _write_config, load_config
+        save_many(
+            "window",
+            {
+                "width": str(int(window.width)),
+                "height": str(int(window.height)),
+                "left": str(int(window.left)),
+                "top": str(int(window.top)),
+            },
+        )
 
-        config = load_config()
-        config.setdefault("window", {})
-        config["window"]["width"] = str(int(window.width))
-        config["window"]["height"] = str(int(window.height))
-        config["window"]["left"] = str(int(window.left))
-        config["window"]["top"] = str(int(window.top))
-        _write_config(config)
-
-    def _on_window_event(self, event: ft.WindowEvent):
+    def on_window_event(self, event: ft.WindowEvent):
         match event.type:
             case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
                 if self._geometry_save_timer is not None:
                     self._geometry_save_timer.cancel()
-                self._geometry_save_timer = threading.Timer(0.3, self._save_window_geometry)
-                self._geometry_save_timer.start()
+                timer = threading.Timer(0.3, self._save_window_geometry)
+                self._geometry_save_timer = timer
+                timer.start()
 
     def _set_text_input_focus(self, focused: bool):
         self._text_input_focused = focused
@@ -219,14 +231,14 @@ class SteamCleanerGUI:
         self._theme_button = ft.IconButton(
             icon=ft.Icons.LIGHT_MODE if is_dark else ft.Icons.DARK_MODE,
             tooltip=t("theme_to_light") if is_dark else t("theme_to_dark"),
-            on_click=self._on_toggle_theme,
+            on_click=self.on_toggle_theme,
             icon_size=20,
         )
 
         self._scan_button = ft.Button(
             t("scan"),
             icon=ft.Icons.SEARCH,
-            on_click=self._on_scan,
+            on_click=self.on_scan,
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         )
         self._clean_button = ft.Button(
@@ -587,7 +599,7 @@ class SteamCleanerGUI:
         self._search_query = event.control.value or ""
         self._refresh_list()
 
-    def _on_toggle_theme(self, _event):
+    def on_toggle_theme(self, _event):
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
             self._theme_button.icon = ft.Icons.DARK_MODE
@@ -615,7 +627,7 @@ class SteamCleanerGUI:
         self._results_list.disabled = locked
         self._results_list.opacity = 0.4 if locked else 1.0
 
-    def _on_scan(self, _event):
+    def on_scan(self, _event):
         if self._cancel_event is not None:
             self._cancel_event.set()
             return
@@ -973,7 +985,7 @@ class SteamCleanerGUI:
 
 
 def run_gui():
-    hider = _WindowHider()
+    hider = WindowHider()
     hider.start()
 
     async def main(page: ft.Page):
