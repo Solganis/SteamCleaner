@@ -267,15 +267,18 @@ class SteamCleanerGUI:
             t("scan"),
             icon=ft.Icons.SEARCH,
             on_click=self.on_scan,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            height=44,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), text_style=ft.TextStyle(size=15)),
         )
         self._clean_button = ft.Button(
             t("clean_selected"),
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
             disabled=True,
+            height=44,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
+                text_style=ft.TextStyle(size=15),
                 color={
                     ft.ControlState.DEFAULT: ft.Colors.WHITE,
                     ft.ControlState.DISABLED: ft.Colors.with_opacity(0.4, ft.Colors.WHITE),
@@ -287,10 +290,11 @@ class SteamCleanerGUI:
                 },
             ),
         )
-        self._select_all_button = ft.TextButton(
+        self._select_all_button = ft.Button(
             t("select_all"),
             on_click=self._on_select_all,
             disabled=True,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
         )
 
         self._sort_dropdown = ft.Dropdown(
