@@ -1,3 +1,4 @@
+import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -6,6 +7,8 @@ from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+
+_logger = logging.getLogger(__name__)
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -21,10 +24,13 @@ class GogClient(GameClient):
         return "GOG Galaxy"
 
     def is_installed(self) -> bool:
-        if self._galaxy_data_dir().is_dir() or self._galaxy_appdata_dir().is_dir():
-            return True
+        for data_dir in (self._galaxy_data_dir(), self._galaxy_appdata_dir()):
+            if data_dir.is_dir():
+                _logger.debug("GOG Galaxy detected via %s", data_dir)
+                return True
         gog_games = self._platform.home() / "GOG Games"
         if gog_games.is_dir():
+            _logger.debug("GOG Galaxy detected via %s", gog_games)
             return True
         for prefix in self._platform.wine_prefixes():
             for gog_path in (
@@ -32,6 +38,7 @@ class GogClient(GameClient):
                 prefix / "GOG Games",
             ):
                 if gog_path.is_dir():
+                    _logger.debug("GOG Galaxy detected via Wine prefix: %s", gog_path)
                     return True
         return False
 
