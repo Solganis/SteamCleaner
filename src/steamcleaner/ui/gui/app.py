@@ -19,7 +19,7 @@ from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
-_VERSION = "0.9.4"
+_VERSION = "1.0.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 _DONATE_URL = "https://www.donationalerts.com/r/Solganis"
@@ -524,9 +524,7 @@ class SteamCleanerGUI:
                 if is_selected:
                     container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
                 else:
-                    container.bgcolor = (
-                        ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
-                    )
+                    container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
             self._results_list.controls.append(container)
         self._update_empty_state()
         self._update_totals()
@@ -605,9 +603,7 @@ class SteamCleanerGUI:
                 if is_selected:
                     container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
                 else:
-                    container.bgcolor = (
-                        ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
-                    )
+                    container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
                 break
         self._update_totals()
         self._page.update()
