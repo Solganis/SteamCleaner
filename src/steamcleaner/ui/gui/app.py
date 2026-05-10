@@ -97,6 +97,7 @@ class SteamCleanerGUI:
         self._category_filter: str | None = None
         self._search_query = ""
         self._cancel_event: threading.Event | None = None
+        self._geometry_save_timer: threading.Timer | None = None
         self._text_input_focused = False
         self._window_hider = window_hider or _WindowHider()
         self._status = ft.Text(t("ready"), size=12)
@@ -164,15 +165,23 @@ class SteamCleanerGUI:
             return
         if int(window.left) <= -30000 or int(window.top) <= -30000:
             return
-        save_value("window", "width", str(int(window.width)))
-        save_value("window", "height", str(int(window.height)))
-        save_value("window", "left", str(int(window.left)))
-        save_value("window", "top", str(int(window.top)))
+        from steamcleaner.utils.config import _write_config, load_config
+
+        config = load_config()
+        config.setdefault("window", {})
+        config["window"]["width"] = str(int(window.width))
+        config["window"]["height"] = str(int(window.height))
+        config["window"]["left"] = str(int(window.left))
+        config["window"]["top"] = str(int(window.top))
+        _write_config(config)
 
     def _on_window_event(self, event: ft.WindowEvent):
         match event.type:
             case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
-                self._save_window_geometry()
+                if self._geometry_save_timer is not None:
+                    self._geometry_save_timer.cancel()
+                self._geometry_save_timer = threading.Timer(0.3, self._save_window_geometry)
+                self._geometry_save_timer.start()
 
     def _set_text_input_focus(self, focused: bool):
         self._text_input_focused = focused
