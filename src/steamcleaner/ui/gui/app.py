@@ -124,6 +124,7 @@ class SteamCleanerGUI:
         self._geometry_save_timer: threading.Timer | None = None
         self._text_input_focused = False
         self._dialog_open = False
+        self._cleaning = False
         self._initialized = False
         self._window_hider = window_hider or WindowHider()
         self._status = ft.Text(t("ready"), size=12)
@@ -238,13 +239,13 @@ class SteamCleanerGUI:
         if self._text_input_focused:
             return
 
-        if event.key == "F5":
+        if event.key == "F5" and not self._cleaning:
             self.on_scan(None)
         elif event.key == "Q" and event.ctrl:
             self._page.run_task(self._page.window.close)
-        elif event.key == "A" and event.ctrl and self._cancel_event is None:
+        elif event.key == "A" and event.ctrl and self._cancel_event is None and not self._cleaning:
             self._on_select_all(None)
-        elif event.key == "Delete" and self._selected and self._cancel_event is None:
+        elif event.key == "Delete" and self._selected and self._cancel_event is None and not self._cleaning:
             self._on_clean(None)
 
     def _build_ui(self):
@@ -784,6 +785,7 @@ class SteamCleanerGUI:
 
     def _confirm_clean(self, entries: list[JunkEntry]):
         self._close_dialog()
+        self._cleaning = True
         self._status.value = t("cleaning")
         self._progress.opacity = 1
         self._set_controls_locked(locked=True)
@@ -839,6 +841,7 @@ class SteamCleanerGUI:
             self._status.value = t("items_remaining", count=entry_count)
             self._show_snackbar(t("deleted_summary", count=stats.deleted, size=format_size(stats.bytes_freed)))
 
+        self._cleaning = False
         self._set_controls_locked(locked=False)
         self._rebuild_filter_options()
         self._refresh_list()
