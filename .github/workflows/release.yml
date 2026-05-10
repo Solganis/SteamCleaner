@@ -72,19 +72,16 @@ jobs:
       - name: Strip debug symbols (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: find dist -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
-      - name: Archive (Windows)
-        if: matrix.os == 'windows-latest'
-        run: 7z a -mx=5 ${{ matrix.artifact }}.zip ./build/windows/*
-      - name: Archive (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
-      - name: Archive (macOS)
-        if: matrix.os == 'macos-latest'
-        run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
       - uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows-latest'
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.*
+          path: build/windows
+      - uses: actions/upload-artifact@v4
+        if: matrix.os != 'windows-latest'
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
 
   release:
     needs: build
@@ -94,8 +91,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
+      - name: Create archives
+        run: |
+          cd artifacts/SteamCleaner-windows && zip -r ../SteamCleaner-windows.zip . && cd ../..
+          tar -cf - -C artifacts/SteamCleaner-linux . | xz -3 > artifacts/SteamCleaner-linux.tar.xz
+          tar -cf - -C artifacts/SteamCleaner-macos . | xz -3 > artifacts/SteamCleaner-macos.tar.xz
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: |
+            artifacts/SteamCleaner-windows.zip
+            artifacts/SteamCleaner-linux.tar.xz
+            artifacts/SteamCleaner-macos.tar.xz
           generate_release_notes: true
