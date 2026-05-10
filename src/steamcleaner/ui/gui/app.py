@@ -270,7 +270,7 @@ class SteamCleanerGUI:
         )
 
         self._search_field = ft.TextField(
-            label=t("search"),
+            hint_text=t("search"),
             prefix_icon=ft.Icons.SEARCH,
             expand=True,
             dense=True,
