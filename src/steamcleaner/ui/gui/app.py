@@ -72,6 +72,9 @@ class WindowHider:
 
         user32 = ctypes.windll.user32  # noqa: E1101
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_NOACTIVATE = 0x0010
 
         # noinspection PyUnresolvedReferences
         def find_flutter() -> int | None:
@@ -93,8 +96,15 @@ class WindowHider:
             hwnd = find_flutter()
             if hwnd:
                 self._hwnd = hwnd
-                return
+                break
             time.sleep(0.001)
+
+        if self._hwnd is None:
+            return
+
+        while not self._stop.is_set():
+            user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+            time.sleep(0.005)
 
 
 class SteamCleanerGUI:
@@ -110,6 +120,8 @@ class SteamCleanerGUI:
         self._cancel_event: threading.Event | None = None
         self._geometry_save_timer: threading.Timer | None = None
         self._text_input_focused = False
+        self._dialog_open = False
+        self._initialized = False
         self._window_hider = window_hider or WindowHider()
         self._status = ft.Text(t("ready"), size=12)
         self._total_label = ft.Text("", size=12)
@@ -130,18 +142,11 @@ class SteamCleanerGUI:
         self._page.update()
         await asyncio.sleep(0.15)
         self._build_ui()
-        saved_left = get_value("window", "left")
-        saved_top = get_value("window", "top")
-        if saved_left is not None and saved_top is not None:
-            left_val = int(saved_left)
-            top_val = int(saved_top)
-            if left_val > -30000 and top_val > -30000:
-                self._page.window.left = left_val
-                self._page.window.top = top_val
         self._page.window.visible = True
         self._page.update()
         await asyncio.sleep(0.05)
         self._window_hider.show()
+        self._initialized = True
 
     def _setup_page(self):
         self._page.title = "SteamCleaner"
@@ -161,8 +166,17 @@ class SteamCleanerGUI:
             color_scheme_seed=ft.Colors.BLUE,
             visual_density=ft.VisualDensity.COMPACT,
         )
+        self._page.window.visible = False
         self._page.window.width = int(get_value("window", "width") or "960")
         self._page.window.height = int(get_value("window", "height") or "640")
+        saved_left = get_value("window", "left")
+        saved_top = get_value("window", "top")
+        if saved_left is not None and saved_top is not None:
+            left_val = int(saved_left)
+            top_val = int(saved_top)
+            if left_val > -30000 and top_val > -30000:
+                self._page.window.left = left_val
+                self._page.window.top = top_val
         self._page.window.min_width = 720
         self._page.window.min_height = 480
         self._page.window.on_event = self.on_window_event
@@ -187,6 +201,8 @@ class SteamCleanerGUI:
         )
 
     def on_window_event(self, event: ft.WindowEvent):
+        if not self._initialized:
+            return
         match event.type:
             case ft.WindowEventType.RESIZED | ft.WindowEventType.MOVED:
                 if self._geometry_save_timer is not None:
@@ -200,6 +216,8 @@ class SteamCleanerGUI:
 
     def _on_keyboard(self, event: ft.KeyboardEvent):
         if event.key == "Escape":
+            if self._dialog_open:
+                return
             if self._cancel_event is not None:
                 self._cancel_event.set()
             elif self._selected:
@@ -220,7 +238,7 @@ class SteamCleanerGUI:
         if event.key == "F5":
             self.on_scan(None)
         elif event.key == "Q" and event.ctrl:
-            self._page.window.close()
+            self._page.run_task(self._page.window.close)
         elif event.key == "A" and event.ctrl:
             self._on_select_all(None)
         elif event.key == "Delete" and self._selected and self._cancel_event is None:
@@ -750,7 +768,7 @@ class SteamCleanerGUI:
             title=ft.Text(t("confirm_deletion")),
             content=content,
             actions=[
-                ft.TextButton(t("cancel"), on_click=lambda _: self._page.pop_dialog()),
+                ft.TextButton(t("cancel"), on_click=lambda _: self._close_dialog()),
                 ft.Button(
                     t("delete_permanently") if not use_trash else t("delete"),
                     color=ft.Colors.WHITE,
@@ -760,10 +778,10 @@ class SteamCleanerGUI:
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        self._page.show_dialog(dialog)
+        self._open_dialog(dialog)
 
     def _confirm_clean(self, entries: list[JunkEntry]):
-        self._page.pop_dialog()
+        self._close_dialog()
         self._status.value = t("cleaning")
         self._progress.opacity = 1
         self._set_controls_locked(locked=True)
@@ -828,9 +846,9 @@ class SteamCleanerGUI:
         dialog = ft.AlertDialog(
             title=ft.Text(t("deleted_failed_title", deleted=stats.deleted, failed=stats.skipped)),
             content=ft.Column(error_lines, tight=True, scroll=ft.ScrollMode.AUTO, height=200),
-            actions=[ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog())],
+            actions=[ft.TextButton(t("close"), on_click=lambda _: self._close_dialog())],
         )
-        self._page.show_dialog(dialog)
+        self._open_dialog(dialog)
 
     def _on_settings_click(self, _event):
         use_trash = get_value("clean", "use_trash", "true") == "true"
@@ -875,7 +893,7 @@ class SteamCleanerGUI:
             new_lang = event.control.value
             if new_lang and new_lang != get_lang():
                 set_lang(new_lang)
-                self._page.pop_dialog()
+                self._close_dialog()
                 self._page.controls.clear()
                 self._page.update()
                 self._build_ui()
@@ -917,7 +935,6 @@ class SteamCleanerGUI:
         )
 
         dialog = ft.AlertDialog(
-            modal=True,
             title=ft.Text(t("settings")),
             content=ft.Column(
                 [
@@ -936,11 +953,11 @@ class SteamCleanerGUI:
                 spacing=8,
             ),
             actions=[
-                ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog()),
+                ft.TextButton(t("close"), on_click=lambda _: self._close_dialog()),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        self._page.show_dialog(dialog)
+        self._open_dialog(dialog)
 
     def _on_about_click(self, _event):
         dialog = ft.AlertDialog(
@@ -980,9 +997,18 @@ class SteamCleanerGUI:
                 width=360,
                 spacing=6,
             ),
-            actions=[ft.TextButton(t("close"), on_click=lambda _: self._page.pop_dialog())],
+            actions=[ft.TextButton(t("close"), on_click=lambda _: self._close_dialog())],
         )
+        self._open_dialog(dialog)
+
+    def _open_dialog(self, dialog: ft.AlertDialog):
+        self._dialog_open = True
+        dialog.on_dismiss = lambda _: setattr(self, "_dialog_open", False)
         self._page.show_dialog(dialog)
+
+    def _close_dialog(self):
+        self._dialog_open = False
+        self._page.pop_dialog()
 
     def _show_snackbar(self, message: str):
         snackbar = ft.SnackBar(content=ft.Text(message), duration=4000, open=True)

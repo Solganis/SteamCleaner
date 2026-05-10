@@ -38,6 +38,7 @@ class TestWindowPositionPersistence:
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
+            gui._initialized = True
 
             page.window.left = 200
             page.window.top = 300
@@ -56,6 +57,7 @@ class TestWindowPositionPersistence:
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
+            gui._initialized = True
 
             page.window.width = 1200
             page.window.height = 800
@@ -70,8 +72,6 @@ class TestWindowPositionPersistence:
             assert get_value("window", "height") == "800"
 
     def test_restores_position_on_startup(self, tmp_path: Path):
-        import asyncio
-
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             save_value("window", "width", "1100")
@@ -80,8 +80,7 @@ class TestWindowPositionPersistence:
             save_value("window", "top", "400")
 
             page = _make_fake_page()
-            gui = SteamCleanerGUI(page)
-            asyncio.run(gui.initialize())
+            SteamCleanerGUI(page)
 
             assert page.window.width == 1100
             assert page.window.height == 700
@@ -102,6 +101,7 @@ class TestWindowPositionPersistence:
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
+            gui._initialized = True
 
             gui.on_window_event(_make_event(ft.WindowEventType.FOCUS))
 
