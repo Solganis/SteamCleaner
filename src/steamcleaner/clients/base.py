@@ -1,10 +1,13 @@
 import abc
+import logging
 import threading
 from collections.abc import Iterator
 
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+_logger = logging.getLogger(__name__)
 
 
 class GameClient(abc.ABC):
@@ -34,8 +37,11 @@ class GameClient(abc.ABC):
         try:
             for entry in self.scan_junk():
                 if self.cancelled:
+                    _logger.info("%s: scan cancelled", self.name)
                     return
-                if not self._exclusions.is_excluded(entry.path):
+                if self._exclusions.is_excluded(entry.path):
+                    _logger.info("Excluded by safety filter: %s", entry.path)
+                else:
                     yield entry
         finally:
             self._cancel = None
