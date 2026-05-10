@@ -21,6 +21,10 @@ Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCl
 
 Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
+<p align="center">
+  <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
+</p>
+
 ## Features
 
 - Desktop GUI built on [Flet](https://flet.dev/) with automatic OS theme detection (dark/light)

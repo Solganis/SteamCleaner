@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import queue
 import sys
 import threading
@@ -22,6 +23,8 @@ _VERSION = "0.9.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 _DONATE_URL = "https://www.donationalerts.com/r/Solganis"
+_TON_ADDRESS = "UQAZDskr7UZE9Hn8Q8asCfmYIsicgL0KS9YNvRJ5NF53OPPo"
+_USDT_TRC20_ADDRESS = "TG32fyLCxPcTCmtFXayDkvAvAF9goci9st"
 
 _PADDING_H = 16
 _CATEGORY_COLORS = {
@@ -72,9 +75,9 @@ class WindowHider:
 
         user32 = ctypes.windll.user32  # noqa: E1101
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
-        SWP_NOSIZE = 0x0001
-        SWP_NOZORDER = 0x0004
-        SWP_NOACTIVATE = 0x0010
+        swp_nosize = 0x0001
+        swp_nozorder = 0x0004
+        swp_noactivate = 0x0010
 
         # noinspection PyUnresolvedReferences
         def find_flutter() -> int | None:
@@ -103,7 +106,7 @@ class WindowHider:
             return
 
         while not self._stop.is_set():
-            user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+            user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, swp_nosize | swp_nozorder | swp_noactivate)
             time.sleep(0.005)
 
 
@@ -764,7 +767,6 @@ class SteamCleanerGUI:
             )
 
         dialog = ft.AlertDialog(
-            modal=True,
             title=ft.Text(t("confirm_deletion")),
             content=content,
             actions=[
@@ -992,6 +994,25 @@ class SteamCleanerGUI:
                         ],
                         spacing=8,
                     ),
+                    ft.Row(
+                        [
+                            ft.TextButton(
+                                "TON",
+                                icon=ft.Icons.CURRENCY_BITCOIN,
+                                tooltip=t("click_to_copy"),
+                                on_click=lambda event: self._copy_with_feedback(event, _TON_ADDRESS, "TON"),
+                            ),
+                            ft.TextButton(
+                                "USDT (TRC-20)",
+                                icon=ft.Icons.CURRENCY_BITCOIN,
+                                tooltip=t("click_to_copy"),
+                                on_click=lambda event: self._copy_with_feedback(
+                                    event, _USDT_TRC20_ADDRESS, "USDT (TRC-20)"
+                                ),
+                            ),
+                        ],
+                        spacing=8,
+                    ),
                 ],
                 tight=True,
                 width=360,
@@ -1009,6 +1030,26 @@ class SteamCleanerGUI:
     def _close_dialog(self):
         self._dialog_open = False
         self._page.pop_dialog()
+
+    def _copy_with_feedback(self, event, address: str, label: str):
+        button = event.control
+
+        async def do_copy():
+            clipboard = ft.Clipboard()
+            await clipboard.set(address)
+            button.text = t("copied")
+            button.icon = ft.Icons.CHECK
+            try:
+                button.update()
+            except RuntimeError:
+                return
+            await asyncio.sleep(1.5)
+            button.text = label
+            button.icon = ft.Icons.CURRENCY_BITCOIN
+            with contextlib.suppress(RuntimeError):
+                button.update()
+
+        self._page.run_task(do_copy)
 
     def _show_snackbar(self, message: str):
         snackbar = ft.SnackBar(content=ft.Text(message), duration=4000, open=True)
