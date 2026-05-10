@@ -5,6 +5,7 @@ visible flash on startup. This script patches two files after flet build:
 
 1. lib/main.dart: sets hideWindowOnStart = true so Dart skips windowManager.show()
 2. windows/runner/flutter_window.cpp: removes SetNextFrameCallback -> Show()
+3. windows/runner/win32_window.cpp: sets BLACK_BRUSH background to prevent white flash
 
 Then rebuilds via flutter build to compile the patches into the final binary.
 
@@ -27,6 +28,7 @@ BUILD_OUTPUT = ROOT / "build" / "windows"
 
 MAIN_DART = BUILD_FLUTTER / "lib" / "main.dart"
 FLUTTER_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "flutter_window.cpp"
+WIN32_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "win32_window.cpp"
 FLUTTER_RELEASE = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Release"
 
 SHOW_CALLBACK_BLOCK = """\
@@ -115,6 +117,20 @@ def patch_sources():
         patched = True
     else:
         print("  flutter_window.cpp: already patched")
+
+    win32_text = WIN32_WINDOW_CPP.read_text(encoding="utf-8")
+    if "window_class.hbrBackground = 0;" in win32_text:
+        win32_text = win32_text.replace(
+            "window_class.hbrBackground = 0;",
+            "window_class.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));",
+        )
+        WIN32_WINDOW_CPP.write_text(win32_text, encoding="utf-8")
+        print("  win32_window.cpp: set black background brush to prevent white flash")
+        patched = True
+    elif "BLACK_BRUSH" in win32_text:
+        print("  win32_window.cpp: already patched")
+    else:
+        print("  WARNING: win32_window.cpp hbrBackground pattern not found", file=sys.stderr)
 
     if not patched:
         print("  (no changes needed)")
