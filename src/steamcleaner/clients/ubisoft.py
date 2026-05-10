@@ -105,6 +105,7 @@ class UbisoftClient(GameClient):
                 size_bytes=total,
                 client_name=self.name,
                 description="Ubisoft Connect cache",
+                game_root=launcher_dir,
             )
 
     def _scan_launcher_crashes(self) -> Iterator[JunkEntry]:
@@ -122,6 +123,7 @@ class UbisoftClient(GameClient):
                 size_bytes=total,
                 client_name=self.name,
                 description="Ubisoft Connect crash dumps",
+                game_root=launcher_dir,
             )
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
@@ -141,10 +143,12 @@ class UbisoftClient(GameClient):
                     size_bytes=size,
                     client_name=self.name,
                     description="Ubisoft Connect launcher log",
+                    game_root=launcher_dir,
                 )
 
     def _scan_appdata_logs(self) -> Iterator[JunkEntry]:
-        logs_dir = self._appdata_dir() / "logs"
+        appdata_dir = self._appdata_dir()
+        logs_dir = appdata_dir / "logs"
         if not logs_dir.is_dir():
             return
         for file_path, size in walk_files(logs_dir):
@@ -157,4 +161,5 @@ class UbisoftClient(GameClient):
                     size_bytes=size,
                     client_name=self.name,
                     description="Ubisoft Connect launcher log",
+                    game_root=appdata_dir,
                 )

@@ -50,6 +50,7 @@ def scan_game(
                 size_bytes=size,
                 client_name=client_name,
                 description=f"Crash dump in {game_dir.name}",
+                game_root=game_dir,
             )
             continue
 
@@ -60,6 +61,7 @@ def scan_game(
                 size_bytes=size,
                 client_name=client_name,
                 description=f"Log file in {game_dir.name}",
+                game_root=game_dir,
             )
             continue
 
@@ -80,4 +82,5 @@ def scan_game(
                         size_bytes=junk_size,
                         client_name=client_name,
                         description=f"{game_dir.name}/{rel}",
+                        game_root=game_dir,
                     )

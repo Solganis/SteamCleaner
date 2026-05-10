@@ -103,6 +103,7 @@ class EaAppClient(GameClient):
                         size_bytes=size,
                         client_name=self.name,
                         description="EA App launcher log",
+                        game_root=logs_dir.parent,
                     )
 
     def _scan_launcher_cache(self) -> Iterator[JunkEntry]:
@@ -121,6 +122,7 @@ class EaAppClient(GameClient):
                     size_bytes=total,
                     client_name=self.name,
                     description=f"{cache_dir_name} cache",
+                    game_root=appdata_local / cache_dir_name,
                 )
 
         home = self._platform.home()
@@ -138,4 +140,5 @@ class EaAppClient(GameClient):
                     size_bytes=total,
                     client_name=self.name,
                     description=f"EA App cache ({bundle_id})",
+                    game_root=home / "Library" / "Caches" / bundle_id,
                 )

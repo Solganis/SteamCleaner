@@ -104,5 +104,6 @@ class ScanEngine:
                         size_bytes=size,
                         client_name="Custom",
                         description=pattern.description,
+                        game_root=game_dir,
                     )
                     break

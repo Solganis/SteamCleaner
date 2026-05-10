@@ -74,6 +74,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "logging": "Logging",
         "logging_hint": "Save diagnostic log to help troubleshoot issues",
         "open_log_file": "Show log file in folder",
+        "select_items_first": "Select items to clean first",
     },
     "ru": {
         "ready": "Готово",
@@ -148,6 +149,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "logging": "Логирование",
         "logging_hint": "Сохранять диагностический лог для поиска проблем",
         "open_log_file": "Показать лог в проводнике",
+        "select_items_first": "Сначала выберите элементы",
     },
     "zh": {
         "ready": "就绪",
@@ -222,6 +224,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "logging": "日志",
         "logging_hint": "保存诊断日志以帮助排查问题",
         "open_log_file": "在文件夹中显示日志",
+        "select_items_first": "请先选择要清理的项目",
     },
     "es": {
         "ready": "Listo",
@@ -296,6 +299,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "logging": "Registro",
         "logging_hint": "Guardar registro de diagnóstico para resolver problemas",
         "open_log_file": "Mostrar registro en carpeta",
+        "select_items_first": "Seleccione elementos primero",
     },
     "pt-BR": {
         "ready": "Pronto",
@@ -370,6 +374,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "logging": "Registro",
         "logging_hint": "Salvar registro de diagnóstico para resolver problemas",
         "open_log_file": "Mostrar registro na pasta",
+        "select_items_first": "Selecione itens para limpar primeiro",
     },
 }
 

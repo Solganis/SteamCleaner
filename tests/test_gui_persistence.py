@@ -12,12 +12,12 @@ def _make_fake_page() -> MagicMock:
     page = MagicMock()
     page.theme_mode = None
     page.window = MagicMock()
-    page.window.width = 960
-    page.window.height = 640
+    page.window.width = 1024
+    page.window.height = 700
     page.window.left = 100
     page.window.top = 200
-    page.window.min_width = 720
-    page.window.min_height = 480
+    page.window.min_width = 800
+    page.window.min_height = 540
     page.window.visible = True
     page.window.on_event = None
     page.padding = 0
@@ -93,8 +93,8 @@ class TestWindowPositionPersistence:
             page = _make_fake_page()
             SteamCleanerGUI(page)
 
-            assert page.window.width == 960
-            assert page.window.height == 640
+            assert page.window.width == 1024
+            assert page.window.height == 700
 
     def test_ignores_irrelevant_events(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
