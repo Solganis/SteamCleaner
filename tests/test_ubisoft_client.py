@@ -211,6 +211,15 @@ class TestUbisoftLogScan:
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
         assert len(logs) == 0
 
+    def test_ignores_small_appdata_logs(self, tmp_path: Path):
+        platform, client = _make_ubisoft_env(tmp_path)
+        logs_dir = tmp_path / "home" / ".local" / "share" / "Ubisoft Game Launcher" / "logs"
+        logs_dir.mkdir(parents=True)
+        (logs_dir / "tiny.log").write_bytes(b"\x00" * 500)
+        entries = list(client.scan_junk())
+        logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
+        assert len(logs) == 0
+
 
 class TestUbisoftLauncherCache:
     def test_finds_cache(self, tmp_path: Path):
