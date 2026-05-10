@@ -242,7 +242,7 @@ class SteamCleanerGUI:
             self.on_scan(None)
         elif event.key == "Q" and event.ctrl:
             self._page.run_task(self._page.window.close)
-        elif event.key == "A" and event.ctrl:
+        elif event.key == "A" and event.ctrl and self._cancel_event is None:
             self._on_select_all(None)
         elif event.key == "Delete" and self._selected and self._cancel_event is None:
             self._on_clean(None)
