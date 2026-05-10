@@ -16,6 +16,7 @@ from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t, t_category
 from steamcleaner.utils.config import get_value, save_value
 from steamcleaner.utils.fs import format_size
+from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
 _VERSION = "0.6.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
@@ -34,42 +35,38 @@ _CATEGORY_COLORS = {
 
 
 class _WindowHider:
-    """Hides the Flutter window before Python gets control via WebSocket."""
+    """Finds the Flutter window handle so Python can show it when ready."""
 
     def __init__(self):
         self._hwnd: int | None = None
         self._stop = threading.Event()
 
     def start(self):
-
         if sys.platform != "win32":
             return
-        threading.Thread(target=self._monitor, daemon=True).start()
+        threading.Thread(target=self._find_window, daemon=True).start()
 
     def stop(self):
         self._stop.set()
 
     def show(self):
-        if self._hwnd is None:
+        if self._hwnd is None or sys.platform != "win32":
             return
         import ctypes
 
-        # noinspection PyUnresolvedReferences
-        ctypes.windll.user32.ShowWindow(self._hwnd, 5)
+        user32 = ctypes.windll.user32  # noqa: E1101
+        user32.ShowWindow(self._hwnd, 5)
 
-    # noinspection PyUnresolvedReferences
-    def _monitor(self):
+    def _find_window(self):
         import ctypes
         import ctypes.wintypes
 
-        user32 = ctypes.windll.user32
+        user32 = ctypes.windll.user32  # noqa: E1101
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
-        # noinspection PyUnresolvedReferences
         def find_flutter() -> int | None:
             found: list[int | None] = [None]
 
-            # noinspection PyUnresolvedReferences
             def callback(window_handle, _):
                 buf = ctypes.create_unicode_buffer(256)
                 user32.GetClassNameW(window_handle, buf, 256)
@@ -84,8 +81,6 @@ class _WindowHider:
         while not self._stop.is_set():
             hwnd = find_flutter()
             if hwnd:
-                user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010)
-                user32.ShowWindow(hwnd, 0)
                 self._hwnd = hwnd
                 return
             time.sleep(0.001)
@@ -123,6 +118,18 @@ class SteamCleanerGUI:
         self._page.update()
         await asyncio.sleep(0.15)
         self._build_ui()
+        saved_left = get_value("window", "left")
+        saved_top = get_value("window", "top")
+        if saved_left is not None and saved_top is not None:
+            left_val = int(saved_left)
+            top_val = int(saved_top)
+            if left_val > -30000 and top_val > -30000:
+                self._page.window.left = left_val
+                self._page.window.top = top_val
+        self._page.window.visible = True
+        self._page.update()
+        await asyncio.sleep(0.05)
+        self._window_hider.show()
 
     def _setup_page(self):
         self._page.title = "SteamCleaner"
@@ -146,11 +153,6 @@ class SteamCleanerGUI:
         self._page.window.height = int(get_value("window", "height") or "640")
         self._page.window.min_width = 720
         self._page.window.min_height = 480
-        saved_left = get_value("window", "left")
-        saved_top = get_value("window", "top")
-        if saved_left is not None and saved_top is not None:
-            self._page.window.left = int(saved_left)
-            self._page.window.top = int(saved_top)
         self._page.window.on_event = self._on_window_event
         self._page.on_keyboard_event = self._on_keyboard
         self._page.padding = 0
@@ -159,6 +161,8 @@ class SteamCleanerGUI:
     def _save_window_geometry(self):
         window = self._page.window
         if window.width is None or window.height is None or window.left is None or window.top is None:
+            return
+        if int(window.left) <= -30000 or int(window.top) <= -30000:
             return
         save_value("window", "width", str(int(window.width)))
         save_value("window", "height", str(int(window.height)))
@@ -364,8 +368,6 @@ class SteamCleanerGUI:
             self._progress,
             status_bar,
         )
-        self._window_hider.show()
-        self._page.window.visible = True
         self._page.update()
 
     def _make_row(self, entry: JunkEntry, index: int) -> ft.Container:
@@ -864,6 +866,31 @@ class SteamCleanerGUI:
             on_select=on_lang_changed,
         )
 
+        log_button_active = is_logging_enabled() and log_file_path().exists()
+        open_log_button = ft.IconButton(
+            icon=ft.Icons.FOLDER_OPEN,
+            tooltip=t("open_log_file") if log_button_active else None,
+            icon_size=18,
+            on_click=lambda _: self._open_in_explorer(log_file_path()),
+            opacity=1.0 if log_button_active else 0.0,
+            disabled=not log_button_active,
+        )
+
+        def on_logging_toggled(event: ft.Event[ft.Switch]):
+            set_logging_enabled(event.control.value)
+            active = event.control.value and log_file_path().exists()
+            open_log_button.opacity = 1.0 if active else 0.0
+            open_log_button.disabled = not active
+            open_log_button.tooltip = t("open_log_file") if active else None
+            self._page.update()
+
+        logging_switch = ft.Switch(
+            label=t("logging"),
+            value=is_logging_enabled(),
+            tooltip=t("logging_hint"),
+            on_change=on_logging_toggled,
+        )
+
         dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text(t("settings")),
@@ -873,7 +900,11 @@ class SteamCleanerGUI:
                     delete_mode,
                     delete_hint,
                     ft.Divider(height=24),
-                    lang_dropdown,
+                    ft.Row(
+                        [lang_dropdown, logging_switch, open_log_button],
+                        spacing=8,
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
                 ],
                 tight=True,
                 width=400,
