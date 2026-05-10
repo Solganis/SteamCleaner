@@ -1,3 +1,4 @@
+import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -8,6 +9,8 @@ from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+
+_logger = logging.getLogger(__name__)
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -49,12 +52,15 @@ class SteamClient(GameClient):
             if registry_value:
                 candidate_path = Path(registry_value)
                 if candidate_path.is_dir():
+                    _logger.debug("Steam install path from registry: %s", candidate_path)
                     self._install_path = candidate_path
                     return candidate_path
         for candidate in self._fallback_steam_paths():
             if candidate.is_dir() and (candidate / "steamapps").is_dir():
+                _logger.debug("Steam install path from fallback: %s", candidate)
                 self._install_path = candidate
                 return candidate
+        _logger.debug("Steam install path not found")
         return None
 
     def _fallback_steam_paths(self) -> list[Path]:
@@ -75,9 +81,11 @@ class SteamClient(GameClient):
         if not install:
             return []
         vdf_path = install / "steamapps" / "libraryfolders.vdf"
+        _logger.debug("Parsing libraryfolders.vdf: %s", vdf_path)
         folders = _parse_library_folders_vdf(vdf_path)
         if install not in folders:
             folders.insert(0, install)
+        _logger.debug("Found %d library folders: %s", len(folders), [str(folder) for folder in folders])
         return folders
 
     def scan_junk(self) -> Iterator[JunkEntry]:

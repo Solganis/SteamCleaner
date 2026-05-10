@@ -1,3 +1,4 @@
+import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -6,6 +7,8 @@ from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+
+_logger = logging.getLogger(__name__)
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -22,12 +25,16 @@ class EaAppClient(GameClient):
         return "EA App"
 
     def is_installed(self) -> bool:
-        if self._ea_desktop_data_dir().is_dir() or self._ea_app_data_dir().is_dir() or self._origin_data_dir().is_dir():
-            return True
+        for data_dir in (self._ea_desktop_data_dir(), self._ea_app_data_dir(), self._origin_data_dir()):
+            if data_dir.is_dir():
+                _logger.debug("EA App detected via %s", data_dir)
+                return True
         for prefix in self._platform.wine_prefixes():
             for dir_name in _GAME_DIR_NAMES:
                 for program_dir_name in ("Program Files", "Program Files (x86)"):
-                    if (prefix / program_dir_name / dir_name).is_dir():
+                    wine_path = prefix / program_dir_name / dir_name
+                    if wine_path.is_dir():
+                        _logger.debug("EA App detected via Wine prefix: %s", wine_path)
                         return True
         return False
 
