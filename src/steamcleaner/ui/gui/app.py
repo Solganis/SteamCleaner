@@ -106,7 +106,7 @@ class WindowHider:
             return
 
         while not self._stop.is_set():
-            user32.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, swp_nosize | swp_nozorder | swp_noactivate)
+            user32.SetWindowPos(self._hwnd, 0, -32000, -32000, 0, 0, swp_nosize | swp_nozorder | swp_noactivate)
             time.sleep(0.005)
 
 
@@ -549,7 +549,9 @@ class SteamCleanerGUI:
                 self._row_cache[entry.path] = container
             else:
                 is_selected = entry.path in self._selected
+                # noinspection PyUnresolvedReferences
                 row = container.content
+                # noinspection PyUnresolvedReferences
                 row.controls[0].value = is_selected
                 if is_selected:
                     container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
@@ -626,7 +628,9 @@ class SteamCleanerGUI:
             self._selected.add(path)
             is_selected = True
         for index, container in enumerate(self._results_list.controls):
+            # noinspection PyUnresolvedReferences
             row = container.content
+            # noinspection PyUnresolvedReferences
             checkbox = row.controls[0]
             if self._visible_entries[index].path == path:
                 checkbox.value = is_selected
@@ -672,7 +676,9 @@ class SteamCleanerGUI:
             self._select_all_button.text = t("deselect_all")
             new_state = True
         for index, container in enumerate(self._results_list.controls):
+            # noinspection PyUnresolvedReferences
             row = container.content
+            # noinspection PyUnresolvedReferences
             checkbox = row.controls[0]
             checkbox.value = new_state
             if new_state:
@@ -696,6 +702,7 @@ class SteamCleanerGUI:
         if self._search_timer is not None:
             self._search_timer.cancel()
         self._search_timer = threading.Timer(0.1, lambda: self._page.run_task(self._do_search_refresh))
+        # noinspection PyUnresolvedReferences
         self._search_timer.start()
 
     async def _do_search_refresh(self):
