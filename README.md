@@ -25,6 +25,8 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
   <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
 </p>
 
+This is a personal passion project: a way to sharpen my Python skills while trying to build something useful for others. Contributions and feedback are welcome.
+
 ## Features
 
 - Desktop GUI built on [Flet](https://flet.dev/) with automatic OS theme detection (dark/light)

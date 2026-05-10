@@ -1,6 +1,6 @@
 [project]
 name = "steamcleaner"
-version = "0.9.3"
+version = "0.9.4"
 description = "Cross-platform tool for reclaiming disk space from game clients"
 requires-python = ">=3.14"
 license = "MIT"
@@ -50,11 +50,13 @@ ignore = ["UP037"]  # flet build bundles Python 3.12, forward-ref strings still 
 [tool.ty.rules]
 unresolved-attribute = "warn"
 
+# winreg module has no type stubs; all registry access triggers false positives
 [[tool.ty.overrides]]
 include = ["src/steamcleaner/platform/windows.py"]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"
 
+# flet controls use dynamic attributes (__init_subclass__, kwargs) with no type stubs
 [[tool.ty.overrides]]
 include = ["src/steamcleaner/ui/gui/app.py", "src/main.py"]
 [tool.ty.overrides.rules]
