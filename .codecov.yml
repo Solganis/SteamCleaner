@@ -1,0 +1,19 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+ignore:
+  - "src/main.py"
+  - "src/steamcleaner/ui/**"
+  - "src/steamcleaner/platform/windows.py"
+  - "src/steamcleaner/platform/macos.py"
+  - "src/steamcleaner/__main__.py"
+  - "src/steamcleaner/app.py"
+  - "scripts/**"
