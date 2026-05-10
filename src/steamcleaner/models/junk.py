@@ -19,6 +19,8 @@ class JunkEntry:
     size_bytes: int
     client_name: str
     description: str = ""
+    game_root: Path | None = None
+    display_name: str | None = None
 
     @property
     def size_mb(self) -> float:
