@@ -217,7 +217,11 @@ class SteamCleanerGUI:
         if self._text_input_focused:
             return
 
-        if event.key == "A" and event.ctrl:
+        if event.key == "F5":
+            self.on_scan(None)
+        elif event.key == "Q" and event.ctrl:
+            self._page.window.close()
+        elif event.key == "A" and event.ctrl:
             self._on_select_all(None)
         elif event.key == "Delete" and self._selected and self._cancel_event is None:
             self._on_clean(None)
@@ -957,9 +961,11 @@ class SteamCleanerGUI:
                     ),
                     ft.Divider(height=16),
                     ft.Text(t("keyboard_shortcuts"), weight=ft.FontWeight.BOLD, size=13),
+                    ft.Text(t("shortcut_scan"), size=12),
                     ft.Text(t("shortcut_select_all"), size=12),
                     ft.Text(t("shortcut_delete"), size=12),
                     ft.Text(t("shortcut_escape"), size=12),
+                    ft.Text(t("shortcut_quit"), size=12),
                     ft.Divider(height=16),
                     ft.Row(
                         [
