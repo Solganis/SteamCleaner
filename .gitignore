@@ -9,4 +9,3 @@ build/
 .pytest_cache/
 .coverage
 .editorconfig
-scripts/generate_test_junk.ps1
