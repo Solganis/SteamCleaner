@@ -1,10 +1,10 @@
-"""Two-step Windows build: flet build → patch → flutter rebuild.
+"""Two-step Windows build: flet build -> patch -> flutter rebuild.
 
 Flet's Flutter runner shows the window before Python gets control, causing a
 visible flash on startup. This script patches two files after flet build:
 
 1. lib/main.dart: sets hideWindowOnStart = true so Dart skips windowManager.show()
-2. windows/runner/flutter_window.cpp: removes SetNextFrameCallback → Show()
+2. windows/runner/flutter_window.cpp: removes SetNextFrameCallback -> Show()
 
 Then rebuilds via flutter build to compile the patches into the final binary.
 
@@ -77,8 +77,9 @@ def flutter_executable(sdk: Path) -> str:
 def flet_build():
     print("=== Step 1/4: flet build windows ===")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    flet_bin = shutil.which("flet") or "flet"
     subprocess.run(
-        [sys.executable, "-m", "flet", "build", "windows"],
+        [flet_bin, "build", "windows"],
         cwd=ROOT,
         check=True,
         env=env,
@@ -97,7 +98,7 @@ def patch_sources():
             'bool.tryParse("True".toLowerCase()) ?? false;',
         )
         MAIN_DART.write_text(dart_text, encoding="utf-8")
-        print("  main.dart: hideWindowOnStart → true")
+        print("  main.dart: hideWindowOnStart -> true")
         patched = True
     elif '"True".toLowerCase()' in dart_text:
         print("  main.dart: already patched")
@@ -108,7 +109,7 @@ def patch_sources():
     if "SetNextFrameCallback" in cpp_text:
         cpp_text = cpp_text.replace(SHOW_CALLBACK_BLOCK, SHOW_CALLBACK_REPLACEMENT)
         FLUTTER_WINDOW_CPP.write_text(cpp_text, encoding="utf-8")
-        print("  flutter_window.cpp: removed SetNextFrameCallback → Show()")
+        print("  flutter_window.cpp: removed SetNextFrameCallback -> Show()")
         patched = True
     else:
         print("  flutter_window.cpp: already patched")
