@@ -1,8 +1,11 @@
+import logging
 import os
 import winreg
 from pathlib import Path
 
 from steamcleaner.platform.base import PlatformAdapter
+
+_logger = logging.getLogger(__name__)
 
 
 class WindowsAdapter(PlatformAdapter):
@@ -14,12 +17,16 @@ class WindowsAdapter(PlatformAdapter):
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
         hkey = self._HKEY_MAP.get(key)
         if hkey is None:
+            _logger.debug("Unknown registry hive: %s", key)
             return None
         try:
             with winreg.OpenKey(hkey, subkey) as reg_key:
                 value, _ = winreg.QueryValueEx(reg_key, value_name)
-                return str(value) if value else None
+                result = str(value) if value else None
+                _logger.debug("Registry %s\\%s@%s = %s", key, subkey, value_name, result)
+                return result
         except OSError:
+            _logger.debug("Registry key not found: %s\\%s@%s", key, subkey, value_name)
             return None
 
     def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
@@ -36,8 +43,10 @@ class WindowsAdapter(PlatformAdapter):
                         index += 1
                     except OSError:
                         break
+                _logger.debug("Registry %s\\%s: %d subkeys", key, subkey, len(subkeys))
                 return subkeys
         except OSError:
+            _logger.debug("Registry key not found: %s\\%s", key, subkey)
             return []
 
     def appdata_local(self) -> Path:

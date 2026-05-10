@@ -1,8 +1,11 @@
+import logging
 import os
 import shutil
 import stat
 from collections.abc import Iterator
 from pathlib import Path
+
+_logger = logging.getLogger(__name__)
 
 
 def is_reparse_point(path: Path) -> bool:
@@ -18,6 +21,7 @@ def is_reparse_point(path: Path) -> bool:
 def safe_rmtree(path: Path) -> bool:
     """Remove a directory tree, refusing to traverse reparse points."""
     if is_reparse_point(path):
+        _logger.warning("Refusing to rmtree reparse point: %s", path)
         return False
     shutil.rmtree(path)
     return True
@@ -30,7 +34,8 @@ def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
     """
     try:
         scanner = os.scandir(root)
-    except OSError:
+    except OSError as scan_error:
+        _logger.debug("Cannot scan directory %s: %s", root, scan_error)
         return
     with scanner:
         for entry in scanner:
@@ -39,9 +44,12 @@ def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
                     entry_path = Path(entry.path)
                     if not is_reparse_point(entry_path):
                         yield from walk_files(entry_path)
+                    else:
+                        _logger.debug("Skipping reparse point: %s", entry_path)
                 elif entry.is_file(follow_symlinks=False) and not entry.is_symlink():
                     yield Path(entry.path), entry.stat(follow_symlinks=False).st_size
-            except OSError:
+            except OSError as file_error:
+                _logger.debug("Error accessing %s: %s", entry.path, file_error)
                 continue
 
 
@@ -54,7 +62,8 @@ def list_subdirs(path: Path) -> list[Path]:
     result: list[Path] = []
     try:
         scanner = os.scandir(path)
-    except OSError:
+    except OSError as scan_error:
+        _logger.debug("Cannot scan directory %s: %s", path, scan_error)
         return result
     with scanner:
         for entry in scanner:
@@ -63,7 +72,8 @@ def list_subdirs(path: Path) -> list[Path]:
                     entry_path = Path(entry.path)
                     if not is_reparse_point(entry_path):
                         result.append(entry_path)
-            except OSError:
+            except OSError as dir_error:
+                _logger.debug("Error accessing %s: %s", entry.path, dir_error)
                 continue
     return result
 
