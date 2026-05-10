@@ -18,7 +18,7 @@ _DUMP_EXTENSIONS = frozenset({".dmp", ".mdmp"})
 _LOG_MIN_SIZE = 1024 * 1024
 
 
-def _parse_library_folders_vdf(path: Path) -> list[Path]:
+def parse_library_folders_vdf(path: Path) -> list[Path]:
     """Parse libraryfolders.vdf to extract library paths."""
     if not path.is_file():
         return []
@@ -82,7 +82,7 @@ class SteamClient(GameClient):
             return []
         vdf_path = install / "steamapps" / "libraryfolders.vdf"
         _logger.debug("Parsing libraryfolders.vdf: %s", vdf_path)
-        folders = _parse_library_folders_vdf(vdf_path)
+        folders = parse_library_folders_vdf(vdf_path)
         if install not in folders:
             folders.insert(0, install)
         _logger.debug("Found %d library folders: %s", len(folders), [str(folder) for folder in folders])

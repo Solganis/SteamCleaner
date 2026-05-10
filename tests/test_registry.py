@@ -7,6 +7,7 @@ from steamcleaner.scanner.exclusions import ExclusionRegistry
 from tests.conftest import FakePlatformAdapter
 
 
+# noinspection PyProtectedMember
 @pytest.fixture(autouse=True)
 def _restore_registry():
     """Ensure registry state is restored after each test."""
@@ -17,6 +18,7 @@ def _restore_registry():
     ClientRegistry._discovered = saved_discovered
 
 
+# noinspection PyProtectedMember
 class TestClientRegistry:
     def test_clear_removes_all_clients(self):
         ClientRegistry.discover()

@@ -12,6 +12,7 @@ class TestJunkEntry:
     def test_frozen(self):
         entry = _entry("/tmp/test", 1024)
         try:
+            # noinspection PyDataclass
             entry.size_bytes = 0  # type: ignore[misc]
             raise AssertionError("should be frozen")
         except AttributeError:

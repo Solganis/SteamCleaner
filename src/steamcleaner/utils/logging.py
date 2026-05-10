@@ -2,7 +2,7 @@ import logging
 import logging.handlers
 from pathlib import Path
 
-from steamcleaner.utils.config import _config_dir, get_value, save_value
+from steamcleaner.utils.config import config_dir, get_value, save_value
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -12,7 +12,7 @@ _ROOT_LOGGER_NAME = "steamcleaner"
 
 
 def log_file_path() -> Path:
-    return _config_dir() / "steamcleaner.log"
+    return config_dir() / "steamcleaner.log"
 
 
 def is_logging_enabled() -> bool:

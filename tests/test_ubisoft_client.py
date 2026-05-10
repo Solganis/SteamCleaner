@@ -82,19 +82,19 @@ class TestUbisoftDetection:
 class TestUbisoftGameDiscovery:
     def test_discovers_from_default_games_dir(self, tmp_path: Path):
         platform, client = _make_ubisoft_env(tmp_path, games={"Assassin's Creed": {"": []}})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Assassin's Creed" for path in paths)
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "FarCry6"
         game_dir.mkdir(parents=True)
         platform, client = _make_ubisoft_env(tmp_path, registry_games={"635": game_dir})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
         platform, client = _make_ubisoft_env(tmp_path, registry_games={"999": tmp_path / "nonexistent"})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert len(paths) == 0
 
     def test_no_duplicate_paths(self, tmp_path: Path):
@@ -102,7 +102,7 @@ class TestUbisoftGameDiscovery:
         game_path = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher" / "games" / "FarCry6"
         platform.set_registry_subkeys("HKLM", _REGISTRY_INSTALLS_PATH, ["635"])
         platform.set_registry("HKLM", rf"{_REGISTRY_INSTALLS_PATH}\635", "InstallDir", str(game_path))
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_path) == 1
 
     def test_no_launcher_dir_still_uses_registry(self, tmp_path: Path):
@@ -113,7 +113,7 @@ class TestUbisoftGameDiscovery:
         platform.set_registry_subkeys("HKLM", _REGISTRY_INSTALLS_PATH, ["635"])
         platform.set_registry("HKLM", rf"{_REGISTRY_INSTALLS_PATH}\635", "InstallDir", str(game_dir))
         client = UbisoftClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
 
@@ -317,7 +317,7 @@ class TestUbisoftWinePrefix:
         game_dir.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = UbisoftClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_discovers_games_from_program_files_prefix(self, tmp_path: Path):
@@ -326,7 +326,7 @@ class TestUbisoftWinePrefix:
         game_dir.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = UbisoftClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
@@ -349,5 +349,5 @@ class TestUbisoftWinePrefix:
         platform.set_registry_subkeys("HKLM", _REGISTRY_INSTALLS_PATH, ["635"])
         platform.set_registry("HKLM", rf"{_REGISTRY_INSTALLS_PATH}\635", "InstallDir", str(game_dir))
         client = UbisoftClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_dir) == 1

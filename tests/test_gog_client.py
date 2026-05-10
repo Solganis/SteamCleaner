@@ -67,24 +67,24 @@ class TestGogDetection:
 class TestGogGameDiscovery:
     def test_discovers_from_gog_games_dir(self, tmp_path: Path):
         platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Witcher 3" for path in paths)
 
     def test_discovers_from_galaxy_games_dir(self, tmp_path: Path):
         platform, client = _make_gog_env(tmp_path, games={"Cyberpunk 2077": {"": []}}, game_dir_name="GOG Galaxy/Games")
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert any(path.name == "Cyberpunk 2077" for path in paths)
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "Witcher3"
         game_dir.mkdir(parents=True)
         platform, client = _make_gog_env(tmp_path, registry_games={"1495134320": game_dir})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
         platform, client = _make_gog_env(tmp_path, registry_games={"12345": tmp_path / "nonexistent"})
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert len(paths) == 0
 
     def test_no_duplicate_paths(self, tmp_path: Path):
@@ -92,7 +92,7 @@ class TestGogGameDiscovery:
         game_path = tmp_path / "ProgramFiles" / "GOG Games" / "Witcher 3"
         platform.set_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH, ["1495134320"])
         platform.set_registry("HKLM", rf"{_REGISTRY_GAMES_PATH}\1495134320", "path", str(game_path))
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_path) == 1
 
 
@@ -287,7 +287,7 @@ class TestGogWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = GogClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_discovers_from_gog_games_in_prefix(self, tmp_path: Path):
@@ -300,7 +300,7 @@ class TestGogWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = GogClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_discovers_from_program_files_gog_games_in_prefix(self, tmp_path: Path):
@@ -313,7 +313,7 @@ class TestGogWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = GogClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
@@ -343,5 +343,5 @@ class TestGogWinePrefix:
             wine_prefix_dirs=[prefix],
         )
         client = GogClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert paths.count(game_dir) == 1
