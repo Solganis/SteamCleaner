@@ -1,13 +1,13 @@
 [project]
 name = "steamcleaner"
-version = "0.9.4"
+version = "1.0.0"
 description = "Cross-platform tool for reclaiming disk space from game clients"
 requires-python = ">=3.14"
 license = "MIT"
 authors = [{name = "Solganis"}]
 keywords = ["steam", "epic", "gog", "ubisoft", "ea", "disk-cleanup", "cache-cleaner"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
