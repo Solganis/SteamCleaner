@@ -16,6 +16,7 @@ steamcleaner = "steamcleaner.app:main"
 [tool.flet]
 org = "dev.steamcleaner"
 product = "SteamCleaner"
+icon = "assets/icon.png"
 
 [tool.flet.app]
 path = "src"

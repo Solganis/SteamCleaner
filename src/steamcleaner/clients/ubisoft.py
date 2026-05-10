@@ -1,3 +1,4 @@
+import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -6,6 +7,8 @@ from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+
+_logger = logging.getLogger(__name__)
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -22,12 +25,18 @@ class UbisoftClient(GameClient):
         return "Ubisoft Connect"
 
     def is_installed(self) -> bool:
-        if self._launcher_install_dir() is not None or self._appdata_dir().is_dir():
+        launcher_dir = self._launcher_install_dir()
+        if launcher_dir is not None:
+            _logger.debug("Ubisoft Connect detected via registry: %s", launcher_dir)
+            return True
+        if self._appdata_dir().is_dir():
+            _logger.debug("Ubisoft Connect detected via appdata: %s", self._appdata_dir())
             return True
         for prefix in self._platform.wine_prefixes():
             for program_dir_name in ("Program Files (x86)", "Program Files"):
                 launcher = prefix / program_dir_name / "Ubisoft" / "Ubisoft Game Launcher"
                 if launcher.is_dir():
+                    _logger.debug("Ubisoft Connect detected via Wine prefix: %s", launcher)
                     return True
         return False
 

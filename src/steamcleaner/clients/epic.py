@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from collections.abc import Iterator
 from pathlib import Path
@@ -7,6 +8,8 @@ from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+
+_logger = logging.getLogger(__name__)
 
 _REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer|prerequisites)", re.IGNORECASE)
 _JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -52,8 +55,10 @@ class EpicClient(GameClient):
                         if install_location:
                             candidate = Path(install_location)
                             if candidate.is_dir() and candidate not in paths:
+                                _logger.debug("Epic manifest %s -> %s", item_file.name, candidate)
                                 paths.append(candidate)
                     except json.JSONDecodeError, OSError:
+                        _logger.debug("Failed to parse Epic manifest: %s", item_file)
                         continue
 
         for program_dir in self._platform.program_files():
