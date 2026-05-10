@@ -19,7 +19,7 @@ from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
-_VERSION = "0.9.3"
+_VERSION = "0.9.4"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 _DONATE_URL = "https://www.donationalerts.com/r/Solganis"
