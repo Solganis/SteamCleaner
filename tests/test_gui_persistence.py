@@ -65,6 +65,8 @@ class TestWindowPositionPersistence:
             assert get_value("window", "height") == "800"
 
     def test_restores_position_on_startup(self, tmp_path: Path):
+        import asyncio
+
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             save_value("window", "width", "1100")
@@ -73,7 +75,8 @@ class TestWindowPositionPersistence:
             save_value("window", "top", "400")
 
             page = _make_fake_page()
-            SteamCleanerGUI(page)
+            gui = SteamCleanerGUI(page)
+            asyncio.run(gui.initialize())
 
             assert page.window.width == 1100
             assert page.window.height == 700
