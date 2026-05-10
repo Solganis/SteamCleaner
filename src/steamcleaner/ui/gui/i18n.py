@@ -67,6 +67,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cat_old_log": "old log",
         "cat_installer": "installer",
         "cat_cross_platform": "cross-platform",
+        "logging": "Logging",
+        "logging_hint": "Save diagnostic log to help troubleshoot issues",
+        "open_log_file": "Show log file in folder",
     },
     "ru": {
         "ready": "Готово",
@@ -134,6 +137,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cat_old_log": "старый лог",
         "cat_installer": "инсталлятор",
         "cat_cross_platform": "кросс-платформа",
+        "logging": "Логирование",
+        "logging_hint": "Сохранять диагностический лог для поиска проблем",
+        "open_log_file": "Показать лог в проводнике",
     },
     "zh": {
         "ready": "就绪",
@@ -201,6 +207,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cat_old_log": "旧日志",
         "cat_installer": "安装程序",
         "cat_cross_platform": "跨平台",
+        "logging": "日志",
+        "logging_hint": "保存诊断日志以帮助排查问题",
+        "open_log_file": "在文件夹中显示日志",
     },
     "es": {
         "ready": "Listo",
@@ -268,6 +277,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cat_old_log": "log antiguo",
         "cat_installer": "instalador",
         "cat_cross_platform": "multiplataforma",
+        "logging": "Registro",
+        "logging_hint": "Guardar registro de diagnóstico para resolver problemas",
+        "open_log_file": "Mostrar registro en carpeta",
     },
     "pt-BR": {
         "ready": "Pronto",
@@ -335,6 +347,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cat_old_log": "log antigo",
         "cat_installer": "instalador",
         "cat_cross_platform": "multiplataforma",
+        "logging": "Registro",
+        "logging_hint": "Salvar registro de diagnóstico para resolver problemas",
+        "open_log_file": "Mostrar registro na pasta",
     },
 }
 

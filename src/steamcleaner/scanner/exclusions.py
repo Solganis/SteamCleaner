@@ -1,5 +1,8 @@
+import logging
 from dataclasses import dataclass, field
 from pathlib import PurePath
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,7 +32,11 @@ class ExclusionRegistry:
 
     def is_excluded(self, path: PurePath) -> bool:
         path_str = str(path).replace("\\", "/").lower()
-        return any(exclusion.pattern.lower() in path_str for exclusion in self._exclusions)
+        for exclusion in self._exclusions:
+            if exclusion.pattern.lower() in path_str:
+                _logger.debug("Path excluded by '%s': %s", exclusion.pattern, path)
+                return True
+        return False
 
     @property
     def all(self) -> list[Exclusion]:
