@@ -306,6 +306,7 @@ class SteamCleanerGUI:
             on_select=self._on_sort_changed,
             dense=True,
             text_size=13,
+            border_color=ft.Colors.OUTLINE,
         )
 
         self._filter_dropdown = ft.Dropdown(
@@ -316,6 +317,7 @@ class SteamCleanerGUI:
             on_select=self._on_filter_changed,
             dense=True,
             text_size=13,
+            border_color=ft.Colors.OUTLINE,
         )
 
         self._search_field = ft.TextField(
@@ -324,6 +326,7 @@ class SteamCleanerGUI:
             expand=True,
             dense=True,
             text_size=13,
+            border_color=ft.Colors.OUTLINE,
             on_change=self._on_search_changed,
             on_focus=lambda _: self._set_text_input_focus(True),
             on_blur=lambda _: self._set_text_input_focus(False),
