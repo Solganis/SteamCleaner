@@ -156,7 +156,34 @@ class TestSteamGameLogs:
         assert len(log_entries) == 0
 
 
-class TestSteamShaderCacheEdgeCases:
+class TestSteamShaderCache:
+    def test_finds_shader_cache(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        shader = steam / "steamapps" / "shadercache" / "730"
+        shader.mkdir(parents=True)
+        (shader / "cache.bin").write_bytes(b"\x00" * 4096)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
+        assert len(shader_entries) == 1
+        assert shader_entries[0].size_bytes == 4096
+        assert "730" in shader_entries[0].description
+
+    def test_finds_multiple_shader_caches(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        for app_id in ("730", "570"):
+            cache_dir = steam / "steamapps" / "shadercache" / app_id
+            cache_dir.mkdir(parents=True)
+            (cache_dir / "data.bin").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
+        assert len(shader_entries) == 2
+
     def test_no_shader_cache_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
         (steam / "steamapps" / "common").mkdir(parents=True)
@@ -176,3 +203,39 @@ class TestSteamShaderCacheEdgeCases:
         entries = list(client.scan_junk())
         shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
         assert len(shader_entries) == 0
+
+
+class TestSteamDumps:
+    def test_finds_steam_dumps(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        dumps = steam / "dumps"
+        dumps.mkdir()
+        (dumps / "crash_2026-01-01.dmp").write_bytes(b"\x00" * 2048)
+        (dumps / "assert_2026-01-02.mdmp").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
+        assert len(dump_entries) == 1
+        assert dump_entries[0].path == dumps
+        assert dump_entries[0].size_bytes == 3072
+
+    def test_ignores_empty_dumps_dir(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        (steam / "dumps").mkdir()
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
+        assert len(dump_entries) == 0
+
+    def test_no_dumps_dir(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
+        assert len(dump_entries) == 0
