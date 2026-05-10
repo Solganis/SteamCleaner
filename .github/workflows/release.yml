@@ -46,7 +46,15 @@ jobs:
           key: flet-build-${{ matrix.os }}-flet0.85
           restore-keys: flet-build-${{ matrix.os }}-
       - name: Build
+        if: matrix.os != 'windows-latest'
         run: uv run flet build ${{ matrix.platform }} --yes --no-rich-output -o dist
+        env:
+          PYTHONIOENCODING: utf-8
+      - name: Build (Windows, patched)
+        if: matrix.os == 'windows-latest'
+        run: |
+          uv run flet build windows --yes --no-rich-output
+          uv run python scripts/build_windows.py --skip-flet-build
         env:
           PYTHONIOENCODING: utf-8
       - name: Strip debug symbols (Linux)
@@ -54,7 +62,7 @@ jobs:
         run: find dist -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
       - name: Archive (Windows)
         if: matrix.os == 'windows-latest'
-        run: 7z a -mx=5 ${{ matrix.artifact }}.zip ./dist/*
+        run: 7z a -mx=5 ${{ matrix.artifact }}.zip ./build/windows/*
       - name: Archive (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: tar -cf - -C dist . | xz -3 > ${{ matrix.artifact }}.tar.xz
