@@ -44,6 +44,7 @@ class TestWindowPositionPersistence:
             page.window.height = 768
 
             gui._on_window_event(_make_event(ft.WindowEventType.MOVED))
+            gui._geometry_save_timer.join()
 
             assert get_value("window", "left") == "200"
             assert get_value("window", "top") == "300"
@@ -60,6 +61,7 @@ class TestWindowPositionPersistence:
             page.window.top = 100
 
             gui._on_window_event(_make_event(ft.WindowEventType.RESIZED))
+            gui._geometry_save_timer.join()
 
             assert get_value("window", "width") == "1200"
             assert get_value("window", "height") == "800"
