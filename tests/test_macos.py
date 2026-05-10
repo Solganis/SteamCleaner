@@ -106,7 +106,7 @@ class TestEpicMacOS:
         manifest.write_text(json.dumps({"InstallLocation": str(game_dir)}), encoding="utf-8")
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_discovers_games_from_shared(self, tmp_path: Path):
@@ -115,7 +115,7 @@ class TestEpicMacOS:
         game_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_shared_skips_launcher_dir(self, tmp_path: Path):
@@ -125,7 +125,7 @@ class TestEpicMacOS:
         game_dir.mkdir()
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
         assert not any(path.name == "Launcher" for path in paths)
 
@@ -195,7 +195,7 @@ class TestEaAppMacOS:
         game_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path, program_files_dirs=[apps])
         client = EaAppClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_scans_macos_origin_cache(self, tmp_path: Path):
@@ -282,7 +282,7 @@ class TestGogMacOS:
         game_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
-        paths = client._game_install_paths()
+        paths = client.game_install_paths()
         assert game_dir in paths
 
     def test_scans_launcher_logs(self, tmp_path: Path):

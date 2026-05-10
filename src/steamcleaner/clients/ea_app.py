@@ -47,7 +47,7 @@ class EaAppClient(GameClient):
     def _origin_data_dir(self) -> Path:
         return self._platform.appdata_local() / "Origin"
 
-    def _game_install_paths(self) -> list[Path]:
+    def game_install_paths(self) -> list[Path]:
         paths: list[Path] = []
 
         for content_id in self._platform.list_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH):
@@ -79,7 +79,7 @@ class EaAppClient(GameClient):
         return paths
 
     def scan_junk(self) -> Iterator[JunkEntry]:
-        for game_dir in self._game_install_paths():
+        for game_dir in self.game_install_paths():
             if self.cancelled:
                 return
             yield from self._scan_game(game_dir)

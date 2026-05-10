@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from steamcleaner.clients.steam import SteamClient, _parse_library_folders_vdf
+from steamcleaner.clients.steam import SteamClient, parse_library_folders_vdf
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size
 from tests.conftest import FakePlatformAdapter
@@ -12,17 +12,17 @@ class TestParseLibraryFoldersVdf:
         library = tmp_path / "SteamLibrary"
         library.mkdir()
         vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{library}"\n  }}\n}}')
-        paths = _parse_library_folders_vdf(vdf)
+        paths = parse_library_folders_vdf(vdf)
         assert library in paths
 
     def test_missing_file_returns_empty(self, tmp_path: Path):
-        result = _parse_library_folders_vdf(tmp_path / "nonexistent.vdf")
+        result = parse_library_folders_vdf(tmp_path / "nonexistent.vdf")
         assert result == []
 
     def test_skips_nonexistent_paths(self, tmp_path: Path):
         vdf = tmp_path / "libraryfolders.vdf"
         vdf.write_text('"libraryfolders"\n{\n  "0"\n  {\n    "path"\t\t"/nonexistent/path"\n  }\n}')
-        result = _parse_library_folders_vdf(vdf)
+        result = parse_library_folders_vdf(vdf)
         assert result == []
 
     def test_multiple_libraries(self, tmp_path: Path):
@@ -38,7 +38,7 @@ class TestParseLibraryFoldersVdf:
             "}"
         )
         vdf.write_text(content)
-        paths = _parse_library_folders_vdf(vdf)
+        paths = parse_library_folders_vdf(vdf)
         assert lib_a in paths
         assert lib_b in paths
 
@@ -67,6 +67,11 @@ class TestSteamNotInstalled:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         assert entries == []
+
+    def test_game_install_paths_returns_empty(self, tmp_path: Path):
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        client = SteamClient(platform, ExclusionRegistry())
+        assert client.game_install_paths() == []
 
 
 class TestSteamClientLibraries:

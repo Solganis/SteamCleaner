@@ -31,6 +31,7 @@ def _make_event(event_type: ft.WindowEventType) -> MagicMock:
     return event
 
 
+# noinspection PyProtectedMember
 class TestWindowPositionPersistence:
     def test_saves_position_on_moved(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
@@ -43,7 +44,8 @@ class TestWindowPositionPersistence:
             page.window.width = 1024
             page.window.height = 768
 
-            gui._on_window_event(_make_event(ft.WindowEventType.MOVED))
+            gui.on_window_event(_make_event(ft.WindowEventType.MOVED))
+            assert gui._geometry_save_timer is not None
             gui._geometry_save_timer.join()
 
             assert get_value("window", "left") == "200"
@@ -60,7 +62,8 @@ class TestWindowPositionPersistence:
             page.window.left = 100
             page.window.top = 100
 
-            gui._on_window_event(_make_event(ft.WindowEventType.RESIZED))
+            gui.on_window_event(_make_event(ft.WindowEventType.RESIZED))
+            assert gui._geometry_save_timer is not None
             gui._geometry_save_timer.join()
 
             assert get_value("window", "width") == "1200"
@@ -100,7 +103,7 @@ class TestWindowPositionPersistence:
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
 
-            gui._on_window_event(_make_event(ft.WindowEventType.FOCUS))
+            gui.on_window_event(_make_event(ft.WindowEventType.FOCUS))
 
             assert get_value("window", "left") is None
 
@@ -113,7 +116,7 @@ class TestThemePersistence:
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
             assert page.theme_mode == ft.ThemeMode.LIGHT
-            gui._on_toggle_theme(None)
+            gui.on_toggle_theme(None)
 
             assert get_value("ui", "theme") == "dark"
 
@@ -124,7 +127,7 @@ class TestThemePersistence:
             page = _make_fake_page()
             gui = SteamCleanerGUI(page)
             assert page.theme_mode == ft.ThemeMode.DARK
-            gui._on_toggle_theme(None)
+            gui.on_toggle_theme(None)
 
             assert get_value("ui", "theme") == "light"
 
@@ -138,11 +141,12 @@ class TestThemePersistence:
             assert page.theme_mode == ft.ThemeMode.LIGHT
 
 
+# noinspection PyProtectedMember
 class TestScanCancelCycles:
     @staticmethod
     def _start_scan(gui: SteamCleanerGUI):
         with patch("threading.Thread"):
-            gui._on_scan(None)
+            gui.on_scan(None)
 
     def test_scan_sets_stop_state(self, tmp_path: Path):
         config_path = tmp_path / "config.toml"
@@ -162,7 +166,7 @@ class TestScanCancelCycles:
 
             self._start_scan(gui)
             assert gui._cancel_event is not None
-            gui._on_scan(None)
+            gui.on_scan(None)
             assert gui._cancel_event.is_set()
 
     def test_reset_scan_ui_clears_state(self, tmp_path: Path):
@@ -188,7 +192,7 @@ class TestScanCancelCycles:
                 self._start_scan(gui)
                 assert gui._cancel_event is not None, f"cycle {cycle}: scan should set cancel_event"
 
-                gui._on_scan(None)
+                gui.on_scan(None)
                 assert gui._cancel_event.is_set(), f"cycle {cycle}: stop should set cancel flag"
 
                 gui._reset_scan_ui()
@@ -201,7 +205,7 @@ class TestScanCancelCycles:
             gui = SteamCleanerGUI(page)
 
             self._start_scan(gui)
-            gui._on_scan(None)
+            gui.on_scan(None)
             gui._reset_scan_ui()
 
             self._start_scan(gui)

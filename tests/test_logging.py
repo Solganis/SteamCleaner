@@ -21,7 +21,7 @@ def _clean_logger():
 
 @pytest.fixture()
 def config_dir(tmp_path, monkeypatch):
-    monkeypatch.setattr("steamcleaner.utils.logging._config_dir", lambda: tmp_path)
+    monkeypatch.setattr("steamcleaner.utils.logging.config_dir", lambda: tmp_path)
     monkeypatch.setattr("steamcleaner.utils.logging.get_value", lambda section, key, default=None: default)
     return tmp_path
 

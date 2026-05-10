@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 
-def _config_dir() -> Path:
+def config_dir() -> Path:
     match sys.platform:
         case "win32":
             import os
@@ -18,7 +18,7 @@ def _config_dir() -> Path:
 
 
 def _config_path() -> Path:  # pragma: no cover
-    return _config_dir() / "config.toml"
+    return config_dir() / "config.toml"
 
 
 def load_config() -> dict[str, Any]:
@@ -34,6 +34,13 @@ def save_value(section: str, key: str, value: str | list[str]):
     if section not in config:
         config[section] = {}
     config[section][key] = value
+    _write_config(config)
+
+
+def save_many(section: str, values: dict[str, str]):
+    config = load_config()
+    config.setdefault(section, {})
+    config[section].update(values)
     _write_config(config)
 
 

@@ -2,6 +2,7 @@ import abc
 import logging
 import threading
 from collections.abc import Iterator
+from pathlib import Path
 
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
@@ -26,6 +27,9 @@ class GameClient(abc.ABC):
 
     @abc.abstractmethod
     def is_installed(self) -> bool: ...
+
+    def game_install_paths(self) -> list[Path]:
+        return []
 
     @abc.abstractmethod
     def scan_junk(self) -> Iterator[JunkEntry]:
