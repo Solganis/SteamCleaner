@@ -1,3 +1,4 @@
+import os
 import sys
 import tomllib
 from pathlib import Path
@@ -7,12 +8,8 @@ from typing import Any
 def config_dir() -> Path:
     match sys.platform:
         case "win32":
-            import os
-
             base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
         case _:
-            import os
-
             base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     return base / "steamcleaner"
 
