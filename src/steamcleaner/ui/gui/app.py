@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -652,8 +653,6 @@ class SteamCleanerGUI:
 
     @staticmethod
     def _open_in_explorer(path: Path):
-        import subprocess
-
         if sys.platform == "win32":
             if path.is_file():
                 subprocess.Popen(["explorer", "/select,", str(path)])

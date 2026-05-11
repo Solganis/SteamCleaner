@@ -2,6 +2,8 @@ import logging
 
 import pytest
 
+from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled, setup_logging
+
 
 @pytest.fixture(autouse=True)
 def _clean_logger():
@@ -27,8 +29,6 @@ def config_dir(tmp_path, monkeypatch):
 
 
 def test_setup_logging_disabled_by_default(config_dir):
-    from steamcleaner.utils.logging import setup_logging
-
     logger = setup_logging()
     assert logger.level == logging.WARNING
     assert len(logger.handlers) == 0
@@ -36,8 +36,6 @@ def test_setup_logging_disabled_by_default(config_dir):
 
 
 def test_setup_logging_enabled_creates_file(config_dir, monkeypatch):
-    from steamcleaner.utils.logging import setup_logging
-
     monkeypatch.setattr(
         "steamcleaner.utils.logging.get_value",
         lambda section, key, default=None: "true" if key == "enabled" else default,
@@ -53,8 +51,6 @@ def test_setup_logging_enabled_creates_file(config_dir, monkeypatch):
 
 
 def test_setup_logging_is_idempotent(config_dir, monkeypatch):
-    from steamcleaner.utils.logging import setup_logging
-
     monkeypatch.setattr(
         "steamcleaner.utils.logging.get_value",
         lambda section, key, default=None: "true" if key == "enabled" else default,
@@ -66,8 +62,6 @@ def test_setup_logging_is_idempotent(config_dir, monkeypatch):
 
 
 def test_set_logging_enabled_hot_toggle(config_dir, monkeypatch):
-    from steamcleaner.utils.logging import set_logging_enabled, setup_logging
-
     saved_values: dict[str, str] = {}
     monkeypatch.setattr(
         "steamcleaner.utils.logging.save_value",
@@ -89,14 +83,10 @@ def test_set_logging_enabled_hot_toggle(config_dir, monkeypatch):
 
 
 def test_log_file_path_location(config_dir):
-    from steamcleaner.utils.logging import log_file_path
-
     assert log_file_path() == config_dir / "steamcleaner.log"
 
 
 def test_is_logging_enabled_reads_config(monkeypatch):
-    from steamcleaner.utils.logging import is_logging_enabled
-
     monkeypatch.setattr(
         "steamcleaner.utils.logging.get_value",
         lambda section, key, default=None: "true" if key == "enabled" else default,
