@@ -47,6 +47,10 @@ target-version = "py314"
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
 ignore = ["UP037"]  # flet build bundles Python 3.12, forward-ref strings still needed
 
+[tool.ty.environment]
+python-version = "3.14"
+python-platform = "all"
+
 [tool.ty.rules]
 unresolved-attribute = "warn"
 
