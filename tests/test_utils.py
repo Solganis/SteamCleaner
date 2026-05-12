@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 from steamcleaner.utils.fs import dir_size, format_size, is_reparse_point, list_subdirs, safe_rmtree, walk_files
 
@@ -61,6 +62,18 @@ class TestWalkFiles:
         result_names = [path.parent.name for path, _ in results]
         assert "symdir" not in result_names
         assert len(results) == 1
+
+    def test_skips_reparse_point_subdir(self, tmp_path: Path):
+        real = tmp_path / "real"
+        real.mkdir()
+        (real / "file.txt").write_bytes(b"data")
+        reparse = tmp_path / "junction"
+        reparse.mkdir()
+        with patch("steamcleaner.utils.fs.is_reparse_point", side_effect=lambda path: path == reparse):
+            results = list(walk_files(tmp_path))
+        result_paths = [path for path, _ in results]
+        assert any(path.name == "file.txt" for path in result_paths)
+        assert not any("junction" in str(path) for path in result_paths)
 
     def test_nonexistent_dir(self, tmp_path: Path):
         results = list(walk_files(tmp_path / "nope"))

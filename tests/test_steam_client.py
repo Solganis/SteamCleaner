@@ -166,6 +166,57 @@ class TestSteamShaderCache:
         assert shaders[0].size_bytes == 4096
 
 
+class TestSteamGameInstallPaths:
+    def test_returns_game_dirs_from_library(self, tmp_path: Path):
+        steam = build_fake_steam_tree(tmp_path, {"GameA": {"": []}, "GameB": {"": []}})
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        paths = client.game_install_paths()
+        names = {path.name for path in paths}
+        assert names == {"GameA", "GameB"}
+
+    def test_skips_library_without_common(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps").mkdir(parents=True)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        assert client.game_install_paths() == []
+
+
+class TestSteamAppidMap:
+    def test_parses_manifest_files(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        steamapps = steam / "steamapps"
+        (steamapps / "common").mkdir(parents=True)
+        manifest = steamapps / "appmanifest_440.acf"
+        manifest.write_text('"AppState"\n{\n\t"appid"\t\t"440"\n\t"name"\t\t"Team Fortress 2"\n}')
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        appid_map = client._build_appid_map(steam)
+        assert appid_map == {"440": "Team Fortress 2"}
+
+    def test_skips_malformed_manifest(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        steamapps = steam / "steamapps"
+        (steamapps / "common").mkdir(parents=True)
+        (steamapps / "appmanifest_999.acf").write_text("garbage content no appid here")
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        appid_map = client._build_appid_map(steam)
+        assert appid_map == {}
+
+    def test_multiple_manifests(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        steamapps = steam / "steamapps"
+        (steamapps / "common").mkdir(parents=True)
+        (steamapps / "appmanifest_440.acf").write_text('"AppState"\n{\n\t"appid"\t\t"440"\n\t"name"\t\t"TF2"\n}')
+        (steamapps / "appmanifest_730.acf").write_text('"AppState"\n{\n\t"appid"\t\t"730"\n\t"name"\t\t"CS2"\n}')
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        appid_map = client._build_appid_map(steam)
+        assert appid_map == {"440": "TF2", "730": "CS2"}
+
+
 class TestSteamClientLogs:
     def test_finds_steam_dumps(self, tmp_path: Path):
         steam = tmp_path / "Steam"

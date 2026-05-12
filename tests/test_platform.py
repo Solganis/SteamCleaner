@@ -6,6 +6,7 @@ import pytest
 
 from steamcleaner.platform import create_adapter
 from steamcleaner.platform.linux import LinuxAdapter
+from steamcleaner.platform.macos import MacOSAdapter
 
 
 class TestCreateAdapter:
@@ -21,6 +22,11 @@ class TestCreateAdapter:
         from steamcleaner.platform.windows import WindowsAdapter  # winreg is Windows-only
 
         assert isinstance(adapter, WindowsAdapter)
+
+    def test_darwin_returns_macos_adapter(self):
+        with patch.object(sys, "platform", "darwin"):
+            adapter = create_adapter()
+        assert isinstance(adapter, MacOSAdapter)
 
     def test_unsupported_platform_raises(self):
         with patch.object(sys, "platform", "freebsd"), pytest.raises(RuntimeError, match="Unsupported platform"):
