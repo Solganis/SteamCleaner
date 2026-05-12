@@ -14,13 +14,13 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/badge/type--checker-ty-D4AA00.svg)](https://github.com/astral-sh/ty)
 
-Cross-platform tool for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.
+**Cross-platform tool** for reclaiming disk space from **Steam**, **Epic Games**, **EA App**, **GOG Galaxy**, and **Ubisoft Connect**.
 
 Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities and modern UI.
 
 Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
-This is a personal passion project: a way to sharpen my Python skills while trying to build something useful for others.
+**This is a personal passion project**: a way to sharpen my Python skills while trying to build something useful for others.
 
 <p align="center">
   <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
@@ -28,15 +28,15 @@ This is a personal passion project: a way to sharpen my Python skills while tryi
 
 ## Features
 
-- Desktop GUI built on [Flet](https://flet.dev/) with automatic OS theme detection (dark/light)
-- Scans Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect
-- Per-item selection with category badges, size breakdown, and sorting
+- **Desktop GUI** built on [Flet](https://flet.dev/) with **automatic OS theme detection (dark/light)**
+- **Scans**: **Steam**, **Epic Games**, **EA App (Origin)**, **GOG Galaxy**, and **Ubisoft Connect**
+- **Per-item selection** with category badges, size breakdown, and sorting
 - Search field for filtering results by path
-- Context menu: open in file explorer, copy path to clipboard
-- Determinate progress bar with per-file status during scan and deletion
-- Keyboard shortcuts: F5 (scan), Ctrl+A (select all), Delete (clean selected), Escape (cancel/deselect), Ctrl+Q (quit)
-- Settings: trash vs permanent delete
-- Safe by default: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
+- **Context menu**: open in file explorer, copy path to clipboard
+- **Determinate progress bar** with per-file status during scan and deletion
+- **Keyboard shortcuts**: F5 (scan), Ctrl+A (select all), Delete (clean selected), Escape (cancel/deselect), Ctrl+Q (quit)
+- **Settings**: trash vs permanent delete
+- **Safe by default**: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
 
 ## Supported clients
 
