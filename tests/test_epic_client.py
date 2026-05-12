@@ -249,6 +249,22 @@ class TestEpicWebcache:
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
         assert len(cache) == 3
 
+    def test_deduplicates_webcache_across_data_dirs(self, tmp_path: Path):
+        home = tmp_path / "home"
+        data_dir = home / ".local" / "share" / "EpicGamesLauncher"
+        saved = data_dir / "Saved"
+        webcache = saved / "webcache"
+        webcache.mkdir(parents=True)
+        (webcache / "data.bin").write_bytes(b"\x00" * 1024)
+        platform = FakePlatformAdapter(
+            home_dir=home, program_files_dirs=[tmp_path / "PF"], programdata_dir=tmp_path / "PD"
+        )
+        client = EpicClient(platform, ExclusionRegistry())
+        client._launcher_data_dirs = lambda: [data_dir, data_dir]
+        entries = list(client.scan_junk())
+        cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
+        assert len(cache) == 1
+
     def test_ignores_empty_webcache(self, tmp_path: Path):
         platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
