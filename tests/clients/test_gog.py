@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.gog import GogClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 _REGISTRY_GAMES_PATH = r"SOFTWARE\WOW6432Node\GOG.com\Games"
 

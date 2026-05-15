@@ -6,29 +6,6 @@ from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 
-def _make_fake_page() -> MagicMock:
-    page = MagicMock()
-    page.theme_mode = None
-    page.window = MagicMock()
-    page.window.width = 1024
-    page.window.height = 700
-    page.window.left = 100
-    page.window.top = 200
-    page.window.min_width = 800
-    page.window.min_height = 540
-    page.window.visible = True
-    page.window.on_event = None
-    page.padding = 0
-    page.add = MagicMock()
-    return page
-
-
-def _make_gui(tmp_path: Path) -> SteamCleanerGUI:
-    config_path = tmp_path / "config.toml"
-    with patch("steamcleaner.utils.config._config_path", return_value=config_path):
-        return SteamCleanerGUI(_make_fake_page())
-
-
 def _make_entry(
     name: str,
     category: JunkCategory = JunkCategory.REDISTRIBUTABLE,
@@ -90,76 +67,75 @@ class TestDisplayPath:
 
 # noinspection PyProtectedMember
 class TestApplySortFilter:
-    def _gui_with_entries(self, tmp_path: Path, entries: list[JunkEntry]) -> SteamCleanerGUI:
-        gui = _make_gui(tmp_path)
+    @staticmethod
+    def _with_entries(gui: SteamCleanerGUI, entries: list[JunkEntry]) -> SteamCleanerGUI:
         gui._result = ScanResult(entries=list(entries))
         return gui
 
-    def test_sort_size_desc(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_LARGE, ENTRY_MEDIUM])
+    def test_sort_size_desc(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_LARGE, ENTRY_MEDIUM])
         gui._sort_key = "size_desc"
         gui._apply_sort_filter()
         sizes = [entry.size_bytes for entry in gui._visible_entries]
         assert sizes == [90000, 5000, 100]
 
-    def test_sort_size_asc(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
+    def test_sort_size_asc(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
         gui._sort_key = "size_asc"
         gui._apply_sort_filter()
         sizes = [entry.size_bytes for entry in gui._visible_entries]
         assert sizes == [100, 5000, 90000]
 
-    def test_sort_by_category(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
+    def test_sort_by_category(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
         gui._sort_key = "category"
         gui._apply_sort_filter()
         categories = [entry.category for entry in gui._visible_entries]
         assert categories == [JunkCategory.CRASH_DUMP, JunkCategory.REDISTRIBUTABLE, JunkCategory.SHADER_CACHE]
 
-    def test_sort_by_path(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_MEDIUM, ENTRY_LARGE, ENTRY_SMALL])
+    def test_sort_by_path(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_MEDIUM, ENTRY_LARGE, ENTRY_SMALL])
         gui._sort_key = "path"
         gui._apply_sort_filter()
         names = [entry.path.name for entry in gui._visible_entries]
         assert names == ["large_dump", "medium_shader", "small_redist"]
 
-    def test_filter_by_category(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+    def test_filter_by_category(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
         gui._category_filter = "shader_cache"
         gui._apply_sort_filter()
         assert len(gui._visible_entries) == 1
         assert gui._visible_entries[0].category == JunkCategory.SHADER_CACHE
 
-    def test_filter_all_shows_everything(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+    def test_filter_all_shows_everything(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
         gui._category_filter = "all"
         gui._apply_sort_filter()
         assert len(gui._visible_entries) == 3
 
-    def test_search_query(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+    def test_search_query(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
         gui._search_query = "shader"
         gui._apply_sort_filter()
         assert len(gui._visible_entries) == 1
         assert gui._visible_entries[0] is ENTRY_MEDIUM
 
-    def test_search_case_insensitive(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM])
+    def test_search_case_insensitive(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM])
         gui._search_query = "SMALL"
         gui._apply_sort_filter()
         assert len(gui._visible_entries) == 1
 
-    def test_filter_and_search_combined(self, tmp_path: Path):
-        entries = [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE]
-        gui = self._gui_with_entries(tmp_path, entries)
+    def test_filter_and_search_combined(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
         gui._category_filter = "redistributable"
         gui._search_query = "small"
         gui._apply_sort_filter()
         assert len(gui._visible_entries) == 1
         assert gui._visible_entries[0] is ENTRY_SMALL
 
-    def test_no_results_after_filter(self, tmp_path: Path):
-        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL])
+    def test_no_results_after_filter(self, gui: SteamCleanerGUI):
+        gui = self._with_entries(gui, [ENTRY_SMALL])
         gui._category_filter = "crash_dump"
         gui._apply_sort_filter()
         assert gui._visible_entries == []
@@ -167,21 +143,18 @@ class TestApplySortFilter:
 
 # noinspection PyProtectedMember
 class TestToggleSelection:
-    def test_toggle_adds_to_selected(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_toggle_adds_to_selected(self, gui: SteamCleanerGUI):
         path = Path("C:/Games/test")
         gui._on_toggle(path, True)
         assert path in gui._selected
 
-    def test_toggle_removes_from_selected(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_toggle_removes_from_selected(self, gui: SteamCleanerGUI):
         path = Path("C:/Games/test")
         gui._selected.add(path)
         gui._on_toggle(path, False)
         assert path not in gui._selected
 
-    def test_toggle_idempotent_remove(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_toggle_idempotent_remove(self, gui: SteamCleanerGUI):
         path = Path("C:/Games/test")
         gui._on_toggle(path, False)
         assert path not in gui._selected
@@ -189,8 +162,7 @@ class TestToggleSelection:
 
 # noinspection PyProtectedMember
 class TestSetControlsLocked:
-    def test_locked_disables_controls(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_locked_disables_controls(self, gui: SteamCleanerGUI):
         gui._set_controls_locked(locked=True)
         assert gui._sort_dropdown.disabled is True
         assert gui._filter_dropdown.disabled is True
@@ -198,8 +170,7 @@ class TestSetControlsLocked:
         assert gui._results_list.disabled is True
         assert gui._results_list.opacity == 0.4
 
-    def test_unlocked_enables_controls(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_unlocked_enables_controls(self, gui: SteamCleanerGUI):
         gui._set_controls_locked(locked=True)
         gui._set_controls_locked(locked=False)
         assert gui._sort_dropdown.disabled is False
@@ -208,24 +179,20 @@ class TestSetControlsLocked:
         assert gui._results_list.disabled is False
         assert gui._results_list.opacity == 1.0
 
-    def test_clean_button_disabled_without_selection(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_clean_button_disabled_without_selection(self, gui: SteamCleanerGUI):
         gui._set_controls_locked(locked=False)
         assert gui._clean_button.disabled is True
 
-    def test_clean_button_enabled_with_selection(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_clean_button_enabled_with_selection(self, gui: SteamCleanerGUI):
         gui._selected.add(Path("C:/Games/test"))
         gui._set_controls_locked(locked=False)
         assert gui._clean_button.disabled is False
 
-    def test_select_all_disabled_without_entries(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_select_all_disabled_without_entries(self, gui: SteamCleanerGUI):
         gui._set_controls_locked(locked=False)
         assert gui._select_all_button.disabled is True
 
-    def test_select_all_enabled_with_entries(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_select_all_enabled_with_entries(self, gui: SteamCleanerGUI):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._set_controls_locked(locked=False)
         assert gui._select_all_button.disabled is False
@@ -243,16 +210,14 @@ class TestOnKeyboard:
         event.meta = False
         return event
 
-    def test_escape_cancels_scan(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_escape_cancels_scan(self, gui: SteamCleanerGUI):
         from threading import Event
 
         gui._cancel_event = Event()
         gui._on_keyboard(self._make_key_event("Escape"))
         assert gui._cancel_event.is_set()
 
-    def test_escape_clears_selection(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_escape_clears_selection(self, gui: SteamCleanerGUI):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._visible_entries = [ENTRY_SMALL]
         gui._selected.add(ENTRY_SMALL.path)
@@ -260,27 +225,23 @@ class TestOnKeyboard:
             gui._on_keyboard(self._make_key_event("Escape"))
         assert len(gui._selected) == 0
 
-    def test_f5_triggers_scan(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_f5_triggers_scan(self, gui: SteamCleanerGUI):
         with patch.object(gui, "on_scan") as mock_scan:
             gui._on_keyboard(self._make_key_event("F5"))
             mock_scan.assert_called_once_with(None)
 
-    def test_f5_blocked_during_cleaning(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_f5_blocked_during_cleaning(self, gui: SteamCleanerGUI):
         gui._cleaning = True
         with patch.object(gui, "on_scan") as mock_scan:
             gui._on_keyboard(self._make_key_event("F5"))
             mock_scan.assert_not_called()
 
-    def test_ctrl_a_selects_all(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_ctrl_a_selects_all(self, gui: SteamCleanerGUI):
         with patch.object(gui, "_on_select_all") as mock_select:
             gui._on_keyboard(self._make_key_event("A", ctrl=True))
             mock_select.assert_called_once_with(None)
 
-    def test_ctrl_a_blocked_during_scan(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_ctrl_a_blocked_during_scan(self, gui: SteamCleanerGUI):
         from threading import Event
 
         gui._cancel_event = Event()
@@ -288,15 +249,13 @@ class TestOnKeyboard:
             gui._on_keyboard(self._make_key_event("A", ctrl=True))
             mock_select.assert_not_called()
 
-    def test_keys_ignored_when_text_focused(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_keys_ignored_when_text_focused(self, gui: SteamCleanerGUI):
         gui._text_input_focused = True
         with patch.object(gui, "on_scan") as mock_scan:
             gui._on_keyboard(self._make_key_event("F5"))
             mock_scan.assert_not_called()
 
-    def test_escape_not_blocked_by_text_focus(self, tmp_path: Path):
-        gui = _make_gui(tmp_path)
+    def test_escape_not_blocked_by_text_focus(self, gui: SteamCleanerGUI):
         gui._text_input_focused = True
         gui._search_field.value = "something"
         with patch.object(gui, "_refresh_list"):

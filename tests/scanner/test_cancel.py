@@ -1,11 +1,12 @@
 import threading
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 def _make_steam_with_games(tmp_path: Path, game_count: int) -> FakePlatformAdapter:
