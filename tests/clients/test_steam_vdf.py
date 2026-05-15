@@ -269,7 +269,7 @@ class TestParseLibraryFoldersVdfStringEntries:
         assert paths == []
 
 
-# noinspection PyProtectedMemberAccess
+# noinspection PyProtectedMemberAccess,PyUnresolvedReferences
 class TestConfigVdfFallback:
     def test_fallback_finds_legacy_folders(self, tmp_path: Path):
         steam = tmp_path / "Steam"
