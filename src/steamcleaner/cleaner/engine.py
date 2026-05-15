@@ -24,7 +24,7 @@ class CleanStats:
 
 
 class CleanEngine:
-    def __init__(self, *, use_trash: bool = True, dry_run: bool = False):
+    def __init__(self, *, use_trash: bool = True, dry_run: bool = False) -> None:
         self._use_trash = use_trash
         self._dry_run = dry_run
 
@@ -80,7 +80,7 @@ class CleanEngine:
         _logger.info("Clean complete: %d deleted, %d skipped, %d bytes freed", deleted, skipped, bytes_freed)
         return CleanStats(deleted=deleted, skipped=skipped, errors=errors, bytes_freed=bytes_freed)
 
-    def _delete(self, path: Path):
+    def _delete(self, path: Path) -> None:
         if self._use_trash:
             send2trash(str(path))
         elif path.is_dir():

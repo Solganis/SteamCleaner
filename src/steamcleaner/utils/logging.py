@@ -32,7 +32,7 @@ def setup_logging() -> logging.Logger:
     return root_logger
 
 
-def set_logging_enabled(enabled: bool):
+def set_logging_enabled(enabled: bool) -> None:
     save_value("logging", "enabled", "true" if enabled else "false")
     root_logger = logging.getLogger(_ROOT_LOGGER_NAME)
 
@@ -45,7 +45,7 @@ def set_logging_enabled(enabled: bool):
         root_logger.setLevel(logging.WARNING)
 
 
-def _attach_file_handler(logger: logging.Logger):
+def _attach_file_handler(logger: logging.Logger) -> None:
     path = log_file_path()
     path.parent.mkdir(parents=True, exist_ok=True)
 

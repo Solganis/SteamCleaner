@@ -18,7 +18,7 @@ FoundCallback = Callable[[JunkEntry], None]
 
 
 class ScanEngine:
-    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry | None = None):
+    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry | None = None) -> None:
         self._platform = platform
         self._exclusions = exclusions or ExclusionRegistry()
 

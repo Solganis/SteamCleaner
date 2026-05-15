@@ -29,7 +29,7 @@ def parse_library_folders_vdf(path: Path) -> list[Path]:
 
 @ClientRegistry.register
 class SteamClient(GameClient):
-    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry):
+    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         super().__init__(platform, exclusions)
         self._install_path: Path | None = None
 
