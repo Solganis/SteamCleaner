@@ -17,7 +17,7 @@ def _elapsed() -> str:
 
 
 # noinspection PyUnresolvedReferences
-def _find_flutter_window():
+def _find_flutter_window() -> None:
     global _flutter_hwnd
     if sys.platform != "win32":
         return
@@ -32,7 +32,7 @@ def _find_flutter_window():
         result = [None]
 
         # noinspection PyUnresolvedReferences
-        def enum_callback(handle, _):
+        def enum_callback(handle, _) -> bool:
             buffer = ctypes.create_unicode_buffer(256)
             user32.GetClassNameW(handle, buffer, 256)
             if "FLUTTER" in buffer.value.upper():
@@ -71,7 +71,7 @@ from steamcleaner.ui.gui.app import SteamCleanerGUI, WindowHider  # noqa: E402
 _logger.debug("%s App module imported, calling ft.run()", _elapsed())
 
 
-async def main(page: ft.Page):
+async def main(page: ft.Page) -> None:
     _logger.debug("%s main() called by Flet", _elapsed())
     hider = WindowHider.from_hwnd(_flutter_hwnd)
     gui = SteamCleanerGUI(page, hider)

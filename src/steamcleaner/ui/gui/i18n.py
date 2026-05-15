@@ -383,13 +383,13 @@ LANGUAGES = {"en": "English", "ru": "Русский", "zh": "中文", "es": "Esp
 _current_lang = "en"
 
 
-def init_lang():
+def init_lang() -> None:
     global _current_lang
     saved = get_value("ui", "language")
     _current_lang = saved if saved in _TRANSLATIONS else "en"
 
 
-def set_lang(lang: str):
+def set_lang(lang: str) -> None:
     global _current_lang
     if lang in _TRANSLATIONS:
         _current_lang = lang

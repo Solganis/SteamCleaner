@@ -24,10 +24,10 @@ BUILTIN_EXCLUSIONS: tuple[Exclusion, ...] = (
 class ExclusionRegistry:
     _exclusions: list[Exclusion] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._exclusions.extend(BUILTIN_EXCLUSIONS)
 
-    def add(self, pattern: str, reason: str):
+    def add(self, pattern: str, reason: str) -> None:
         self._exclusions.append(Exclusion(pattern, reason))
 
     def is_excluded(self, path: PurePath) -> bool:
