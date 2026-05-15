@@ -19,7 +19,7 @@ class ClientRegistry:
         return client_cls
 
     @classmethod
-    def discover(cls):
+    def discover(cls) -> None:
         if cls._discovered:
             return
         import steamcleaner.clients as clients_package
@@ -36,6 +36,6 @@ class ClientRegistry:
             yield client_cls(platform, exclusions)
 
     @classmethod
-    def clear(cls):
+    def clear(cls) -> None:
         cls._client_classes.clear()
         cls._discovered = False

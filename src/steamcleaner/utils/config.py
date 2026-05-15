@@ -26,7 +26,7 @@ def load_config() -> dict[str, Any]:
         return tomllib.load(config_file)
 
 
-def save_value(section: str, key: str, value: str | list[str]):
+def save_value(section: str, key: str, value: str | list[str]) -> None:
     config = load_config()
     if section not in config:
         config[section] = {}
@@ -34,14 +34,14 @@ def save_value(section: str, key: str, value: str | list[str]):
     _write_config(config)
 
 
-def save_many(section: str, values: dict[str, str]):
+def save_many(section: str, values: dict[str, str]) -> None:
     config = load_config()
     config.setdefault(section, {})
     config[section].update(values)
     _write_config(config)
 
 
-def _write_config(config: dict[str, Any]):
+def _write_config(config: dict[str, Any]) -> None:
     path = _config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
 

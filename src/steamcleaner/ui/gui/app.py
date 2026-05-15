@@ -41,7 +41,7 @@ _CATEGORY_COLORS = {
 class WindowHider:
     """Finds the Flutter window handle so Python can show it when ready."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._hwnd: int | None = None
         self._stop = threading.Event()
 
@@ -52,16 +52,16 @@ class WindowHider:
         instance._hwnd = hwnd
         return instance
 
-    def start(self):
+    def start(self) -> None:
         if sys.platform != "win32":
             return
         threading.Thread(target=self._find_window, daemon=True).start()
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop.set()
 
     # noinspection PyUnresolvedReferences
-    def show(self):
+    def show(self) -> None:
         if self._hwnd is None or sys.platform != "win32":
             return
         import ctypes
@@ -70,7 +70,7 @@ class WindowHider:
         user32.ShowWindow(self._hwnd, 5)
 
     # noinspection PyUnresolvedReferences
-    def _find_window(self):
+    def _find_window(self) -> None:
         import ctypes
         import ctypes.wintypes
 
@@ -85,7 +85,7 @@ class WindowHider:
             found: list[int | None] = [None]
 
             # noinspection PyUnresolvedReferences
-            def callback(window_handle, _):
+            def callback(window_handle, _) -> bool:
                 buf = ctypes.create_unicode_buffer(256)
                 user32.GetClassNameW(window_handle, buf, 256)
                 if "FLUTTER" in buf.value.upper():
@@ -112,7 +112,7 @@ class WindowHider:
 
 
 class SteamCleanerGUI:
-    def __init__(self, page: ft.Page, window_hider: WindowHider | None = None):
+    def __init__(self, page: ft.Page, window_hider: WindowHider | None = None) -> None:
         init_lang()
         self._page = page
         self._result = ScanResult()
@@ -144,7 +144,7 @@ class SteamCleanerGUI:
         self._empty_state = ft.Column()
         self._setup_page()
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         self._window_hider.stop()
         self._page.update()
         await asyncio.sleep(0.15)
@@ -155,7 +155,7 @@ class SteamCleanerGUI:
         self._window_hider.show()
         self._initialized = True
 
-    def _setup_page(self):
+    def _setup_page(self) -> None:
         self._page.title = "SteamCleaner"
         saved_theme = get_value("ui", "theme")
         match saved_theme:
@@ -191,7 +191,7 @@ class SteamCleanerGUI:
         self._page.padding = 0
         self._page.spacing = 0
 
-    def _save_window_geometry(self):
+    def _save_window_geometry(self) -> None:
         window = self._page.window
         if window.width is None or window.height is None or window.left is None or window.top is None:
             return
@@ -207,7 +207,7 @@ class SteamCleanerGUI:
             },
         )
 
-    def on_window_event(self, event: ft.WindowEvent):
+    def on_window_event(self, event: ft.WindowEvent) -> None:
         if not self._initialized:
             return
         match event.type:
@@ -218,10 +218,10 @@ class SteamCleanerGUI:
                 self._geometry_save_timer = timer
                 timer.start()
 
-    def _set_text_input_focus(self, focused: bool):
+    def _set_text_input_focus(self, focused: bool) -> None:
         self._text_input_focused = focused
 
-    def _on_keyboard(self, event: ft.KeyboardEvent):
+    def _on_keyboard(self, event: ft.KeyboardEvent) -> None:
         if event.key == "Escape":
             if self._dialog_open:
                 return
@@ -251,7 +251,7 @@ class SteamCleanerGUI:
         elif event.key == "Delete" and self._selected and self._cancel_event is None and not self._cleaning:
             self._on_clean(None)
 
-    def _build_ui(self):
+    def _build_ui(self) -> None:
         is_dark = self._page.theme_mode == ft.ThemeMode.DARK
 
         self._status = ft.Text(t("ready"), size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE))
@@ -522,7 +522,7 @@ class SteamCleanerGUI:
             on_click=lambda event, path=entry_path: self._on_row_click(path),
         )
 
-    def _apply_sort_filter(self):
+    def _apply_sort_filter(self) -> None:
         entries = self._result.entries
         if self._category_filter and self._category_filter != "all":
             entries = [entry for entry in entries if entry.category.value == self._category_filter]
@@ -540,7 +540,7 @@ class SteamCleanerGUI:
                 entries = sorted(entries, key=lambda entry: str(entry.path).lower())
         self._visible_entries = entries
 
-    def _refresh_list(self):
+    def _refresh_list(self) -> None:
         self._apply_sort_filter()
         self._results_list.controls.clear()
         for index, entry in enumerate(self._visible_entries):
@@ -563,7 +563,7 @@ class SteamCleanerGUI:
         self._update_totals()
         self._page.update()
 
-    def _update_empty_state(self):
+    def _update_empty_state(self) -> None:
         has_results = len(self._result.entries) > 0
         has_visible = len(self._visible_entries) > 0
         icon_control = self._empty_state.controls[1]
@@ -582,7 +582,7 @@ class SteamCleanerGUI:
             text_control.value = t("empty_scan")
             self._empty_state.visible = True
 
-    def _rebuild_filter_options(self):
+    def _rebuild_filter_options(self) -> None:
         categories = sorted({entry.category.value for entry in self._result.entries})
         options: list[ft.dropdown.Option] = [ft.dropdown.Option("all", t("all_categories"))]
         for category in categories:
@@ -592,7 +592,7 @@ class SteamCleanerGUI:
             self._category_filter = None
             self._filter_dropdown.value = "all"
 
-    def _update_totals(self):
+    def _update_totals(self) -> None:
         selected_bytes = sum(entry.size_bytes for entry in self._result.entries if entry.path in self._selected)
         total_formatted = format_size(self._result.total_bytes)
         selected_formatted = format_size(selected_bytes)
@@ -613,7 +613,7 @@ class SteamCleanerGUI:
         self._clean_button.disabled = not has_selection
         self._select_all_button.disabled = total_count == 0
 
-    def _on_toggle(self, path: Path, checked: bool):
+    def _on_toggle(self, path: Path, checked: bool) -> None:
         if checked:
             self._selected.add(path)
         else:
@@ -621,7 +621,7 @@ class SteamCleanerGUI:
         self._update_totals()
         self._page.update()
 
-    def _on_row_click(self, path: Path):
+    def _on_row_click(self, path: Path) -> None:
         if path in self._selected:
             self._selected.discard(path)
             is_selected = False
@@ -643,8 +643,8 @@ class SteamCleanerGUI:
         self._update_totals()
         self._page.update()
 
-    def _copy_path(self, path: Path):
-        async def do_copy():
+    def _copy_path(self, path: Path) -> None:
+        async def do_copy() -> None:
             clipboard = ft.Clipboard()
             await clipboard.set(str(path))
             self._show_snackbar(t("path_copied"))
@@ -652,7 +652,7 @@ class SteamCleanerGUI:
         self._page.run_task(do_copy)
 
     @staticmethod
-    def _open_in_explorer(path: Path):
+    def _open_in_explorer(path: Path) -> None:
         if sys.platform == "win32":
             if path.is_file():
                 subprocess.Popen(["explorer", "/select,", str(path)])
@@ -664,7 +664,7 @@ class SteamCleanerGUI:
             parent = path.parent if path.is_file() else path
             subprocess.Popen(["xdg-open", str(parent)])
 
-    def _on_select_all(self, _event):
+    def _on_select_all(self, _event) -> None:
         visible_paths = {entry.path for entry in self._visible_entries}
         if visible_paths.issubset(self._selected):
             self._selected -= visible_paths
@@ -687,16 +687,16 @@ class SteamCleanerGUI:
         self._update_totals()
         self._page.update()
 
-    def _on_sort_changed(self, event):
+    def _on_sort_changed(self, event) -> None:
         self._sort_key = event.control.value
         self._refresh_list()
 
-    def _on_filter_changed(self, event):
+    def _on_filter_changed(self, event) -> None:
         value = event.control.value
         self._category_filter = None if value == "all" else value
         self._refresh_list()
 
-    def _on_search_changed(self, event):
+    def _on_search_changed(self, event) -> None:
         self._search_query = event.control.value or ""
         if self._search_timer is not None:
             self._search_timer.cancel()
@@ -704,10 +704,10 @@ class SteamCleanerGUI:
         # noinspection PyUnresolvedReferences
         self._search_timer.start()
 
-    async def _do_search_refresh(self):
+    async def _do_search_refresh(self) -> None:
         self._refresh_list()
 
-    def on_toggle_theme(self, _event):
+    def on_toggle_theme(self, _event) -> None:
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
             self._theme_button.icon = ft.Icons.DARK_MODE
@@ -720,13 +720,13 @@ class SteamCleanerGUI:
             save_value("ui", "theme", "dark")
         self._page.update()
 
-    def _reset_scan_ui(self):
+    def _reset_scan_ui(self) -> None:
         self._scan_button.text = t("scan")
         self._scan_button.icon = ft.Icons.SEARCH
         self._progress.opacity = 0
         self._cancel_event = None
 
-    def _set_controls_locked(self, locked: bool):
+    def _set_controls_locked(self, locked: bool) -> None:
         self._clean_button.disabled = locked or not self._selected
         self._select_all_button.disabled = locked or len(self._result.entries) == 0
         self._sort_dropdown.disabled = locked
@@ -735,7 +735,7 @@ class SteamCleanerGUI:
         self._results_list.disabled = locked
         self._results_list.opacity = 0.4 if locked else 1.0
 
-    def on_scan(self, _event):
+    def on_scan(self, _event) -> None:
         if self._cancel_event is not None:
             self._cancel_event.set()
             return
@@ -755,22 +755,22 @@ class SteamCleanerGUI:
         self._page.update()
         self._page.run_task(self._scan_task)
 
-    async def _scan_task(self):
+    async def _scan_task(self) -> None:
         assert self._cancel_event is not None
         cancel = self._cancel_event
         found_queue: queue.Queue[JunkEntry] = queue.Queue()
         status_text = [t("scanning")]
         scan_done = threading.Event()
 
-        def on_progress(message: str, _count: int):
+        def on_progress(message: str, _count: int) -> None:
             if not cancel.is_set():
                 status_text[0] = message
 
-        def on_found(entry: JunkEntry):
+        def on_found(entry: JunkEntry) -> None:
             if not cancel.is_set():
                 found_queue.put(entry)
 
-        def run_scan():
+        def run_scan() -> None:
             try:
                 from steamcleaner.platform import create_adapter
 
@@ -806,7 +806,7 @@ class SteamCleanerGUI:
         self._rebuild_filter_options()
         self._refresh_list()
 
-    def _drain_found_queue(self, found_queue: queue.Queue[JunkEntry]):
+    def _drain_found_queue(self, found_queue: queue.Queue[JunkEntry]) -> None:
         added = False
         while not found_queue.empty():
             entry = found_queue.get_nowait()
@@ -822,7 +822,7 @@ class SteamCleanerGUI:
                 "scan_progress", items=len(self._result.entries), size=format_size(self._result.total_bytes)
             )
 
-    def _on_clean(self, _event):
+    def _on_clean(self, _event) -> None:
         if not self._selected:
             return
 
@@ -866,7 +866,7 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _confirm_clean(self, entries: list[JunkEntry]):
+    def _confirm_clean(self, entries: list[JunkEntry]) -> None:
         self._close_dialog()
         self._cleaning = True
         self._status.value = t("cleaning")
@@ -876,20 +876,20 @@ class SteamCleanerGUI:
         self._page.update()
         self._page.run_task(self._clean_task, entries)
 
-    async def _clean_task(self, entries: list[JunkEntry]):
+    async def _clean_task(self, entries: list[JunkEntry]) -> None:
         deleted_ids = {id(entry) for entry in entries}
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
         total = len(entries)
         progress_state: list[str | int] = [0, ""]
 
-        def on_entry_cleaned(entry: JunkEntry, success: bool):
+        def on_entry_cleaned(entry: JunkEntry, success: bool) -> None:
             progress_state[0] = int(progress_state[0]) + 1
             name = entry.path.name
             status = t("deleted") if success else t("failed")
             progress_state[1] = f"{status}: {name} ({progress_state[0]}/{total})"
 
-        def run_clean():
+        def run_clean() -> None:
             selected_result = ScanResult(entries=entries)
             use_trash = get_value("clean", "use_trash", "true") == "true"
             cleaner = CleanEngine(use_trash=use_trash, dry_run=False)
@@ -929,7 +929,7 @@ class SteamCleanerGUI:
         self._rebuild_filter_options()
         self._refresh_list()
 
-    def _show_error_dialog(self, stats: CleanStats):
+    def _show_error_dialog(self, stats: CleanStats) -> None:
         error_lines: list[ft.Control] = [ft.Text(error, size=12) for error in stats.errors]
         dialog = ft.AlertDialog(
             title=ft.Text(t("deleted_failed_title", deleted=stats.deleted, failed=stats.skipped)),
@@ -938,7 +938,7 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _on_settings_click(self, _event):
+    def _on_settings_click(self, _event) -> None:
         use_trash = get_value("clean", "use_trash", "true") == "true"
         delete_hint = ft.Text(
             t("delete_mode_hint_trash") if use_trash else t("delete_mode_hint_permanent"),
@@ -947,7 +947,7 @@ class SteamCleanerGUI:
             color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE) if use_trash else ft.Colors.RED_700,
         )
 
-        def on_delete_mode_changed(event: ft.Event[ft.SegmentedButton]):
+        def on_delete_mode_changed(event: ft.Event[ft.SegmentedButton]) -> None:
             selected_mode = event.control.selected[0] if event.control.selected else "trash"
             save_value("clean", "use_trash", "true" if selected_mode == "trash" else "false")
             if selected_mode == "permanent":
@@ -977,7 +977,7 @@ class SteamCleanerGUI:
             on_change=on_delete_mode_changed,
         )
 
-        def on_lang_changed(event: ft.Event[ft.Dropdown]):
+        def on_lang_changed(event: ft.Event[ft.Dropdown]) -> None:
             new_lang = event.control.value
             if new_lang and new_lang != get_lang():
                 set_lang(new_lang)
@@ -1007,7 +1007,7 @@ class SteamCleanerGUI:
             disabled=not log_button_active,
         )
 
-        def on_logging_toggled(event: ft.Event[ft.Switch]):
+        def on_logging_toggled(event: ft.Event[ft.Switch]) -> None:
             set_logging_enabled(event.control.value)
             active = event.control.value and log_file_path().exists()
             open_log_button.opacity = 1.0 if active else 0.0
@@ -1047,7 +1047,7 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _on_about_click(self, _event):
+    def _on_about_click(self, _event) -> None:
         dialog = ft.AlertDialog(
             title=ft.Row(
                 [
@@ -1108,19 +1108,19 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _open_dialog(self, dialog: ft.AlertDialog):
+    def _open_dialog(self, dialog: ft.AlertDialog) -> None:
         self._dialog_open = True
         dialog.on_dismiss = lambda _: setattr(self, "_dialog_open", False)
         self._page.show_dialog(dialog)
 
-    def _close_dialog(self):
+    def _close_dialog(self) -> None:
         self._dialog_open = False
         self._page.pop_dialog()
 
-    def _copy_with_feedback(self, event, address: str, label: str):
+    def _copy_with_feedback(self, event, address: str, label: str) -> None:
         button = event.control
 
-        async def do_copy():
+        async def do_copy() -> None:
             clipboard = ft.Clipboard()
             await clipboard.set(address)
             button.text = t("copied")
@@ -1137,7 +1137,7 @@ class SteamCleanerGUI:
 
         self._page.run_task(do_copy)
 
-    def _show_snackbar(self, message: str):
+    def _show_snackbar(self, message: str) -> None:
         snackbar = ft.SnackBar(
             content=ft.Text(message, color=ft.Colors.ON_SURFACE),
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
@@ -1148,11 +1148,11 @@ class SteamCleanerGUI:
         self._page.update()
 
 
-def run_gui():
+def run_gui() -> None:
     hider = WindowHider()
     hider.start()
 
-    async def main(page: ft.Page):
+    async def main(page: ft.Page) -> None:
         gui = SteamCleanerGUI(page, hider)
         await gui.initialize()
 

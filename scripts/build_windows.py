@@ -78,7 +78,7 @@ def flutter_executable(sdk: Path) -> str:
 
 
 # noinspection PyDeprecation
-def flet_build():
+def flet_build() -> None:
     print("=== Step 1/4: flet build windows ===")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     flet_bin = shutil.which("flet") or "flet"
@@ -91,7 +91,7 @@ def flet_build():
     print()
 
 
-def patch_sources():
+def patch_sources() -> None:
     print("=== Step 2/4: Patching build sources ===")
     patched = False
 
@@ -137,7 +137,7 @@ def patch_sources():
     print()
 
 
-def flutter_rebuild(sdk: Path):
+def flutter_rebuild(sdk: Path) -> None:
     print("=== Step 3/4: flutter build windows --release ===")
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     subprocess.run(
@@ -149,7 +149,7 @@ def flutter_rebuild(sdk: Path):
     print()
 
 
-def copy_patched_binaries():
+def copy_patched_binaries() -> None:
     print("=== Step 4/4: Copying patched binaries ===")
     exe_src = FLUTTER_RELEASE / "steamcleaner.exe"
     exe_dst = BUILD_OUTPUT / "steamcleaner.exe"
@@ -163,7 +163,7 @@ def copy_patched_binaries():
     print()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Two-step Windows build with startup-flash fix")
     parser.add_argument("--flutter-sdk", type=Path, help="Path to Flutter SDK root")
     parser.add_argument("--skip-flet-build", action="store_true", help="Skip flet build, patch and rebuild only")

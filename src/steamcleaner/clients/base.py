@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 
 
 class GameClient(abc.ABC):
-    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry):
+    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         self._platform = platform
         self._exclusions = exclusions
         self._cancel: threading.Event | None = None
