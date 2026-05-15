@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+# noinspection PyProtectedMemberAccess
 from steamcleaner.ui.gui.i18n import LANGUAGES, _get_translations, _load_translations, t
 
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "steamcleaner" / "ui" / "gui" / "locales"

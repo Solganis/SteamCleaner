@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import DEFAULT_LOG_MIN_SIZE, scan_game
+from steamcleaner.clients.shared import scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+from steamcleaner.utils.fs import dir_size, list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -96,24 +96,13 @@ class GogClient(GameClient):
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
         galaxy_dir = self._galaxy_data_dir()
         home = self._platform.home()
-        for logs_dir in (
-            galaxy_dir / "logs",
-            home / "Library" / "Logs" / "GOG.com" / "Galaxy",
-        ):
-            if not logs_dir.is_dir():
-                continue
-            for file_path, size in walk_files(logs_dir):
-                if self.cancelled:
-                    return
-                if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
-                    yield JunkEntry(
-                        path=file_path,
-                        category=JunkCategory.OLD_LOG,
-                        size_bytes=size,
-                        client_name=self.name,
-                        description="GOG Galaxy launcher log",
-                        game_root=galaxy_dir,
-                    )
+        yield from scan_launcher_logs(
+            [galaxy_dir / "logs", home / "Library" / "Logs" / "GOG.com" / "Galaxy"],
+            self.name,
+            lambda: self.cancelled,
+            "GOG Galaxy launcher log",
+            game_root=galaxy_dir,
+        )
 
     def _scan_crashdumps(self) -> Iterator[JunkEntry]:
         galaxy_dir = self._galaxy_data_dir()
