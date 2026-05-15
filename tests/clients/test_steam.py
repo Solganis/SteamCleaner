@@ -184,6 +184,7 @@ class TestSteamGameInstallPaths:
         assert client.game_install_paths() == []
 
 
+# noinspection PyUnresolvedReferences
 class TestSteamAppidMap:
     def test_parses_manifest_files(self, tmp_path: Path):
         steam = tmp_path / "Steam"
