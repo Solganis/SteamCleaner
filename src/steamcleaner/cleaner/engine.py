@@ -70,7 +70,7 @@ class CleanEngine:
                 bytes_freed += entry.size_bytes
                 if callback:
                     callback(entry, True)
-            except Exception as exc:
+            except (OSError, RuntimeError) as exc:
                 _logger.error("Failed to delete %s: %s", entry.path, exc)
                 skipped += 1
                 errors.append(f"{entry.path}: {exc}")
