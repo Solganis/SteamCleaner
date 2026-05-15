@@ -1,10 +1,13 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from conftest import FakePlatformAdapter
 
+from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
+from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 # noinspection PyProtectedMember
@@ -42,3 +45,20 @@ class TestClientRegistry:
         for client in clients:
             assert hasattr(client, "name")
             assert hasattr(client, "is_installed")
+
+
+class TestGameClientDefaults:
+    def test_game_install_paths_default(self, tmp_path: Path):
+        class StubClient(GameClient):
+            @property
+            def name(self) -> str:
+                return "Stub"
+
+            def is_installed(self) -> bool:
+                return False
+
+            def scan_junk(self) -> Iterator[JunkEntry]:
+                yield from ()
+
+        client = StubClient(FakePlatformAdapter(home_dir=tmp_path), ExclusionRegistry())
+        assert client.game_install_paths() == []

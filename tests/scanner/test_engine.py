@@ -1,10 +1,11 @@
 import threading
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 def _make_steam_tree(tmp_path: Path) -> FakePlatformAdapter:
