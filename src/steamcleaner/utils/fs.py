@@ -82,9 +82,9 @@ def format_size(size_bytes: int) -> str:
     """Format byte count as human-readable string."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
+    value = float(size_bytes)
     for unit in ("KB", "MB", "GB", "TB"):
-        size_bytes_f = size_bytes / 1024
-        if size_bytes_f < 1024 or unit == "TB":
-            return f"{size_bytes_f:.1f} {unit}"
-        size_bytes = int(size_bytes_f)
+        value /= 1024
+        if value < 1024 or unit == "TB":
+            return f"{value:.1f} {unit}"
     return f"{size_bytes} B"  # pragma: no cover
