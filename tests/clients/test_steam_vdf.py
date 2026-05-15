@@ -7,12 +7,18 @@ from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size
 
 
+def _vdf_escape(path: Path) -> str:
+    """Escape a path for VDF format (double backslashes on Windows)."""
+    return str(path).replace("\\", "\\\\")
+
+
 class TestParseLibraryFoldersVdf:
     def test_parses_valid_vdf(self, tmp_path: Path):
         vdf = tmp_path / "libraryfolders.vdf"
         library = tmp_path / "SteamLibrary"
         library.mkdir()
-        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{library}"\n  }}\n}}')
+        escaped = _vdf_escape(library)
+        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{escaped}"\n  }}\n}}')
         paths = parse_library_folders_vdf(vdf)
         assert library in paths
 
@@ -32,10 +38,12 @@ class TestParseLibraryFoldersVdf:
         lib_a.mkdir()
         lib_b.mkdir()
         vdf = tmp_path / "libraryfolders.vdf"
+        escaped_a = _vdf_escape(lib_a)
+        escaped_b = _vdf_escape(lib_b)
         content = (
             '"libraryfolders"\n{\n'
-            f'  "0"\n  {{\n    "path"\t\t"{lib_a}"\n  }}\n'
-            f'  "1"\n  {{\n    "path"\t\t"{lib_b}"\n  }}\n'
+            f'  "0"\n  {{\n    "path"\t\t"{escaped_a}"\n  }}\n'
+            f'  "1"\n  {{\n    "path"\t\t"{escaped_b}"\n  }}\n'
             "}"
         )
         vdf.write_text(content)
@@ -86,7 +94,8 @@ class TestSteamClientLibraries:
         extra_common.mkdir(parents=True)
 
         vdf = steam / "steamapps" / "libraryfolders.vdf"
-        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{extra_lib}"\n  }}\n}}')
+        escaped = _vdf_escape(extra_lib)
+        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{escaped}"\n  }}\n}}')
 
         game = extra_common / "TestGame" / "_CommonRedist"
         game.mkdir(parents=True)
@@ -240,3 +249,100 @@ class TestSteamDumps:
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
         assert len(dump_entries) == 0
+
+
+class TestConfigVdfFallback:
+    def test_fallback_finds_legacy_folders(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+
+        extra_lib = tmp_path / "ExtraLib"
+        extra_common = extra_lib / "steamapps" / "common"
+        extra_common.mkdir(parents=True)
+
+        game = extra_common / "TestGame" / "_CommonRedist"
+        game.mkdir(parents=True)
+        (game / "setup.exe").write_bytes(b"\x00" * 1024)
+
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        escaped = _vdf_escape(extra_lib)
+        config_vdf = config_dir / "config.vdf"
+        config_vdf.write_text(
+            '"InstallConfigStore"\n{\n'
+            '  "Software"\n  {\n'
+            '    "Valve"\n    {\n'
+            '      "Steam"\n      {\n'
+            f'        "BaseInstallFolder_1"\t\t"{escaped}"\n'
+            "      }\n    }\n  }\n}"
+        )
+
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
+        assert len(redist_entries) > 0
+
+    def test_fallback_skips_nonexistent_paths(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        config_vdf = config_dir / "config.vdf"
+        config_vdf.write_text(
+            '"InstallConfigStore"\n{\n'
+            '  "Software"\n  {\n'
+            '    "Valve"\n    {\n'
+            '      "Steam"\n      {\n'
+            '        "BaseInstallFolder_1"\t\t"/nonexistent/path"\n'
+            "      }\n    }\n  }\n}"
+        )
+
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        paths = client.game_install_paths()
+        assert all(not str(path).startswith("/nonexistent") for path in paths)
+
+    def test_modern_vdf_takes_priority(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+
+        modern_lib = tmp_path / "ModernLib"
+        modern_common = modern_lib / "steamapps" / "common"
+        modern_common.mkdir(parents=True)
+        (modern_common / "SomeGame").mkdir()
+
+        legacy_lib = tmp_path / "LegacyLib"
+        (legacy_lib / "steamapps" / "common").mkdir(parents=True)
+
+        vdf = steam / "steamapps" / "libraryfolders.vdf"
+        escaped_modern = _vdf_escape(modern_lib)
+        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{escaped_modern}"\n  }}\n}}')
+
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        escaped_legacy = _vdf_escape(legacy_lib)
+        config_vdf = config_dir / "config.vdf"
+        config_vdf.write_text(
+            '"InstallConfigStore"\n{\n'
+            '  "Software"\n  {\n'
+            '    "Valve"\n    {\n'
+            '      "Steam"\n      {\n'
+            f'        "BaseInstallFolder_1"\t\t"{escaped_legacy}"\n'
+            "      }\n    }\n  }\n}"
+        )
+
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        install_paths = client.game_install_paths()
+        modern_found = any(path.is_relative_to(modern_lib) for path in install_paths)
+        assert modern_found
+
+    def test_no_config_vdf(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        assert isinstance(entries, list)
