@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import scan_game, scan_launcher_logs
+from steamcleaner.clients.shared import scan_cache_dir, scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs
+from steamcleaner.utils.fs import list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -94,37 +94,27 @@ class UbisoftClient(GameClient):
         launcher_dir = self._launcher_install_dir()
         if not launcher_dir:
             return
-        cache_dir = launcher_dir / "cache"
-        if not cache_dir.is_dir() or self.cancelled:
-            return
-        total = dir_size(cache_dir)
-        if total > 0:
-            yield JunkEntry(
-                path=cache_dir,
-                category=JunkCategory.SHADER_CACHE,
-                size_bytes=total,
-                client_name=self.name,
-                description="Ubisoft Connect cache",
-                game_root=launcher_dir,
-            )
+        yield from scan_cache_dir(
+            launcher_dir / "cache",
+            JunkCategory.SHADER_CACHE,
+            self.name,
+            "Ubisoft Connect cache",
+            lambda: self.cancelled,
+            game_root=launcher_dir,
+        )
 
     def _scan_launcher_crashes(self) -> Iterator[JunkEntry]:
         launcher_dir = self._launcher_install_dir()
         if not launcher_dir:
             return
-        crashes_dir = launcher_dir / "crashes"
-        if not crashes_dir.is_dir() or self.cancelled:
-            return
-        total = dir_size(crashes_dir)
-        if total > 0:
-            yield JunkEntry(
-                path=crashes_dir,
-                category=JunkCategory.CRASH_DUMP,
-                size_bytes=total,
-                client_name=self.name,
-                description="Ubisoft Connect crash dumps",
-                game_root=launcher_dir,
-            )
+        yield from scan_cache_dir(
+            launcher_dir / "crashes",
+            JunkCategory.CRASH_DUMP,
+            self.name,
+            "Ubisoft Connect crash dumps",
+            lambda: self.cancelled,
+            game_root=launcher_dir,
+        )
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
         launcher_dir = self._launcher_install_dir()

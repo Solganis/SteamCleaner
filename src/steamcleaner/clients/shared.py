@@ -3,7 +3,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import walk_files
+from steamcleaner.utils.fs import dir_size, walk_files
 
 REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
@@ -28,6 +28,28 @@ def find_redist_root(file_path: Path, root: Path, pattern: re.Pattern[str] = RED
             topmost = current
         current = current.parent
     return topmost
+
+
+def scan_cache_dir(
+    cache_path: Path,
+    category: JunkCategory,
+    client_name: str,
+    description: str,
+    cancel_check: Callable[[], bool],
+    game_root: Path | None = None,
+) -> Iterator[JunkEntry]:
+    if not cache_path.is_dir() or cancel_check():
+        return
+    total = dir_size(cache_path)
+    if total > 0:
+        yield JunkEntry(
+            path=cache_path,
+            category=category,
+            size_bytes=total,
+            client_name=client_name,
+            description=description,
+            game_root=game_root or cache_path.parent,
+        )
 
 
 def scan_launcher_logs(
