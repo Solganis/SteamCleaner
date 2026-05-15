@@ -21,12 +21,11 @@ def parse_library_folders_vdf(path: Path) -> list[Path]:
     paths: list[Path] = []
     if isinstance(folders, dict):
         for entry in folders.values():
+            raw_path = ""
             if isinstance(entry, dict):
                 raw_path = entry.get("path", "")
             elif isinstance(entry, str):
                 raw_path = entry
-            else:
-                continue
             if raw_path:
                 library_path = Path(raw_path)
                 if library_path.is_dir():
