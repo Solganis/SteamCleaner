@@ -29,3 +29,13 @@ def gui(tmp_path: Path, fake_page: MagicMock) -> SteamCleanerGUI:
     config_path = tmp_path / "config.toml"
     with patch("steamcleaner.utils.config._config_path", return_value=config_path):
         return SteamCleanerGUI(fake_page)
+
+
+# noinspection PyProtectedMember
+@pytest.fixture
+def gui_with_ui(tmp_path: Path, fake_page: MagicMock) -> SteamCleanerGUI:
+    config_path = tmp_path / "config.toml"
+    with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+        instance = SteamCleanerGUI(fake_page)
+        instance._build_ui()
+        return instance
