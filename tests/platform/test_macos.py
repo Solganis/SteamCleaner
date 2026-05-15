@@ -3,13 +3,14 @@
 import json
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.ea_app import EaAppClient
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.clients.gog import GogClient
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 def _macos_platform(tmp_path: Path, **kwargs) -> FakePlatformAdapter:

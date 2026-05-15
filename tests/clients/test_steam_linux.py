@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 class TestSteamLinuxDetection:

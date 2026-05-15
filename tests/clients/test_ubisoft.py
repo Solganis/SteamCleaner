@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.ubisoft import UbisoftClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 _REGISTRY_LAUNCHER_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher"
 _REGISTRY_INSTALLS_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"

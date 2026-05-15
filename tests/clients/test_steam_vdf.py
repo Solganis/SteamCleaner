@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.steam import SteamClient, parse_library_folders_vdf
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size
-from tests.conftest import FakePlatformAdapter
 
 
 class TestParseLibraryFoldersVdf:

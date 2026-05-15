@@ -2,10 +2,11 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+from conftest import FakePlatformAdapter
+
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
-from tests.conftest import FakePlatformAdapter
 
 
 def _make_epic_env(
