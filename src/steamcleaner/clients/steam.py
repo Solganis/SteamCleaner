@@ -1,5 +1,4 @@
 import logging
-import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -10,20 +9,28 @@ from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size, list_subdirs
+from steamcleaner.utils.vdf import load_vdf
 
 _logger = logging.getLogger(__name__)
 
 
 def parse_library_folders_vdf(path: Path) -> list[Path]:
     """Parse libraryfolders.vdf to extract library paths."""
-    if not path.is_file():
-        return []
-    text = path.read_text(encoding="utf-8", errors="replace")
+    data = load_vdf(path)
+    folders = data.get("libraryfolders", {})
     paths: list[Path] = []
-    for match in re.finditer(r'"path"\s+"([^"]+)"', text):
-        library_path = Path(match.group(1).replace("\\\\", "\\"))
-        if library_path.is_dir():
-            paths.append(library_path)
+    if isinstance(folders, dict):
+        for entry in folders.values():
+            if isinstance(entry, dict):
+                raw_path = entry.get("path", "")
+            elif isinstance(entry, str):
+                raw_path = entry
+            else:
+                continue
+            if raw_path:
+                library_path = Path(raw_path)
+                if library_path.is_dir():
+                    paths.append(library_path)
     return paths
 
 
@@ -79,10 +86,40 @@ class SteamClient(GameClient):
         vdf_path = install / "steamapps" / "libraryfolders.vdf"
         _logger.debug("Parsing libraryfolders.vdf: %s", vdf_path)
         folders = parse_library_folders_vdf(vdf_path)
+        if len(folders) <= 1:
+            fallback = self._parse_config_vdf_fallback(install)
+            for folder in fallback:
+                if folder not in folders:
+                    folders.append(folder)
         if install not in folders:
             folders.insert(0, install)
         _logger.debug("Found %d library folders: %s", len(folders), [str(folder) for folder in folders])
         return folders
+
+    @staticmethod
+    def _parse_config_vdf_fallback(install: Path) -> list[Path]:
+        """Parse config/config.vdf for BaseInstallFolder_N keys (legacy Steam)."""
+        config_path = install / "config" / "config.vdf"
+        data = load_vdf(config_path)
+        store = data.get("InstallConfigStore", {})
+        if not isinstance(store, dict):
+            return []
+        software = store.get("Software", store.get("software", {}))
+        if not isinstance(software, dict):
+            return []
+        valve = software.get("Valve", software.get("valve", {}))
+        if not isinstance(valve, dict):
+            return []
+        steam_section = valve.get("Steam", valve.get("steam", {}))
+        if not isinstance(steam_section, dict):
+            return []
+        paths: list[Path] = []
+        for key, value in steam_section.items():
+            if key.lower().startswith("baseinstallfolder_") and isinstance(value, str) and value:
+                candidate = Path(value)
+                if candidate.is_dir():
+                    paths.append(candidate)
+        return paths
 
     def game_install_paths(self) -> list[Path]:
         paths: list[Path] = []
@@ -121,14 +158,13 @@ class SteamClient(GameClient):
         steamapps = library / "steamapps"
         appid_map: dict[str, str] = {}
         for manifest in steamapps.glob("appmanifest_*.acf"):
-            try:
-                text = manifest.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            appid_match = re.search(r'"appid"\s+"(\d+)"', text)
-            name_match = re.search(r'"name"\s+"([^"]+)"', text)
-            if appid_match and name_match:
-                appid_map[appid_match.group(1)] = name_match.group(1)
+            data = load_vdf(manifest)
+            app_state = data.get("AppState", {})
+            if isinstance(app_state, dict):
+                appid = app_state.get("appid", "")
+                name = app_state.get("name", "")
+                if isinstance(appid, str) and isinstance(name, str) and appid and name:
+                    appid_map[appid] = name
         return appid_map
 
     def _scan_shader_cache(self, library: Path) -> Iterator[JunkEntry]:
