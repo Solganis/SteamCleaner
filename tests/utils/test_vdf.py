@@ -230,3 +230,9 @@ class TestLoadVdf:
         vdf_file.write_text("", encoding="utf-8")
         result = load_vdf(vdf_file)
         assert result == {}
+
+    def test_malformed_unquoted_triggers_error(self, tmp_path: Path):
+        vdf_file = tmp_path / "bad.vdf"
+        vdf_file.write_text("{", encoding="utf-8")
+        result = load_vdf(vdf_file)
+        assert result == {}
