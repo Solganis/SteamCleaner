@@ -1,0 +1,304 @@
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from steamcleaner.models.junk import JunkCategory, JunkEntry
+from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.ui.gui.app import SteamCleanerGUI
+
+
+def _make_fake_page() -> MagicMock:
+    page = MagicMock()
+    page.theme_mode = None
+    page.window = MagicMock()
+    page.window.width = 1024
+    page.window.height = 700
+    page.window.left = 100
+    page.window.top = 200
+    page.window.min_width = 800
+    page.window.min_height = 540
+    page.window.visible = True
+    page.window.on_event = None
+    page.padding = 0
+    page.add = MagicMock()
+    return page
+
+
+def _make_gui(tmp_path: Path) -> SteamCleanerGUI:
+    config_path = tmp_path / "config.toml"
+    with patch("steamcleaner.utils.config._config_path", return_value=config_path):
+        return SteamCleanerGUI(_make_fake_page())
+
+
+def _make_entry(
+    name: str,
+    category: JunkCategory = JunkCategory.REDISTRIBUTABLE,
+    size: int = 1024,
+    game_root: Path | None = None,
+    display_name: str | None = None,
+) -> JunkEntry:
+    return JunkEntry(
+        path=Path(f"C:/Games/{name}"),
+        category=category,
+        size_bytes=size,
+        client_name="Steam",
+        game_root=game_root,
+        display_name=display_name,
+    )
+
+
+ENTRY_SMALL = _make_entry("small_redist", JunkCategory.REDISTRIBUTABLE, 100)
+ENTRY_MEDIUM = _make_entry("medium_shader", JunkCategory.SHADER_CACHE, 5000)
+ENTRY_LARGE = _make_entry("large_dump", JunkCategory.CRASH_DUMP, 90000)
+
+
+# noinspection PyProtectedMember
+class TestDisplayPath:
+    def test_with_display_name(self):
+        entry = _make_entry("file.exe", display_name="Custom Name")
+        assert SteamCleanerGUI._display_path(entry) == "Custom Name"
+
+    def test_with_game_root(self):
+        entry = _make_entry(
+            "TestGame/_CommonRedist/vcredist.exe",
+            game_root=Path("C:/Games/TestGame"),
+        )
+        result = SteamCleanerGUI._display_path(entry)
+        assert result == r"TestGame\_CommonRedist\vcredist.exe"
+
+    def test_without_game_root_or_display_name(self):
+        entry = _make_entry("some_file.exe")
+        assert SteamCleanerGUI._display_path(entry) == str(entry.path)
+
+    def test_game_root_not_parent_of_path(self):
+        entry = JunkEntry(
+            path=Path("D:/Other/file.exe"),
+            category=JunkCategory.REDISTRIBUTABLE,
+            size_bytes=100,
+            client_name="Steam",
+            game_root=Path("C:/Games/TestGame"),
+        )
+        assert SteamCleanerGUI._display_path(entry) == str(entry.path)
+
+    def test_display_name_takes_priority_over_game_root(self):
+        entry = _make_entry(
+            "TestGame/file.exe",
+            game_root=Path("C:/Games/TestGame"),
+            display_name="Override",
+        )
+        assert SteamCleanerGUI._display_path(entry) == "Override"
+
+
+# noinspection PyProtectedMember
+class TestApplySortFilter:
+    def _gui_with_entries(self, tmp_path: Path, entries: list[JunkEntry]) -> SteamCleanerGUI:
+        gui = _make_gui(tmp_path)
+        gui._result = ScanResult(entries=list(entries))
+        return gui
+
+    def test_sort_size_desc(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_LARGE, ENTRY_MEDIUM])
+        gui._sort_key = "size_desc"
+        gui._apply_sort_filter()
+        sizes = [entry.size_bytes for entry in gui._visible_entries]
+        assert sizes == [90000, 5000, 100]
+
+    def test_sort_size_asc(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
+        gui._sort_key = "size_asc"
+        gui._apply_sort_filter()
+        sizes = [entry.size_bytes for entry in gui._visible_entries]
+        assert sizes == [100, 5000, 90000]
+
+    def test_sort_by_category(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_LARGE, ENTRY_SMALL, ENTRY_MEDIUM])
+        gui._sort_key = "category"
+        gui._apply_sort_filter()
+        categories = [entry.category for entry in gui._visible_entries]
+        assert categories == [JunkCategory.CRASH_DUMP, JunkCategory.REDISTRIBUTABLE, JunkCategory.SHADER_CACHE]
+
+    def test_sort_by_path(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_MEDIUM, ENTRY_LARGE, ENTRY_SMALL])
+        gui._sort_key = "path"
+        gui._apply_sort_filter()
+        names = [entry.path.name for entry in gui._visible_entries]
+        assert names == ["large_dump", "medium_shader", "small_redist"]
+
+    def test_filter_by_category(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+        gui._category_filter = "shader_cache"
+        gui._apply_sort_filter()
+        assert len(gui._visible_entries) == 1
+        assert gui._visible_entries[0].category == JunkCategory.SHADER_CACHE
+
+    def test_filter_all_shows_everything(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+        gui._category_filter = "all"
+        gui._apply_sort_filter()
+        assert len(gui._visible_entries) == 3
+
+    def test_search_query(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+        gui._search_query = "shader"
+        gui._apply_sort_filter()
+        assert len(gui._visible_entries) == 1
+        assert gui._visible_entries[0] is ENTRY_MEDIUM
+
+    def test_search_case_insensitive(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL, ENTRY_MEDIUM])
+        gui._search_query = "SMALL"
+        gui._apply_sort_filter()
+        assert len(gui._visible_entries) == 1
+
+    def test_filter_and_search_combined(self, tmp_path: Path):
+        entries = [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE]
+        gui = self._gui_with_entries(tmp_path, entries)
+        gui._category_filter = "redistributable"
+        gui._search_query = "small"
+        gui._apply_sort_filter()
+        assert len(gui._visible_entries) == 1
+        assert gui._visible_entries[0] is ENTRY_SMALL
+
+    def test_no_results_after_filter(self, tmp_path: Path):
+        gui = self._gui_with_entries(tmp_path, [ENTRY_SMALL])
+        gui._category_filter = "crash_dump"
+        gui._apply_sort_filter()
+        assert gui._visible_entries == []
+
+
+# noinspection PyProtectedMember
+class TestToggleSelection:
+    def test_toggle_adds_to_selected(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        path = Path("C:/Games/test")
+        gui._on_toggle(path, True)
+        assert path in gui._selected
+
+    def test_toggle_removes_from_selected(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        path = Path("C:/Games/test")
+        gui._selected.add(path)
+        gui._on_toggle(path, False)
+        assert path not in gui._selected
+
+    def test_toggle_idempotent_remove(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        path = Path("C:/Games/test")
+        gui._on_toggle(path, False)
+        assert path not in gui._selected
+
+
+# noinspection PyProtectedMember
+class TestSetControlsLocked:
+    def test_locked_disables_controls(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._set_controls_locked(locked=True)
+        assert gui._sort_dropdown.disabled is True
+        assert gui._filter_dropdown.disabled is True
+        assert gui._search_field.disabled is True
+        assert gui._results_list.disabled is True
+        assert gui._results_list.opacity == 0.4
+
+    def test_unlocked_enables_controls(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._set_controls_locked(locked=True)
+        gui._set_controls_locked(locked=False)
+        assert gui._sort_dropdown.disabled is False
+        assert gui._filter_dropdown.disabled is False
+        assert gui._search_field.disabled is False
+        assert gui._results_list.disabled is False
+        assert gui._results_list.opacity == 1.0
+
+    def test_clean_button_disabled_without_selection(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._set_controls_locked(locked=False)
+        assert gui._clean_button.disabled is True
+
+    def test_clean_button_enabled_with_selection(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._selected.add(Path("C:/Games/test"))
+        gui._set_controls_locked(locked=False)
+        assert gui._clean_button.disabled is False
+
+    def test_select_all_disabled_without_entries(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._set_controls_locked(locked=False)
+        assert gui._select_all_button.disabled is True
+
+    def test_select_all_enabled_with_entries(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._set_controls_locked(locked=False)
+        assert gui._select_all_button.disabled is False
+
+
+# noinspection PyProtectedMember
+class TestOnKeyboard:
+    @staticmethod
+    def _make_key_event(key: str, ctrl: bool = False) -> MagicMock:
+        event = MagicMock()
+        event.key = key
+        event.ctrl = ctrl
+        event.shift = False
+        event.alt = False
+        event.meta = False
+        return event
+
+    def test_escape_cancels_scan(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        from threading import Event
+
+        gui._cancel_event = Event()
+        gui._on_keyboard(self._make_key_event("Escape"))
+        assert gui._cancel_event.is_set()
+
+    def test_escape_clears_selection(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._visible_entries = [ENTRY_SMALL]
+        gui._selected.add(ENTRY_SMALL.path)
+        with patch.object(gui, "_refresh_list"):
+            gui._on_keyboard(self._make_key_event("Escape"))
+        assert len(gui._selected) == 0
+
+    def test_f5_triggers_scan(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        with patch.object(gui, "on_scan") as mock_scan:
+            gui._on_keyboard(self._make_key_event("F5"))
+            mock_scan.assert_called_once_with(None)
+
+    def test_f5_blocked_during_cleaning(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._cleaning = True
+        with patch.object(gui, "on_scan") as mock_scan:
+            gui._on_keyboard(self._make_key_event("F5"))
+            mock_scan.assert_not_called()
+
+    def test_ctrl_a_selects_all(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        with patch.object(gui, "_on_select_all") as mock_select:
+            gui._on_keyboard(self._make_key_event("A", ctrl=True))
+            mock_select.assert_called_once_with(None)
+
+    def test_ctrl_a_blocked_during_scan(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        from threading import Event
+
+        gui._cancel_event = Event()
+        with patch.object(gui, "_on_select_all") as mock_select:
+            gui._on_keyboard(self._make_key_event("A", ctrl=True))
+            mock_select.assert_not_called()
+
+    def test_keys_ignored_when_text_focused(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._text_input_focused = True
+        with patch.object(gui, "on_scan") as mock_scan:
+            gui._on_keyboard(self._make_key_event("F5"))
+            mock_scan.assert_not_called()
+
+    def test_escape_not_blocked_by_text_focus(self, tmp_path: Path):
+        gui = _make_gui(tmp_path)
+        gui._text_input_focused = True
+        gui._search_field.value = "something"
+        with patch.object(gui, "_refresh_list"):
+            gui._on_keyboard(self._make_key_event("Escape"))
+        assert gui._search_query == ""
