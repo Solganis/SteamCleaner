@@ -1,9 +1,13 @@
+import queue
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import flet as ft
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.ui.gui.app import SteamCleanerGUI
+from steamcleaner.ui.gui.i18n import t
 
 
 def _make_entry(
@@ -261,3 +265,147 @@ class TestOnKeyboard:
         with patch.object(gui, "_refresh_list"):
             gui._on_keyboard(self._make_key_event("Escape"))
         assert gui._search_query == ""
+
+
+# noinspection PyProtectedMember
+class TestRebuildFilterOptions:
+    @staticmethod
+    def _with_entries(gui: SteamCleanerGUI, entries: list[JunkEntry]) -> SteamCleanerGUI:
+        gui._result = ScanResult(entries=list(entries))
+        return gui
+
+    def test_single_category(self, gui: SteamCleanerGUI):
+        self._with_entries(gui, [ENTRY_SMALL])
+        gui._rebuild_filter_options()
+        keys = [option.key for option in gui._filter_dropdown.options]
+        assert keys == ["all", "redistributable"]
+
+    def test_multiple_categories_sorted(self, gui: SteamCleanerGUI):
+        self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+        gui._rebuild_filter_options()
+        keys = [option.key for option in gui._filter_dropdown.options]
+        assert keys == ["all", "crash_dump", "redistributable", "shader_cache"]
+
+    def test_empty_entries_only_all(self, gui: SteamCleanerGUI):
+        self._with_entries(gui, [])
+        gui._rebuild_filter_options()
+        assert len(gui._filter_dropdown.options) == 1
+        assert gui._filter_dropdown.options[0].key == "all"
+
+    def test_resets_filter_when_category_gone(self, gui: SteamCleanerGUI):
+        self._with_entries(gui, [ENTRY_SMALL])
+        gui._category_filter = "shader_cache"
+        gui._rebuild_filter_options()
+        assert gui._category_filter is None
+        assert gui._filter_dropdown.value == "all"
+
+    def test_keeps_filter_when_category_present(self, gui: SteamCleanerGUI):
+        self._with_entries(gui, [ENTRY_SMALL, ENTRY_MEDIUM])
+        gui._category_filter = "shader_cache"
+        gui._rebuild_filter_options()
+        assert gui._category_filter == "shader_cache"
+
+
+# noinspection PyProtectedMember
+class TestUpdateTotals:
+    @staticmethod
+    def _with_state(
+        gui: SteamCleanerGUI,
+        entries: list[JunkEntry],
+        selected: set[Path] | None = None,
+        visible: list[JunkEntry] | None = None,
+    ) -> SteamCleanerGUI:
+        gui._result = ScanResult(entries=list(entries))
+        gui._selected = selected or set()
+        gui._visible_entries = visible if visible is not None else list(entries)
+        return gui
+
+    def test_no_selection_disables_clean(self, gui: SteamCleanerGUI):
+        self._with_state(gui, [ENTRY_SMALL, ENTRY_LARGE])
+        gui._update_totals()
+        assert gui._clean_button.disabled is True
+
+    def test_with_selection_enables_clean(self, gui: SteamCleanerGUI):
+        self._with_state(gui, [ENTRY_SMALL, ENTRY_LARGE], selected={ENTRY_SMALL.path})
+        gui._update_totals()
+        assert gui._clean_button.disabled is False
+
+    def test_partial_selection_correct_sum(self, gui: SteamCleanerGUI):
+        self._with_state(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE], selected={ENTRY_SMALL.path, ENTRY_MEDIUM.path})
+        gui._update_totals()
+        expected_selected = ENTRY_SMALL.size_bytes + ENTRY_MEDIUM.size_bytes
+        assert str(expected_selected) in gui._total_label.value or "5.0" in gui._total_label.value
+
+    def test_filter_note_when_filtered(self, gui: SteamCleanerGUI):
+        self._with_state(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE], visible=[ENTRY_SMALL])
+        gui._update_totals()
+        assert t("total_shown", shown=1) in gui._total_label.value
+
+    def test_empty_result_disables_select_all(self, gui: SteamCleanerGUI):
+        self._with_state(gui, [])
+        gui._update_totals()
+        assert gui._select_all_button.disabled is True
+
+
+# noinspection PyProtectedMember
+class TestUpdateEmptyState:
+    def test_visible_entries_hides_state(self, gui_with_ui: SteamCleanerGUI):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui_with_ui._visible_entries = [ENTRY_SMALL]
+        gui_with_ui._update_empty_state()
+        assert gui_with_ui._empty_state.visible is False
+
+    def test_filtered_out_shows_filter_icon(self, gui_with_ui: SteamCleanerGUI):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui_with_ui._visible_entries = []
+        gui_with_ui._update_empty_state()
+        assert gui_with_ui._empty_state.visible is True
+        assert gui_with_ui._empty_state.controls[1].name == ft.Icons.FILTER_LIST_OFF
+        assert gui_with_ui._empty_state.controls[2].value == t("empty_filter")
+
+    def test_no_results_shows_search_icon(self, gui_with_ui: SteamCleanerGUI):
+        gui_with_ui._result = ScanResult(entries=[])
+        gui_with_ui._visible_entries = []
+        gui_with_ui._update_empty_state()
+        assert gui_with_ui._empty_state.visible is True
+        assert gui_with_ui._empty_state.controls[1].name == ft.Icons.SEARCH_OFF
+        assert gui_with_ui._empty_state.controls[2].value == t("empty_scan")
+
+
+# noinspection PyProtectedMember
+class TestDrainFoundQueue:
+    def test_empty_queue_no_change(self, gui_with_ui: SteamCleanerGUI):
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        initial_count = len(gui_with_ui._result.entries)
+        gui_with_ui._drain_found_queue(found_queue)
+        assert len(gui_with_ui._result.entries) == initial_count
+
+    def test_single_entry_drained(self, gui_with_ui: SteamCleanerGUI):
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        found_queue.put(ENTRY_SMALL)
+        gui_with_ui._drain_found_queue(found_queue)
+        assert len(gui_with_ui._result.entries) == 1
+        assert gui_with_ui._result.entries[0] is ENTRY_SMALL
+
+    def test_multiple_entries_drained(self, gui_with_ui: SteamCleanerGUI):
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        for entry in [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE]:
+            found_queue.put(entry)
+        gui_with_ui._drain_found_queue(found_queue)
+        assert len(gui_with_ui._result.entries) == 3
+        assert len(gui_with_ui._results_list.controls) == 3
+
+    def test_rebuilds_filter_options(self, gui_with_ui: SteamCleanerGUI):
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        found_queue.put(ENTRY_SMALL)
+        found_queue.put(ENTRY_MEDIUM)
+        gui_with_ui._drain_found_queue(found_queue)
+        keys = [option.key for option in gui_with_ui._filter_dropdown.options]
+        assert "redistributable" in keys
+        assert "shader_cache" in keys
+
+    def test_updates_progress_label(self, gui_with_ui: SteamCleanerGUI):
+        found_queue: queue.Queue[JunkEntry] = queue.Queue()
+        found_queue.put(ENTRY_SMALL)
+        gui_with_ui._drain_found_queue(found_queue)
+        assert gui_with_ui._total_label.value != ""
