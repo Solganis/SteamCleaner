@@ -4,7 +4,7 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import LOG_MIN_SIZE, scan_game
+from steamcleaner.clients.shared import DEFAULT_LOG_MIN_SIZE, scan_game
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
 
@@ -96,7 +96,7 @@ class EaAppClient(GameClient):
             for file_path, size in walk_files(logs_dir):
                 if self.cancelled:
                     return
-                if file_path.suffix.lower() == ".log" and size >= LOG_MIN_SIZE:
+                if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
                     yield JunkEntry(
                         path=file_path,
                         category=JunkCategory.OLD_LOG,

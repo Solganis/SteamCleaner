@@ -6,7 +6,7 @@ from steamcleaner.utils.config import config_dir, get_value, save_value
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-_MAX_BYTES = 2_000_000
+DEFAULT_MAX_LOG_BYTES = 2_000_000
 _BACKUP_COUNT = 3
 _ROOT_LOGGER_NAME = "steamcleaner"
 
@@ -19,13 +19,13 @@ def is_logging_enabled() -> bool:
     return get_value("logging", "enabled", "false") == "true"
 
 
-def setup_logging() -> logging.Logger:
+def setup_logging(max_bytes: int = DEFAULT_MAX_LOG_BYTES) -> logging.Logger:
     root_logger = logging.getLogger(_ROOT_LOGGER_NAME)
     if root_logger.handlers:
         return root_logger
 
     if is_logging_enabled():
-        _attach_file_handler(root_logger)
+        _attach_file_handler(root_logger, max_bytes=max_bytes)
     else:
         root_logger.setLevel(logging.WARNING)
 
@@ -45,13 +45,13 @@ def set_logging_enabled(enabled: bool) -> None:
         root_logger.setLevel(logging.WARNING)
 
 
-def _attach_file_handler(logger: logging.Logger) -> None:
+def _attach_file_handler(logger: logging.Logger, max_bytes: int = DEFAULT_MAX_LOG_BYTES) -> None:
     path = log_file_path()
     path.parent.mkdir(parents=True, exist_ok=True)
 
     file_handler = logging.handlers.RotatingFileHandler(
         path,
-        maxBytes=_MAX_BYTES,
+        maxBytes=max_bytes,
         backupCount=_BACKUP_COUNT,
         encoding="utf-8",
     )
