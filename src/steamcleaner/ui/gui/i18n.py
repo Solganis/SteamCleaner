@@ -410,6 +410,4 @@ def t(key: str, **kwargs: str | int) -> str:
 
 
 def t_category(category_value: str) -> str:
-    return t(
-        f"cat_{category_value}",
-    )
+    return t(f"cat_{category_value}")

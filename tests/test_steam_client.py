@@ -64,7 +64,7 @@ class TestSteamRedistScan:
         )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        entries = [e for e in client.scan_junk() if e.category == JunkCategory.REDISTRIBUTABLE]
+        entries = [entry for entry in client.scan_junk() if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert len(entries) == 1
         assert "__Installer" in str(entries[0].path)
 

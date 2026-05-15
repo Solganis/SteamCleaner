@@ -61,7 +61,7 @@ class TestCancelMidScan:
             entries.append(entry)
             if entry.category == JunkCategory.REDISTRIBUTABLE:
                 cancel.set()
-        categories = {e.category for e in entries}
+        categories = {entry.category for entry in entries}
         assert JunkCategory.REDISTRIBUTABLE in categories
         assert JunkCategory.SHADER_CACHE not in categories
         assert JunkCategory.OLD_LOG not in categories

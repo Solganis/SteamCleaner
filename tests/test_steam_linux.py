@@ -60,7 +60,7 @@ class TestSteamLinuxScan:
         (cache / "data.bin").write_bytes(b"\x00" * 4096)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        shader_entries = [e for e in entries if e.category.value == "shader_cache"]
+        shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
         assert len(shader_entries) == 1
 
     def test_finds_dumps_on_linux(self, tmp_path: Path):
@@ -70,5 +70,5 @@ class TestSteamLinuxScan:
         (dumps / "crash.dmp").write_bytes(b"\x00" * 512)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        dump_entries = [e for e in entries if e.category.value == "crash_dump"]
+        dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
         assert len(dump_entries) == 1

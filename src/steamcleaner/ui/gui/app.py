@@ -877,7 +877,7 @@ class SteamCleanerGUI:
         self._page.run_task(self._clean_task, entries)
 
     async def _clean_task(self, entries: list[JunkEntry]):
-        deleted_set = {id(entry) for entry in entries}
+        deleted_ids = {id(entry) for entry in entries}
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
         total = len(entries)
@@ -910,7 +910,7 @@ class SteamCleanerGUI:
         stats = stats_holder[0]
 
         deleted_paths = {entry.path for entry in entries}
-        self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_set]
+        self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_ids]
         self._selected -= deleted_paths
         self._scan_button.disabled = False
         self._progress.opacity = 0

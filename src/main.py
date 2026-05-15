@@ -6,14 +6,14 @@ import time
 from steamcleaner.utils.logging import setup_logging
 
 _flutter_hwnd = None
-_t0 = time.perf_counter()
+_start_time = time.perf_counter()
 
 setup_logging()
 _logger = logging.getLogger("steamcleaner.main")
 
 
 def _elapsed() -> str:
-    return f"[{(time.perf_counter() - _t0) * 1000:9.1f}ms]"
+    return f"[{(time.perf_counter() - _start_time) * 1000:9.1f}ms]"
 
 
 # noinspection PyUnresolvedReferences

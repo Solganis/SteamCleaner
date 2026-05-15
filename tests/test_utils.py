@@ -26,9 +26,9 @@ class TestFormatSize:
 
 class TestIsReparsePoint:
     def test_regular_dir(self, tmp_path: Path):
-        d = tmp_path / "normal"
-        d.mkdir()
-        assert not is_reparse_point(d)
+        normal_dir = tmp_path / "normal"
+        normal_dir.mkdir()
+        assert not is_reparse_point(normal_dir)
 
     def test_symlink(self, tmp_path: Path):
         real = tmp_path / "real"
