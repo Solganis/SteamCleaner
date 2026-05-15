@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from conftest import FakePlatformAdapter
+from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory

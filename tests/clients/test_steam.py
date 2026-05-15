@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from conftest import FakePlatformAdapter, build_fake_steam_tree
+from helpers import FakePlatformAdapter, build_fake_steam_tree
 
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory

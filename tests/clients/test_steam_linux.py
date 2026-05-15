@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from conftest import FakePlatformAdapter
+from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.scanner.exclusions import ExclusionRegistry
