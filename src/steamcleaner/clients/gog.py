@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import scan_game, scan_launcher_logs
+from steamcleaner.clients.shared import scan_cache_dir, scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs
+from steamcleaner.utils.fs import list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -106,37 +106,31 @@ class GogClient(GameClient):
 
     def _scan_crashdumps(self) -> Iterator[JunkEntry]:
         galaxy_dir = self._galaxy_data_dir()
-        crashdumps_dir = galaxy_dir / "crashdumps"
-        if not crashdumps_dir.is_dir() or self.cancelled:
-            return
-        total = dir_size(crashdumps_dir)
-        if total > 0:
-            yield JunkEntry(
-                path=crashdumps_dir,
-                category=JunkCategory.CRASH_DUMP,
-                size_bytes=total,
-                client_name=self.name,
-                description="GOG Galaxy crash dumps",
-                game_root=galaxy_dir,
-            )
+        yield from scan_cache_dir(
+            galaxy_dir / "crashdumps",
+            JunkCategory.CRASH_DUMP,
+            self.name,
+            "GOG Galaxy crash dumps",
+            lambda: self.cancelled,
+            game_root=galaxy_dir,
+        )
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
         galaxy_dir = self._galaxy_data_dir()
-        cache_dirs = [galaxy_dir / "webcache"]
         home = self._platform.home()
-        for bundle_id in ("com.gog.galaxy", "5b6cd92d.com.gog.galaxy"):
-            cache_dirs.append(home / "Library" / "Caches" / bundle_id)
-
+        cache_dirs = [
+            galaxy_dir / "webcache",
+            home / "Library" / "Caches" / "com.gog.galaxy",
+            home / "Library" / "Caches" / "5b6cd92d.com.gog.galaxy",
+        ]
         for webcache_dir in cache_dirs:
-            if not webcache_dir.is_dir() or self.cancelled:
-                continue
-            total = dir_size(webcache_dir)
-            if total > 0:
-                yield JunkEntry(
-                    path=webcache_dir,
-                    category=JunkCategory.SHADER_CACHE,
-                    size_bytes=total,
-                    client_name=self.name,
-                    description="GOG Galaxy web cache",
-                    game_root=galaxy_dir,
-                )
+            if self.cancelled:
+                return
+            yield from scan_cache_dir(
+                webcache_dir,
+                JunkCategory.SHADER_CACHE,
+                self.name,
+                "GOG Galaxy web cache",
+                lambda: self.cancelled,
+                game_root=galaxy_dir,
+            )

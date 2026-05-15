@@ -4,7 +4,7 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import scan_game
+from steamcleaner.clients.shared import scan_cache_dir, scan_game
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
@@ -189,16 +189,11 @@ class SteamClient(GameClient):
                 )
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:
-        dumps_dir = install / "dumps"
-        if not dumps_dir.is_dir() or self.cancelled:
-            return
-        total = dir_size(dumps_dir)
-        if total > 0:
-            yield JunkEntry(
-                path=dumps_dir,
-                category=JunkCategory.CRASH_DUMP,
-                size_bytes=total,
-                client_name=self.name,
-                description="Steam client crash dumps",
-                game_root=install,
-            )
+        yield from scan_cache_dir(
+            install / "dumps",
+            JunkCategory.CRASH_DUMP,
+            self.name,
+            "Steam client crash dumps",
+            lambda: self.cancelled,
+            game_root=install,
+        )
