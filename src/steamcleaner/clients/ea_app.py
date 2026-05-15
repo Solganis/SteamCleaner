@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import DEFAULT_LOG_MIN_SIZE, scan_game
+from steamcleaner.clients.shared import scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+from steamcleaner.utils.fs import dir_size, list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -86,25 +86,16 @@ class EaAppClient(GameClient):
         yield from self._scan_launcher_cache()
 
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
-        for logs_dir in (
-            self._ea_desktop_data_dir() / "Logs",
-            self._ea_app_data_dir() / "Logs",
-            self._platform.programdata() / "EA Desktop" / "Logs",
-        ):
-            if not logs_dir.is_dir():
-                continue
-            for file_path, size in walk_files(logs_dir):
-                if self.cancelled:
-                    return
-                if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
-                    yield JunkEntry(
-                        path=file_path,
-                        category=JunkCategory.OLD_LOG,
-                        size_bytes=size,
-                        client_name=self.name,
-                        description="EA App launcher log",
-                        game_root=logs_dir.parent,
-                    )
+        yield from scan_launcher_logs(
+            [
+                self._ea_desktop_data_dir() / "Logs",
+                self._ea_app_data_dir() / "Logs",
+                self._platform.programdata() / "EA Desktop" / "Logs",
+            ],
+            self.name,
+            lambda: self.cancelled,
+            "EA App launcher log",
+        )
 
     def _scan_launcher_cache(self) -> Iterator[JunkEntry]:
         appdata_local = self._platform.appdata_local()

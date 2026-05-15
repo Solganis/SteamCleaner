@@ -7,6 +7,7 @@ from steamcleaner.clients.shared import (
     find_redist_root,
     has_redist_ancestor,
     scan_game,
+    scan_launcher_logs,
 )
 from steamcleaner.models.junk import JunkCategory
 
@@ -182,4 +183,45 @@ class TestScanGame:
         redist.mkdir(parents=True)
         (redist / "readme.txt").write_bytes(b"\x00" * 1024)
         entries = list(scan_game(game, "TestClient", lambda: False))
+        assert len(entries) == 0
+
+
+class TestScanLauncherLogs:
+    def test_finds_large_log_files(self, tmp_path: Path):
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir()
+        (logs_dir / "launcher.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+        entries = list(scan_launcher_logs([logs_dir], "TestClient", lambda: False, "test log"))
+        assert len(entries) == 1
+        assert entries[0].category == JunkCategory.OLD_LOG
+        assert entries[0].game_root == tmp_path
+
+    def test_skips_small_log_files(self, tmp_path: Path):
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir()
+        (logs_dir / "small.log").write_bytes(b"\x00" * 100)
+        entries = list(scan_launcher_logs([logs_dir], "TestClient", lambda: False, "test log"))
+        assert len(entries) == 0
+
+    def test_skips_nonexistent_dirs(self, tmp_path: Path):
+        entries = list(scan_launcher_logs([tmp_path / "nope"], "TestClient", lambda: False, "test log"))
+        assert len(entries) == 0
+
+    def test_uses_explicit_game_root(self, tmp_path: Path):
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir()
+        (logs_dir / "launcher.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+        custom_root = tmp_path / "custom"
+        custom_root.mkdir()
+        entries = list(scan_launcher_logs([logs_dir], "TestClient", lambda: False, "test log", game_root=custom_root))
+        assert entries[0].game_root == custom_root
+
+    def test_cancel_stops_iteration(self, tmp_path: Path):
+        logs_dir = tmp_path / "logs"
+        logs_dir.mkdir()
+        for index in range(10):
+            (logs_dir / f"log_{index}.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+        cancel = threading.Event()
+        cancel.set()
+        entries = list(scan_launcher_logs([logs_dir], "TestClient", cancel.is_set, "test log"))
         assert len(entries) == 0

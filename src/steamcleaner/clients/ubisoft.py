@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import DEFAULT_LOG_MIN_SIZE, scan_game
+from steamcleaner.clients.shared import scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+from steamcleaner.utils.fs import dir_size, list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -130,36 +130,17 @@ class UbisoftClient(GameClient):
         launcher_dir = self._launcher_install_dir()
         if not launcher_dir:
             return
-        logs_dir = launcher_dir / "logs"
-        if not logs_dir.is_dir():
-            return
-        for file_path, size in walk_files(logs_dir):
-            if self.cancelled:
-                return
-            if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
-                yield JunkEntry(
-                    path=file_path,
-                    category=JunkCategory.OLD_LOG,
-                    size_bytes=size,
-                    client_name=self.name,
-                    description="Ubisoft Connect launcher log",
-                    game_root=launcher_dir,
-                )
+        yield from scan_launcher_logs(
+            [launcher_dir / "logs"],
+            self.name,
+            lambda: self.cancelled,
+            "Ubisoft Connect launcher log",
+        )
 
     def _scan_appdata_logs(self) -> Iterator[JunkEntry]:
-        appdata_dir = self._appdata_dir()
-        logs_dir = appdata_dir / "logs"
-        if not logs_dir.is_dir():
-            return
-        for file_path, size in walk_files(logs_dir):
-            if self.cancelled:
-                return
-            if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
-                yield JunkEntry(
-                    path=file_path,
-                    category=JunkCategory.OLD_LOG,
-                    size_bytes=size,
-                    client_name=self.name,
-                    description="Ubisoft Connect launcher log",
-                    game_root=appdata_dir,
-                )
+        yield from scan_launcher_logs(
+            [self._appdata_dir() / "logs"],
+            self.name,
+            lambda: self.cancelled,
+            "Ubisoft Connect launcher log",
+        )

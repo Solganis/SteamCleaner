@@ -6,9 +6,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import DEFAULT_LOG_MIN_SIZE, REDIST_DIR_RE, scan_game
+from steamcleaner.clients.shared import REDIST_DIR_RE, scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
+from steamcleaner.utils.fs import dir_size, list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -104,21 +104,7 @@ class EpicClient(GameClient):
     def _scan_launcher_logs(self) -> Iterator[JunkEntry]:
         log_dirs = [data_dir / "Saved" / "Logs" for data_dir in self._launcher_data_dirs()]
         log_dirs.append(self._platform.home() / "Library" / "Logs" / "Unreal Engine" / "EpicGamesLauncher")
-        for logs_dir in log_dirs:
-            if not logs_dir.is_dir():
-                continue
-            for file_path, size in walk_files(logs_dir):
-                if self.cancelled:
-                    return
-                if file_path.suffix.lower() == ".log" and size >= DEFAULT_LOG_MIN_SIZE:
-                    yield JunkEntry(
-                        path=file_path,
-                        category=JunkCategory.OLD_LOG,
-                        size_bytes=size,
-                        client_name=self.name,
-                        description="Epic Games Launcher log",
-                        game_root=logs_dir.parent,
-                    )
+        yield from scan_launcher_logs(log_dirs, self.name, lambda: self.cancelled, "Epic Games Launcher log")
 
     def _scan_webcache(self) -> Iterator[JunkEntry]:
         scanned: set[Path] = set()

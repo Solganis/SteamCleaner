@@ -30,6 +30,33 @@ def find_redist_root(file_path: Path, root: Path, pattern: re.Pattern[str] = RED
     return topmost
 
 
+def scan_launcher_logs(
+    log_dirs: list[Path],
+    client_name: str,
+    cancel_check: Callable[[], bool],
+    description: str,
+    game_root: Path | None = None,
+    log_min_size: int = DEFAULT_LOG_MIN_SIZE,
+) -> Iterator[JunkEntry]:
+    """Scan launcher log directories for large .log files."""
+    for logs_dir in log_dirs:
+        if not logs_dir.is_dir():
+            continue
+        root = game_root or logs_dir.parent
+        for file_path, size in walk_files(logs_dir):
+            if cancel_check():
+                return
+            if file_path.suffix.lower() == ".log" and size >= log_min_size:
+                yield JunkEntry(
+                    path=file_path,
+                    category=JunkCategory.OLD_LOG,
+                    size_bytes=size,
+                    client_name=client_name,
+                    description=description,
+                    game_root=root,
+                )
+
+
 def scan_game(
     game_dir: Path,
     client_name: str,
