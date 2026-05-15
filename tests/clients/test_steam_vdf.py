@@ -251,6 +251,24 @@ class TestSteamDumps:
         assert len(dump_entries) == 0
 
 
+class TestParseLibraryFoldersVdfStringEntries:
+    def test_old_style_string_entries(self, tmp_path: Path):
+        """Old libraryfolders.vdf format where entries are plain strings, not dicts."""
+        library = tmp_path / "SteamLib"
+        library.mkdir()
+        vdf = tmp_path / "libraryfolders.vdf"
+        escaped = _vdf_escape(library)
+        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\t\t"{escaped}"\n}}')
+        paths = parse_library_folders_vdf(vdf)
+        assert library in paths
+
+    def test_old_style_skips_nonexistent(self, tmp_path: Path):
+        vdf = tmp_path / "libraryfolders.vdf"
+        vdf.write_text('"libraryfolders"\n{\n  "0"\t\t"/no/such/path"\n}')
+        paths = parse_library_folders_vdf(vdf)
+        assert paths == []
+
+
 class TestConfigVdfFallback:
     def test_fallback_finds_legacy_folders(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -346,3 +364,73 @@ class TestConfigVdfFallback:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         assert isinstance(entries, list)
+
+    def test_lowercase_keys_in_config_vdf(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        extra_lib = tmp_path / "ExtraLib"
+        extra_common = extra_lib / "steamapps" / "common"
+        extra_common.mkdir(parents=True)
+        game = extra_common / "TestGame" / "_CommonRedist"
+        game.mkdir(parents=True)
+        (game / "setup.exe").write_bytes(b"\x00" * 1024)
+
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        escaped = _vdf_escape(extra_lib)
+        config_dir_file = config_dir / "config.vdf"
+        config_dir_file.write_text(
+            '"InstallConfigStore"\n{\n'
+            '  "software"\n  {\n'
+            '    "valve"\n    {\n'
+            '      "steam"\n      {\n'
+            f'        "BaseInstallFolder_1"\t\t"{escaped}"\n'
+            "      }\n    }\n  }\n}"
+        )
+
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = list(client.scan_junk())
+        redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
+        assert len(redist_entries) > 0
+
+    def test_fallback_returns_empty_when_store_is_string(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text('"InstallConfigStore"\t\t"not_a_dict"')
+        result = SteamClient._parse_config_vdf_fallback(steam)
+        assert result == []
+
+    def test_fallback_returns_empty_when_software_is_string(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text('"InstallConfigStore"\n{\n  "Software"\t\t"not_a_dict"\n}')
+        result = SteamClient._parse_config_vdf_fallback(steam)
+        assert result == []
+
+    def test_fallback_returns_empty_when_valve_is_string(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text(
+            '"InstallConfigStore"\n{\n  "Software"\n  {\n    "Valve"\t\t"not_a_dict"\n  }\n}'
+        )
+        result = SteamClient._parse_config_vdf_fallback(steam)
+        assert result == []
+
+    def test_fallback_returns_empty_when_steam_section_is_string(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text(
+            '"InstallConfigStore"\n{\n  "Software"\n  {\n    "Valve"\n    {\n'
+            '      "Steam"\t\t"not_a_dict"\n    }\n  }\n}'
+        )
+        result = SteamClient._parse_config_vdf_fallback(steam)
+        assert result == []
