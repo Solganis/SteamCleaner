@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory
@@ -260,8 +261,8 @@ class TestEpicWebcache:
             home_dir=home, program_files_dirs=[tmp_path / "PF"], programdata_dir=tmp_path / "PD"
         )
         client = EpicClient(platform, ExclusionRegistry())
-        client._launcher_data_dirs = lambda: [data_dir, data_dir]
-        entries = list(client.scan_junk())
+        with patch.object(client, "_launcher_data_dirs", return_value=[data_dir, data_dir]):
+            entries = list(client.scan_junk())
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
         assert len(cache) == 1
 
