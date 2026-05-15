@@ -62,7 +62,7 @@ unresolved-attribute = "ignore"
 
 # flet controls use dynamic attributes (__init_subclass__, kwargs) with no type stubs
 [[tool.ty.overrides]]
-include = ["src/steamcleaner/ui/gui/app.py", "src/main.py", "tests/ui/test_persistence.py"]
+include = ["src/steamcleaner/ui/gui/app.py", "src/main.py", "tests/ui/test_persistence.py", "tests/ui/test_logic.py", "tests/ui/test_controls.py", "tests/ui/test_async.py"]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"
 
