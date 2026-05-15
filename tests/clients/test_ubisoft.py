@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from conftest import FakePlatformAdapter
+from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.ubisoft import UbisoftClient
 from steamcleaner.models.junk import JunkCategory
