@@ -1,7 +1,7 @@
 import threading
 from pathlib import Path
 
-from conftest import FakePlatformAdapter
+from helpers import FakePlatformAdapter
 
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.engine import ScanEngine

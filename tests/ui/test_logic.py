@@ -219,6 +219,7 @@ class TestOnKeyboard:
 
         gui._cancel_event = Event()
         gui._on_keyboard(self._make_key_event("Escape"))
+        assert gui._cancel_event is not None
         assert gui._cancel_event.is_set()
 
     def test_escape_clears_selection(self, gui: SteamCleanerGUI):
