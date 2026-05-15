@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
 
-# noinspection PyProtectedMemberAccess
-from steamcleaner.ui.gui.i18n import LANGUAGES, _get_translations, _load_translations, t
+from steamcleaner.ui.gui import i18n
+from steamcleaner.ui.gui.i18n import LANGUAGES, t
 
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "steamcleaner" / "ui" / "gui" / "locales"
 
 
+# noinspection PyProtectedMemberAccess
 class TestLocaleFiles:
     def test_all_languages_have_json_files(self):
         for lang_code in LANGUAGES:
@@ -23,13 +24,13 @@ class TestLocaleFiles:
                 assert isinstance(value, str), f"{locale_file.name}: value for {key!r} must be a string"
 
     def test_all_languages_have_same_keys_as_english(self):
-        english = _load_translations("en")
+        english = i18n._load_translations("en")
         english_keys = set(english.keys())
         assert english_keys, "English translations must not be empty"
         for lang_code in LANGUAGES:
             if lang_code == "en":
                 continue
-            translations = _load_translations(lang_code)
+            translations = i18n._load_translations(lang_code)
             lang_keys = set(translations.keys())
             missing = english_keys - lang_keys
             extra = lang_keys - english_keys
@@ -37,6 +38,7 @@ class TestLocaleFiles:
             assert not extra, f"{lang_code} has extra keys: {extra}"
 
 
+# noinspection PyProtectedMemberAccess
 class TestTranslationFunction:
     def test_returns_english_by_default(self):
         result = t("ready")
@@ -53,21 +55,22 @@ class TestTranslationFunction:
         assert result == "nonexistent_key_12345"
 
     def test_fallback_to_english(self):
-        english = _get_translations("en")
+        english = i18n._get_translations("en")
         assert "ready" in english
 
 
+# noinspection PyProtectedMemberAccess
 class TestLoadTranslations:
     def test_load_english(self):
-        translations = _load_translations("en")
+        translations = i18n._load_translations("en")
         assert "ready" in translations
         assert translations["ready"] == "Ready"
 
     def test_load_russian(self):
-        translations = _load_translations("ru")
+        translations = i18n._load_translations("ru")
         assert "ready" in translations
         assert translations["ready"] == "Готово"
 
     def test_load_nonexistent_returns_empty(self):
-        translations = _load_translations("xx-nonexistent")
+        translations = i18n._load_translations("xx-nonexistent")
         assert translations == {}
