@@ -8,7 +8,7 @@ from steamcleaner.utils.fs import walk_files
 REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
 DUMP_EXTENSIONS = frozenset({".dmp", ".mdmp"})
-LOG_MIN_SIZE = 1024 * 1024
+DEFAULT_LOG_MIN_SIZE = 1024 * 1024
 
 
 def has_redist_ancestor(file_path: Path, root: Path, pattern: re.Pattern[str] = REDIST_DIR_RE) -> bool:
@@ -35,6 +35,7 @@ def scan_game(
     client_name: str,
     cancel_check: Callable[[], bool],
     pattern: re.Pattern[str] = REDIST_DIR_RE,
+    log_min_size: int = DEFAULT_LOG_MIN_SIZE,
 ) -> Iterator[JunkEntry]:
     """Single-pass scan of a game directory for redist, dumps, and logs."""
     found_redist: list[Path] = []
@@ -54,7 +55,7 @@ def scan_game(
             )
             continue
 
-        if extension == ".log" and size >= LOG_MIN_SIZE:
+        if extension == ".log" and size >= log_min_size:
             yield JunkEntry(
                 path=file_path,
                 category=JunkCategory.OLD_LOG,
