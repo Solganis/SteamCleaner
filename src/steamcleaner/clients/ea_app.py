@@ -4,9 +4,9 @@ from pathlib import Path
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.clients.shared import scan_game, scan_launcher_logs
+from steamcleaner.clients.shared import scan_cache_dir, scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs
+from steamcleaner.utils.fs import list_subdirs
 
 _logger = logging.getLogger(__name__)
 
@@ -102,34 +102,22 @@ class EaAppClient(GameClient):
         for cache_dir_name in ("EADesktop", "EALaunchHelper"):
             if self.cancelled:
                 return
-            cache_dir = appdata_local / cache_dir_name / "cache"
-            if not cache_dir.is_dir():
-                continue
-            total = dir_size(cache_dir)
-            if total > 0:
-                yield JunkEntry(
-                    path=cache_dir,
-                    category=JunkCategory.SHADER_CACHE,
-                    size_bytes=total,
-                    client_name=self.name,
-                    description=f"{cache_dir_name} cache",
-                    game_root=appdata_local / cache_dir_name,
-                )
+            yield from scan_cache_dir(
+                appdata_local / cache_dir_name / "cache",
+                JunkCategory.SHADER_CACHE,
+                self.name,
+                f"{cache_dir_name} cache",
+                lambda: self.cancelled,
+            )
 
         home = self._platform.home()
         for bundle_id in ("com.ea.Origin", "com.EA.EA-app-Migrator", "Origin", "EA app", "EALaunchHelper"):
             if self.cancelled:
                 return
-            cache_dir = home / "Library" / "Caches" / bundle_id
-            if not cache_dir.is_dir():
-                continue
-            total = dir_size(cache_dir)
-            if total > 0:
-                yield JunkEntry(
-                    path=cache_dir,
-                    category=JunkCategory.SHADER_CACHE,
-                    size_bytes=total,
-                    client_name=self.name,
-                    description=f"EA App cache ({bundle_id})",
-                    game_root=home / "Library" / "Caches" / bundle_id,
-                )
+            yield from scan_cache_dir(
+                home / "Library" / "Caches" / bundle_id,
+                JunkCategory.SHADER_CACHE,
+                self.name,
+                f"EA App cache ({bundle_id})",
+                lambda: self.cancelled,
+            )

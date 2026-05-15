@@ -6,6 +6,7 @@ from steamcleaner.clients.shared import (
     REDIST_DIR_RE,
     find_redist_root,
     has_redist_ancestor,
+    scan_cache_dir,
     scan_game,
     scan_launcher_logs,
 )
@@ -225,3 +226,84 @@ class TestScanLauncherLogs:
         cancel.set()
         entries = list(scan_launcher_logs([logs_dir], "TestClient", cancel.is_set, "test log"))
         assert len(entries) == 0
+
+
+class TestScanCacheDir:
+    def test_yields_entry_for_nonempty_dir(self, tmp_path: Path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        (cache / "data.bin").write_bytes(b"\x00" * 1024)
+        entries = list(
+            scan_cache_dir(
+                cache,
+                JunkCategory.SHADER_CACHE,
+                "TestClient",
+                "test cache",
+                lambda: False,
+            )
+        )
+        assert len(entries) == 1
+        assert entries[0].category == JunkCategory.SHADER_CACHE
+        assert entries[0].size_bytes == 1024
+        assert entries[0].game_root == tmp_path
+
+    def test_skips_nonexistent_dir(self, tmp_path: Path):
+        entries = list(
+            scan_cache_dir(
+                tmp_path / "nope",
+                JunkCategory.SHADER_CACHE,
+                "TestClient",
+                "test",
+                lambda: False,
+            )
+        )
+        assert len(entries) == 0
+
+    def test_skips_empty_dir(self, tmp_path: Path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        entries = list(
+            scan_cache_dir(
+                cache,
+                JunkCategory.SHADER_CACHE,
+                "TestClient",
+                "test",
+                lambda: False,
+            )
+        )
+        assert len(entries) == 0
+
+    def test_skips_when_cancelled(self, tmp_path: Path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        (cache / "data.bin").write_bytes(b"\x00" * 1024)
+        cancel = threading.Event()
+        cancel.set()
+        entries = list(
+            scan_cache_dir(
+                cache,
+                JunkCategory.SHADER_CACHE,
+                "TestClient",
+                "test",
+                cancel.is_set,
+            )
+        )
+        assert len(entries) == 0
+
+    def test_uses_explicit_game_root(self, tmp_path: Path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        (cache / "data.bin").write_bytes(b"\x00" * 512)
+        custom_root = tmp_path / "root"
+        custom_root.mkdir()
+        entries = list(
+            scan_cache_dir(
+                cache,
+                JunkCategory.CRASH_DUMP,
+                "TestClient",
+                "test",
+                lambda: False,
+                game_root=custom_root,
+            )
+        )
+        assert entries[0].game_root == custom_root
