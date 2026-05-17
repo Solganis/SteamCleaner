@@ -34,16 +34,6 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - **Safe by default**: files go to system trash, symlinks and junctions are never followed
 - **Keyboard shortcuts** for scan, select, clean, and cancel
 
-## Supported clients
-
-| Client | Platforms | Junk found |
-|--------|-----------|------------|
-| Steam | Windows, macOS, Linux (Flatpak, Snap) | Shader cache, crash dumps |
-| Epic Games | Windows, macOS, Linux (Wine/Proton) | Logs, webcache |
-| EA App (Origin) | Windows, macOS, Linux (Wine/Proton) | Logs, launcher cache |
-| GOG Galaxy | Windows, macOS, Linux (Wine/Proton) | Logs, crashdumps, webcache |
-| Ubisoft Connect | Windows, macOS, Linux (Wine/Proton) | Cache, crashes, logs |
-
 ## What it finds
 
 | Category | Examples | Typical savings |
