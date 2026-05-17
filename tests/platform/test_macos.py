@@ -10,6 +10,7 @@ from steamcleaner.clients.epic import EpicClient
 from steamcleaner.clients.gog import GogClient
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory
+from steamcleaner.platform.macos import MacOSAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
@@ -339,3 +340,96 @@ class TestGogMacOS:
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert len(redist_entries) == 1
+
+
+class TestMacOSWinePrefixes:
+    def test_empty_when_no_prefixes_exist(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        adapter = MacOSAdapter()
+        assert adapter.wine_prefixes() == []
+
+    def test_finds_default_wine_prefix(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        drive_c = tmp_path / ".wine" / "drive_c"
+        drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert drive_c in prefixes
+
+    def test_finds_crossover_bottles(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        bottles = tmp_path / "Library" / "Application Support" / "CrossOver" / "Bottles"
+        drive_c = bottles / "my-bottle" / "drive_c"
+        drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert drive_c in prefixes
+
+    def test_finds_multiple_crossover_bottles(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        bottles = tmp_path / "Library" / "Application Support" / "CrossOver" / "Bottles"
+        drive_c_1 = bottles / "steam" / "drive_c"
+        drive_c_2 = bottles / "gog" / "drive_c"
+        drive_c_1.mkdir(parents=True)
+        drive_c_2.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert drive_c_1 in prefixes
+        assert drive_c_2 in prefixes
+        assert len(prefixes) == 2
+
+    def test_finds_whisky_bottles(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        bottles = tmp_path / "Library" / "Containers" / "com.isaacmarovitz.Whisky" / "Bottles"
+        drive_c = bottles / "some-uuid" / "drive_c"
+        drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert drive_c in prefixes
+
+    def test_finds_playonmac_prefixes(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        wineprefix = tmp_path / "Library" / "PlayOnMac" / "wineprefix"
+        drive_c = wineprefix / "my-drive" / "drive_c"
+        drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert drive_c in prefixes
+
+    def test_all_sources_combined(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        wine_drive_c = tmp_path / ".wine" / "drive_c"
+        wine_drive_c.mkdir(parents=True)
+        crossover_drive_c = (
+            tmp_path / "Library" / "Application Support" / "CrossOver" / "Bottles" / "gaming" / "drive_c"
+        )
+        crossover_drive_c.mkdir(parents=True)
+        whisky_drive_c = (
+            tmp_path / "Library" / "Containers" / "com.isaacmarovitz.Whisky" / "Bottles" / "uuid-1" / "drive_c"
+        )
+        whisky_drive_c.mkdir(parents=True)
+        playonmac_drive_c = tmp_path / "Library" / "PlayOnMac" / "wineprefix" / "steam" / "drive_c"
+        playonmac_drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert wine_drive_c in prefixes
+        assert crossover_drive_c in prefixes
+        assert whisky_drive_c in prefixes
+        assert playonmac_drive_c in prefixes
+        assert len(prefixes) == 4
+
+    def test_skips_bottles_without_drive_c(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        bottles = tmp_path / "Library" / "Application Support" / "CrossOver" / "Bottles"
+        (bottles / "empty-bottle").mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert len(prefixes) == 0
+
+    def test_no_duplicates(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        drive_c = tmp_path / ".wine" / "drive_c"
+        drive_c.mkdir(parents=True)
+        adapter = MacOSAdapter()
+        prefixes = adapter.wine_prefixes()
+        assert prefixes.count(drive_c) == 1

@@ -27,3 +27,24 @@ class MacOSAdapter(PlatformAdapter):
 
     def programdata(self) -> Path:
         return Path("/Users/Shared")
+
+    def wine_prefixes(self) -> list[Path]:
+        prefixes: list[Path] = []
+        home = self.home()
+
+        default_wine = home / ".wine" / "drive_c"
+        if default_wine.is_dir():
+            prefixes.append(default_wine)
+
+        for bottles_root in (
+            home / "Library" / "Application Support" / "CrossOver" / "Bottles",
+            home / "Library" / "Containers" / "com.isaacmarovitz.Whisky" / "Bottles",
+            home / "Library" / "PlayOnMac" / "wineprefix",
+        ):
+            if bottles_root.is_dir():
+                for bottle_dir in bottles_root.iterdir():
+                    drive_c = bottle_dir / "drive_c"
+                    if drive_c.is_dir() and drive_c not in prefixes:
+                        prefixes.append(drive_c)
+
+        return prefixes
