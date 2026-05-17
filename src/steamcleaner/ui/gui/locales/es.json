@@ -71,5 +71,8 @@
     "logging": "Registro",
     "logging_hint": "Guardar registro de diagnóstico para resolver problemas",
     "open_log_file": "Mostrar registro en carpeta",
-    "select_items_first": "Selecciona los elementos primero"
+    "select_items_first": "Selecciona los elementos primero",
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar"
 }
