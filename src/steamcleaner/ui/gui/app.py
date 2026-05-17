@@ -175,6 +175,8 @@ class SteamCleanerGUI:
             visual_density=ft.VisualDensity.COMPACT,
         )
         self._page.window.title_bar_hidden = True
+        if sys.platform == "darwin":
+            self._page.window.title_bar_buttons_hidden = False
         self._page.window.visible = False
         self._page.window.width = int(get_value("window", "width") or "1024")
         self._page.window.height = int(get_value("window", "height") or "700")
@@ -219,11 +221,11 @@ class SteamCleanerGUI:
                 timer = threading.Timer(0.3, self._save_window_geometry)
                 self._geometry_save_timer = timer
                 timer.start()
-            case ft.WindowEventType.MAXIMIZE:
+            case ft.WindowEventType.MAXIMIZE if sys.platform != "darwin":
                 self._maximize_button.icon = ft.Icons.FILTER_NONE
                 self._maximize_button.tooltip = t("restore")
                 self._maximize_button.update()
-            case ft.WindowEventType.UNMAXIMIZE:
+            case ft.WindowEventType.UNMAXIMIZE if sys.platform != "darwin":
                 self._maximize_button.icon = ft.Icons.CROP_SQUARE
                 self._maximize_button.tooltip = t("maximize")
                 self._maximize_button.update()
@@ -374,41 +376,48 @@ class SteamCleanerGUI:
             icon_size=20,
         )
 
-        minimize_button = ft.IconButton(
-            icon=ft.Icons.MINIMIZE,
-            tooltip=t("minimize"),
-            on_click=self._on_minimize_click,
-            icon_size=20,
-        )
-        self._maximize_button = ft.IconButton(
-            icon=ft.Icons.CROP_SQUARE,
-            tooltip=t("maximize"),
-            on_click=self._on_maximize_click,
-            icon_size=20,
-        )
-        close_button = ft.IconButton(
-            icon=ft.Icons.CLOSE,
-            tooltip=t("close"),
-            on_click=lambda _: self._page.run_task(self._page.window.close),
-            icon_size=20,
-            style=ft.ButtonStyle(overlay_color=ft.Colors.RED_700),
-        )
+        header_controls = [
+            ft.Icon(ft.Icons.CLEANING_SERVICES, size=24, color=ft.Colors.BLUE_400),
+            ft.Text("SteamCleaner", size=18, weight=ft.FontWeight.BOLD),
+            ft.Container(expand=True),
+            settings_button,
+            about_button,
+            self._theme_button,
+        ]
+
+        if sys.platform != "darwin":
+            minimize_button = ft.IconButton(
+                icon=ft.Icons.MINIMIZE,
+                tooltip=t("minimize"),
+                on_click=self._on_minimize_click,
+                icon_size=20,
+            )
+            self._maximize_button = ft.IconButton(
+                icon=ft.Icons.CROP_SQUARE,
+                tooltip=t("maximize"),
+                on_click=self._on_maximize_click,
+                icon_size=20,
+            )
+            close_button = ft.IconButton(
+                icon=ft.Icons.CLOSE,
+                tooltip=t("close"),
+                on_click=lambda _: self._page.run_task(self._page.window.close),
+                icon_size=20,
+                style=ft.ButtonStyle(overlay_color=ft.Colors.RED_700),
+            )
+            header_controls.extend(
+                [
+                    ft.VerticalDivider(width=1),
+                    minimize_button,
+                    self._maximize_button,
+                    close_button,
+                ]
+            )
 
         header = ft.WindowDragArea(
             content=ft.Container(
                 content=ft.Row(
-                    [
-                        ft.Icon(ft.Icons.CLEANING_SERVICES, size=24, color=ft.Colors.BLUE_400),
-                        ft.Text("SteamCleaner", size=18, weight=ft.FontWeight.BOLD),
-                        ft.Container(expand=True),
-                        settings_button,
-                        about_button,
-                        self._theme_button,
-                        ft.VerticalDivider(width=1),
-                        minimize_button,
-                        self._maximize_button,
-                        close_button,
-                    ],
+                    header_controls,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=4,
                 ),
