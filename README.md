@@ -28,25 +28,21 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 
 ## Features
 
-- **Desktop GUI** built on [Flet](https://flet.dev/) with **automatic OS theme detection (dark/light)**
-- **Scans**: **Steam**, **Epic Games**, **EA App (Origin)**, **GOG Galaxy**, and **Ubisoft Connect**
-- **Per-item selection** with category badges, size breakdown, and sorting
-- Search field for filtering results by path
-- **Context menu**: open in file explorer, copy path to clipboard
-- **Determinate progress bar** with per-file status during scan and deletion
-- **Keyboard shortcuts**: F5 (scan), Ctrl+A (select all), Delete (clean selected), Escape (cancel/deselect), Ctrl+Q (quit)
-- **Settings**: trash vs permanent delete
-- **Safe by default**: files go to system trash via [send2trash](https://github.com/arsenetar/Send2Trash), symlinks and junctions are never followed
+- **Cross-platform desktop app** with automatic dark/light theme
+- **Scans** Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect
+- **Finds** redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries
+- **Safe by default**: files go to system trash, symlinks and junctions are never followed
+- **Keyboard shortcuts** for scan, select, clean, and cancel
 
 ## Supported clients
 
-| Client | Game discovery | Launcher junk |
-|--------|---------------|---------------|
-| Steam | Registry, `libraryfolders.vdf`, macOS/Linux paths (native, Flatpak, Snap) | Shader cache, crash dumps |
-| Epic Games | JSON manifests, Program Files, macOS Application Support, Wine/Proton prefixes | Logs, webcache |
-| EA App (Origin) | Registry (`Origin Games`), Program Files, macOS Application Support, Wine/Proton prefixes | Logs, launcher cache |
-| GOG Galaxy | Registry (`GOG.com\Games`), Program Files, macOS Application Support, Wine/Proton prefixes | Logs, crashdumps, webcache |
-| Ubisoft Connect | Registry (`Ubisoft\Launcher\Installs`), default games dir, Wine/Proton prefixes | Cache, crashes, logs |
+| Client | Platforms | Junk found |
+|--------|-----------|------------|
+| Steam | Windows, macOS, Linux (Flatpak, Snap) | Shader cache, crash dumps |
+| Epic Games | Windows, macOS, Linux (Wine/Proton) | Logs, webcache |
+| EA App (Origin) | Windows, macOS, Linux (Wine/Proton) | Logs, launcher cache |
+| GOG Galaxy | Windows, macOS, Linux (Wine/Proton) | Logs, crashdumps, webcache |
+| Ubisoft Connect | Windows, macOS, Linux (Wine/Proton) | Cache, crashes, logs |
 
 ## What it finds
 
