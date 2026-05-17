@@ -376,7 +376,7 @@ class SteamCleanerGUI:
             icon_size=20,
         )
 
-        header_controls = [
+        header_controls: list[ft.Control] = [
             ft.Icon(ft.Icons.CLEANING_SERVICES, size=24, color=ft.Colors.BLUE_400),
             ft.Text("SteamCleaner", size=18, weight=ft.FontWeight.BOLD),
             ft.Container(expand=True),
