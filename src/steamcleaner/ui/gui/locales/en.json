@@ -71,5 +71,8 @@
     "logging": "Logging",
     "logging_hint": "Save diagnostic log to help troubleshoot issues",
     "open_log_file": "Show log file in folder",
-    "select_items_first": "Select items to clean first"
+    "select_items_first": "Select items to clean first",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore"
 }

@@ -71,5 +71,8 @@
     "logging": "日志",
     "logging_hint": "保存诊断日志以帮助排查问题",
     "open_log_file": "在文件夹中显示日志",
-    "select_items_first": "请先选择要清理的项目"
+    "select_items_first": "请先选择要清理的项目",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原"
 }
