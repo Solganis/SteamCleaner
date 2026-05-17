@@ -71,5 +71,8 @@
     "logging": "Registro",
     "logging_hint": "Salvar registro de diagnóstico para resolver problemas",
     "open_log_file": "Mostrar registro na pasta",
-    "select_items_first": "Selecione itens para limpar primeiro"
+    "select_items_first": "Selecione itens para limpar primeiro",
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar"
 }
