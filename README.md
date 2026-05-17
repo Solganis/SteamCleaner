@@ -36,14 +36,14 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 
 ## What it finds
 
-| Category | Examples | Typical savings |
-|----------|----------|-----------------|
-| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `installer` | 5-15 GB per library |
-| Shader/web cache | Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache | Up to 500+ MB per client |
-| Crash dumps | `.dmp`, `.mdmp` files in game directories and launcher crash folders | Varies |
-| Old logs | Log files over 1 MB in game directories and launcher logs | Varies |
-| Cross-platform binaries | Ren'Py `lib/darwin-*`, `lib/linux-*` on Windows (and vice versa) | Varies |
-| Bundled installers | Setup/installer executables inside game folders | Varies |
+| Category | Examples |
+|----------|----------|
+| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `installer` |
+| Shader/web cache | Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache |
+| Crash dumps | `.dmp`, `.mdmp` files in game directories and launcher crash folders |
+| Old logs | Log files over 1 MB in game directories and launcher logs |
+| Cross-platform binaries | Ren'Py `lib/darwin-*`, `lib/linux-*` on Windows (and vice versa) |
+| Bundled installers | Setup/installer executables inside game folders |
 
 ## Safety
 
