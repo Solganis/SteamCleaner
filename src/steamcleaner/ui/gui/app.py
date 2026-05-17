@@ -994,6 +994,7 @@ class SteamCleanerGUI:
             value=get_lang(),
             options=[ft.dropdown.Option(code, label) for code, label in LANGUAGES.items()],
             dense=True,
+            text_size=13,
             border_color=ft.Colors.OUTLINE,
             on_select=on_lang_changed,
         )
