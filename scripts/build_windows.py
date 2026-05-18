@@ -30,6 +30,8 @@ MAIN_DART = BUILD_FLUTTER / "lib" / "main.dart"
 FLUTTER_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "flutter_window.cpp"
 WIN32_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "win32_window.cpp"
 FLUTTER_RELEASE = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Release"
+FLUTTER_APP_ICON = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_icon.ico"
+CUSTOM_ICON = ROOT / "assets" / "icon.ico"
 
 SHOW_CALLBACK_BLOCK = """\
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -131,6 +133,13 @@ def patch_sources() -> None:
         print("  win32_window.cpp: already patched")
     else:
         print("  WARNING: win32_window.cpp hbrBackground pattern not found", file=sys.stderr)
+
+    if CUSTOM_ICON.exists() and FLUTTER_APP_ICON.exists():
+        shutil.copy2(CUSTOM_ICON, FLUTTER_APP_ICON)
+        print("  app_icon.ico: replaced with custom icon")
+        patched = True
+    elif not CUSTOM_ICON.exists():
+        print("  WARNING: assets/icon.ico not found, using default Flutter icon", file=sys.stderr)
 
     if not patched:
         print("  (no changes needed)")
