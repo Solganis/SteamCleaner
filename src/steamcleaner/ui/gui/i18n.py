@@ -15,7 +15,7 @@ def _load_translations(lang: str) -> dict[str, str]:
         data = json.loads(text)
         if isinstance(data, dict):
             return {key: value for key, value in data.items() if isinstance(key, str) and isinstance(value, str)}
-    except OSError, json.JSONDecodeError:
+    except (OSError, json.JSONDecodeError):  # fmt: skip  # flet build bundles Python 3.12
         pass
     return {}
 
