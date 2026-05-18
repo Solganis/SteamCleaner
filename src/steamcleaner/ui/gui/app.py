@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 import queue
 import subprocess
 import sys
@@ -19,6 +20,8 @@ from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t
 from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
+
+_logger = logging.getLogger(__name__)
 
 _VERSION = "1.0.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
@@ -832,6 +835,7 @@ class SteamCleanerGUI:
                 engine = ScanEngine(platform, exclusions)
                 engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
             except (OSError, ValueError, KeyError):  # fmt: skip  # parens required: flet build bundles Python 3.12
+                _logger.error("Scan failed", exc_info=True)
                 status_text[0] = t("scan_failed")
             finally:
                 scan_done.set()
@@ -854,6 +858,7 @@ class SteamCleanerGUI:
         else:
             self._status.value = t("found_items", count=entry_count, size=format_size(self._result.total_bytes))
 
+        _logger.info("Scan finished: %d entries, %s", entry_count, format_size(self._result.total_bytes))
         self._reset_scan_ui()
         self._set_controls_locked(locked=False)
         self._rebuild_filter_options()
@@ -961,6 +966,15 @@ class SteamCleanerGUI:
             await asyncio.sleep(0.1)
 
         stats = stats_holder[0]
+        _logger.info(
+            "Clean finished: deleted=%d, skipped=%d, freed=%s, errors=%d",
+            stats.deleted,
+            stats.skipped,
+            format_size(stats.bytes_freed),
+            len(stats.errors),
+        )
+        for error in stats.errors:
+            _logger.warning("Clean error: %s", error)
 
         deleted_paths = {entry.path for entry in entries}
         self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_ids]
@@ -1003,6 +1017,7 @@ class SteamCleanerGUI:
         def on_delete_mode_changed(event: ft.Event[ft.SegmentedButton]) -> None:
             selected_mode = event.control.selected[0] if event.control.selected else "trash"
             save_value("clean", "use_trash", "true" if selected_mode == "trash" else "false")
+            _logger.info("Delete mode: %s", selected_mode)
             if selected_mode == "permanent":
                 delete_hint.value = t("delete_mode_hint_permanent")
                 delete_hint.color = ft.Colors.RED_700
@@ -1034,6 +1049,7 @@ class SteamCleanerGUI:
             new_lang = event.control.value
             if new_lang and new_lang != get_lang():
                 set_lang(new_lang)
+                _logger.info("Language changed: %s", new_lang)
                 self._close_dialog()
                 self._page.controls.clear()
                 self._page.update()
@@ -1064,6 +1080,7 @@ class SteamCleanerGUI:
 
         def on_logging_toggled(event: ft.Event[ft.Switch]) -> None:
             set_logging_enabled(event.control.value)
+            _logger.info("Logging toggled: %s", event.control.value)
             active = event.control.value and log_file_path().exists()
             open_log_button.opacity = 1.0 if active else 0.0
             open_log_button.disabled = not active
