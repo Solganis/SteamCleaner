@@ -1,8 +1,11 @@
+import logging
 import os
 import sys
 import tomllib
 from pathlib import Path
 from typing import Any
+
+_logger = logging.getLogger(__name__)
 
 
 def config_dir() -> Path:
@@ -22,8 +25,12 @@ def load_config() -> dict[str, Any]:
     path = _config_path()
     if not path.is_file():
         return {}
-    with path.open("rb") as config_file:
-        return tomllib.load(config_file)
+    try:
+        with path.open("rb") as config_file:
+            return tomllib.load(config_file)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        _logger.warning("Failed to load config %s: %s", path, exc)
+        return {}
 
 
 def save_value(section: str, key: str, value: str | list[str]) -> None:
@@ -57,7 +64,10 @@ def _write_config(config: dict[str, Any]) -> None:
                     lines.append(f"{key_name} = '{key_value}'")
         lines.append("")
 
-    path.write_text("\n".join(lines), encoding="utf-8")
+    try:
+        path.write_text("\n".join(lines), encoding="utf-8")
+    except OSError as exc:
+        _logger.error("Failed to write config %s: %s", path, exc)
 
 
 def get_value(section: str, key: str, default: str | None = None) -> str | None:
