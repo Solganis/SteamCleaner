@@ -17,7 +17,7 @@ class ClientRegistry:
     _discovered: bool = False
 
     @classmethod
-    def register(cls, client_cls: type[GameClient]) -> type[GameClient]:
+    def register[T: GameClient](cls, client_cls: type[T]) -> type[T]:
         cls._client_classes.append(client_cls)
         return client_cls
 
