@@ -1,11 +1,22 @@
-.idea/
+# python
 __pycache__/
 *.pyc
-.venv/
+
+# testing
+.pytest_cache/
+.coverage
+
+# packaging
 *.egg-info/
 dist/
 build/
+
+# venv
+.venv/
+
+# linters
 .ruff_cache/
-.pytest_cache/
-.coverage
+
+# IDE
+.idea/
 .editorconfig
