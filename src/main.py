@@ -24,7 +24,7 @@ def _find_flutter_window() -> None:
     import ctypes
     import ctypes.wintypes
 
-    user32 = ctypes.windll.user32  # noqa: E1101
+    user32 = ctypes.windll.user32
     callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
     # noinspection PyUnresolvedReferences
@@ -62,11 +62,11 @@ def _find_flutter_window() -> None:
 threading.Thread(target=_find_flutter_window, daemon=True).start()
 _logger.debug("%s Thread launched, importing flet", _elapsed())
 
-import flet as ft  # noqa: E402 -- must import after window-finder thread starts
+import flet as ft
 
 _logger.debug("%s Flet imported", _elapsed())
 
-from steamcleaner.ui.gui.app import SteamCleanerGUI, WindowHider  # noqa: E402
+from steamcleaner.ui.gui.app import SteamCleanerGUI, WindowHider
 
 _logger.debug("%s App module imported, calling ft.run()", _elapsed())
 

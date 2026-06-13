@@ -2,6 +2,7 @@ import logging
 import os
 import winreg
 from pathlib import Path
+from typing import ClassVar
 
 from steamcleaner.platform.base import PlatformAdapter
 
@@ -9,7 +10,7 @@ _logger = logging.getLogger(__name__)
 
 
 class WindowsAdapter(PlatformAdapter):
-    _HKEY_MAP = {
+    _HKEY_MAP: ClassVar[dict[str, int]] = {
         "HKLM": winreg.HKEY_LOCAL_MACHINE,
         "HKCU": winreg.HKEY_CURRENT_USER,
     }

@@ -58,7 +58,7 @@ class TestEpicClientDetection:
         assert_that(client.is_installed()).is_false()
 
     def test_installed(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         assert_that(client.is_installed()).is_true()
 
     def test_name(self, tmp_path: Path):
@@ -69,12 +69,12 @@ class TestEpicClientDetection:
 
 class TestEpicGameDiscovery:
     def test_discovers_from_program_files(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         paths = client.game_install_paths()
         assert_that(any(path.name == "Fortnite" for path in paths)).is_true()
 
     def test_skips_launcher_dir(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Launcher": {"": []}, "Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Launcher": {"": []}, "Fortnite": {"": []}})
         paths = client.game_install_paths()
         names = [path.name for path in paths]
         assert_that(names).does_not_contain("Launcher")
@@ -83,17 +83,17 @@ class TestEpicGameDiscovery:
     def test_discovers_from_manifests(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "MyGame"
         game_dir.mkdir(parents=True)
-        platform, client = _make_epic_env(tmp_path, manifest_locations=[game_dir])
+        _platform, client = _make_epic_env(tmp_path, manifest_locations=[game_dir])
         paths = client.game_install_paths()
         assert_that(paths).contains(game_dir)
 
     def test_manifest_nonexistent_path_skipped(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, manifest_locations=[tmp_path / "nonexistent" / "game"])
+        _platform, client = _make_epic_env(tmp_path, manifest_locations=[tmp_path / "nonexistent" / "game"])
         paths = client.game_install_paths()
         assert_that(paths).is_length(0)
 
     def test_manifest_invalid_json_skipped(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         programdata = tmp_path / "ProgramData"
         manifests = programdata / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
         manifests.mkdir(parents=True)
@@ -102,7 +102,7 @@ class TestEpicGameDiscovery:
         assert_that(paths).is_length(0)
 
     def test_no_duplicate_paths(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         game_path = tmp_path / "ProgramFiles" / "Epic Games" / "Fortnite"
         programdata = tmp_path / "ProgramData"
         manifests = programdata / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
@@ -115,7 +115,7 @@ class TestEpicGameDiscovery:
 
 class TestEpicRedistScan:
     def test_finds_redist(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={"Fortnite": {"_CommonRedist": ["vcredist.exe", "dxsetup.cab"]}},
         )
@@ -126,7 +126,7 @@ class TestEpicRedistScan:
         assert_that(redist[0].client_name).is_equal_to("Epic Games")
 
     def test_finds_prerequisites(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={"Fortnite": {"Prerequisites": ["EpicPrereqSetup.exe"]}},
         )
@@ -135,7 +135,7 @@ class TestEpicRedistScan:
         assert_that(redist).is_length(1)
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={"Fortnite": {"_CommonRedist": ["readme.txt", "notes.pdf"]}},
         )
@@ -144,7 +144,7 @@ class TestEpicRedistScan:
         assert_that(redist).is_length(0)
 
     def test_nested_redist_no_duplicates(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={
                 "Fortnite": {
@@ -161,7 +161,7 @@ class TestEpicRedistScan:
 
 class TestEpicDumpScan:
     def test_finds_crash_dumps(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Epic Games" / "Fortnite"
         (game_dir / "crash.dmp").write_bytes(b"\x00" * 512)
         (game_dir / "mini.mdmp").write_bytes(b"\x00" * 256)
@@ -170,7 +170,7 @@ class TestEpicDumpScan:
         assert_that(dumps).is_length(2)
 
     def test_ignores_zero_size_dumps(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Epic Games" / "Fortnite"
         (game_dir / "empty.dmp").write_bytes(b"")
         entries = list(client.scan_junk())
@@ -180,7 +180,7 @@ class TestEpicDumpScan:
 
 class TestEpicLogScan:
     def test_finds_large_game_logs(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Epic Games" / "Fortnite"
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
@@ -188,7 +188,7 @@ class TestEpicLogScan:
         assert_that(logs).is_length(1)
 
     def test_ignores_small_game_logs(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Epic Games" / "Fortnite"
         (game_dir / "small.log").write_bytes(b"\x00" * 100)
         entries = list(client.scan_junk())
@@ -196,7 +196,7 @@ class TestEpicLogScan:
         assert_that(logs).is_length(0)
 
     def test_finds_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         logs_dir = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "Logs"
         logs_dir.mkdir(parents=True)
@@ -207,7 +207,7 @@ class TestEpicLogScan:
         assert_that(logs[0].description).is_equal_to("Epic Games Launcher log")
 
     def test_ignores_small_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         logs_dir = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "Logs"
         logs_dir.mkdir(parents=True)
@@ -219,7 +219,7 @@ class TestEpicLogScan:
 
 class TestEpicWebcache:
     def test_finds_webcache(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         webcache = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "webcache"
         webcache.mkdir(parents=True)
@@ -230,7 +230,7 @@ class TestEpicWebcache:
         assert_that(cache[0].size_bytes).is_equal_to(4096)
 
     def test_finds_webcache_with_port_suffix(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         webcache = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "webcache_4430"
         webcache.mkdir(parents=True)
@@ -241,7 +241,7 @@ class TestEpicWebcache:
         assert_that(str(cache[0].path)).contains("webcache_4430")
 
     def test_finds_multiple_webcache_dirs(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         saved = home / ".local" / "share" / "EpicGamesLauncher" / "Saved"
         for name in ("webcache", "webcache_4430", "webcache_8888"):
@@ -269,7 +269,7 @@ class TestEpicWebcache:
         assert_that(cache).is_length(1)
 
     def test_ignores_empty_webcache(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path)
+        _platform, client = _make_epic_env(tmp_path)
         home = tmp_path / "home"
         webcache = home / ".local" / "share" / "EpicGamesLauncher" / "Saved" / "webcache"
         webcache.mkdir(parents=True)
@@ -280,7 +280,7 @@ class TestEpicWebcache:
 
 class TestEpicUnicode:
     def test_cyrillic_game_name(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={"Игра Тест": {"_CommonRedist": ["vcredist.exe"]}},
         )
@@ -288,7 +288,7 @@ class TestEpicUnicode:
         assert_that(entries).is_length(1)
 
     def test_cjk_game_name(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        _platform, client = _make_epic_env(
             tmp_path,
             games={"ゲームテスト": {"redist": ["setup.msi"]}},
         )
@@ -304,18 +304,18 @@ class TestEpicEdgeCases:
         assert_that(entries).is_equal_to([])
 
     def test_empty_game_dir(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"EmptyGame": {"": []}})
+        _platform, client = _make_epic_env(tmp_path, games={"EmptyGame": {"": []}})
         entries = list(client.scan_junk())
         assert_that(entries).is_equal_to([])
 
     def test_exe_outside_redist_ignored(self, tmp_path: Path):
-        platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"Binaries": ["game.exe"]}})
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"Binaries": ["game.exe"]}})
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert_that(redist).is_length(0)
 
     def test_exclusion_filters(self, tmp_path: Path):
-        platform, client = _make_epic_env(
+        platform, _client = _make_epic_env(
             tmp_path,
             games={"Fortnite": {"_CommonRedist": ["vcredist.exe"]}},
         )

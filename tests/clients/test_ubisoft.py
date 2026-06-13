@@ -64,7 +64,7 @@ class TestUbisoftDetection:
         assert_that(client.is_installed()).is_false()
 
     def test_installed_via_registry(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         assert_that(client.is_installed()).is_true()
 
     def test_installed_via_appdata(self, tmp_path: Path):
@@ -83,19 +83,19 @@ class TestUbisoftDetection:
 
 class TestUbisoftGameDiscovery:
     def test_discovers_from_default_games_dir(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"Assassin's Creed": {"": []}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"Assassin's Creed": {"": []}})
         paths = client.game_install_paths()
         assert_that(any(path.name == "Assassin's Creed" for path in paths)).is_true()
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "FarCry6"
         game_dir.mkdir(parents=True)
-        platform, client = _make_ubisoft_env(tmp_path, registry_games={"635": game_dir})
+        _platform, client = _make_ubisoft_env(tmp_path, registry_games={"635": game_dir})
         paths = client.game_install_paths()
         assert_that(paths).contains(game_dir)
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, registry_games={"999": tmp_path / "nonexistent"})
+        _platform, client = _make_ubisoft_env(tmp_path, registry_games={"999": tmp_path / "nonexistent"})
         paths = client.game_install_paths()
         assert_that(paths).is_length(0)
 
@@ -121,7 +121,7 @@ class TestUbisoftGameDiscovery:
 
 class TestUbisoftRedistScan:
     def test_finds_common_redist(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(
+        _platform, client = _make_ubisoft_env(
             tmp_path,
             games={"FarCry6": {"_CommonRedist": ["vcredist.exe", "dxsetup.cab"]}},
         )
@@ -132,7 +132,7 @@ class TestUbisoftRedistScan:
         assert_that(redist[0].client_name).is_equal_to("Ubisoft Connect")
 
     def test_finds_support_dir(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(
+        _platform, client = _make_ubisoft_env(
             tmp_path,
             games={"FarCry6": {"support": ["dxsetup.exe"]}},
         )
@@ -141,7 +141,7 @@ class TestUbisoftRedistScan:
         assert_that(redist).is_length(1)
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(
+        _platform, client = _make_ubisoft_env(
             tmp_path,
             games={"FarCry6": {"_CommonRedist": ["readme.txt"]}},
         )
@@ -150,7 +150,7 @@ class TestUbisoftRedistScan:
         assert_that(redist).is_length(0)
 
     def test_exe_outside_redist_ignored(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"bin": ["game.exe"]}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"bin": ["game.exe"]}})
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert_that(redist).is_length(0)
@@ -158,7 +158,7 @@ class TestUbisoftRedistScan:
 
 class TestUbisoftDumpScan:
     def test_finds_crash_dumps(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher" / "games" / "FarCry6"
         (game_dir / "crash.dmp").write_bytes(b"\x00" * 512)
         entries = list(client.scan_junk())
@@ -166,7 +166,7 @@ class TestUbisoftDumpScan:
         assert_that(dumps).is_length(1)
 
     def test_ignores_zero_size_dumps(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher" / "games" / "FarCry6"
         (game_dir / "empty.dmp").write_bytes(b"")
         entries = list(client.scan_junk())
@@ -176,7 +176,7 @@ class TestUbisoftDumpScan:
 
 class TestUbisoftLogScan:
     def test_finds_large_game_logs(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher" / "games" / "FarCry6"
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
@@ -184,7 +184,7 @@ class TestUbisoftLogScan:
         assert_that(logs).is_length(1)
 
     def test_finds_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         logs_dir = launcher_dir / "logs"
         logs_dir.mkdir(parents=True)
@@ -195,7 +195,7 @@ class TestUbisoftLogScan:
         assert_that(logs[0].description).is_equal_to("Ubisoft Connect launcher log")
 
     def test_finds_appdata_logs(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         logs_dir = tmp_path / "home" / ".local" / "share" / "Ubisoft Game Launcher" / "logs"
         logs_dir.mkdir(parents=True)
         (logs_dir / "debug.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
@@ -204,7 +204,7 @@ class TestUbisoftLogScan:
         assert_that(logs).is_length(1)
 
     def test_ignores_small_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         logs_dir = launcher_dir / "logs"
         logs_dir.mkdir(parents=True)
@@ -214,7 +214,7 @@ class TestUbisoftLogScan:
         assert_that(logs).is_length(0)
 
     def test_ignores_small_appdata_logs(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         logs_dir = tmp_path / "home" / ".local" / "share" / "Ubisoft Game Launcher" / "logs"
         logs_dir.mkdir(parents=True)
         (logs_dir / "tiny.log").write_bytes(b"\x00" * 500)
@@ -225,7 +225,7 @@ class TestUbisoftLogScan:
 
 class TestUbisoftLauncherCache:
     def test_finds_cache(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         cache_dir = launcher_dir / "cache"
         cache_dir.mkdir(parents=True)
@@ -236,7 +236,7 @@ class TestUbisoftLauncherCache:
         assert_that(cache[0].description).is_equal_to("Ubisoft Connect cache")
 
     def test_ignores_empty_cache(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         cache_dir = launcher_dir / "cache"
         cache_dir.mkdir(parents=True)
@@ -247,7 +247,7 @@ class TestUbisoftLauncherCache:
 
 class TestUbisoftLauncherCrashes:
     def test_finds_crashes(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         crashes_dir = launcher_dir / "crashes"
         crashes_dir.mkdir(parents=True)
@@ -258,7 +258,7 @@ class TestUbisoftLauncherCrashes:
         assert_that(dumps[0].description).is_equal_to("Ubisoft Connect crash dumps")
 
     def test_ignores_empty_crashes(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path)
+        _platform, client = _make_ubisoft_env(tmp_path)
         launcher_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher"
         crashes_dir = launcher_dir / "crashes"
         crashes_dir.mkdir(parents=True)
@@ -269,12 +269,12 @@ class TestUbisoftLauncherCrashes:
 
 class TestUbisoftUnicode:
     def test_cyrillic_game_name(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"Игра Тест": {"_CommonRedist": ["vcredist.exe"]}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"Игра Тест": {"_CommonRedist": ["vcredist.exe"]}})
         entries = list(client.scan_junk())
         assert_that(entries).is_length(1)
 
     def test_cjk_game_name(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"ゲームテスト": {"redist": ["setup.msi"]}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"ゲームテスト": {"redist": ["setup.msi"]}})
         entries = list(client.scan_junk())
         assert_that(entries).is_length(1)
 
@@ -287,12 +287,12 @@ class TestUbisoftEdgeCases:
         assert_that(entries).is_equal_to([])
 
     def test_empty_game_dir(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"EmptyGame": {"": []}})
+        _platform, client = _make_ubisoft_env(tmp_path, games={"EmptyGame": {"": []}})
         entries = list(client.scan_junk())
         assert_that(entries).is_equal_to([])
 
     def test_exclusion_filters(self, tmp_path: Path):
-        platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"_CommonRedist": ["vcredist.exe"]}})
+        platform, _client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"_CommonRedist": ["vcredist.exe"]}})
         exclusions = ExclusionRegistry()
         exclusions.add("FarCry6", "test exclusion")
         client_with_excl = UbisoftClient(platform, exclusions)

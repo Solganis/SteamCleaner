@@ -69,7 +69,7 @@ class WindowHider:
             return
         import ctypes
 
-        user32 = ctypes.windll.user32  # noqa: E1101
+        user32 = ctypes.windll.user32
         user32.ShowWindow(self._hwnd, 5)
 
     # noinspection PyUnresolvedReferences
@@ -77,7 +77,7 @@ class WindowHider:
         import ctypes
         import ctypes.wintypes
 
-        user32 = ctypes.windll.user32  # noqa: E1101
+        user32 = ctypes.windll.user32
         enum_cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
         swp_nosize = 0x0001
         swp_nozorder = 0x0004
