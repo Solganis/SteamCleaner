@@ -2,6 +2,7 @@ import importlib
 import logging
 import pkgutil
 from collections.abc import Iterator
+from typing import ClassVar
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.platform.base import PlatformAdapter
@@ -13,8 +14,8 @@ _SKIP_MODULES = frozenset({"base", "registry"})
 
 
 class ClientRegistry:
-    _client_classes: list[type[GameClient]] = []
-    _discovered: bool = False
+    _client_classes: ClassVar[list[type[GameClient]]] = []
+    _discovered: ClassVar[bool] = False
 
     @classmethod
     def register[T: GameClient](cls, client_cls: type[T]) -> type[T]:

@@ -57,7 +57,7 @@ class TestGogDetection:
         assert_that(client.is_installed()).is_false()
 
     def test_installed(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         assert_that(client.is_installed()).is_true()
 
     def test_name(self, tmp_path: Path):
@@ -68,24 +68,28 @@ class TestGogDetection:
 
 class TestGogGameDiscovery:
     def test_discovers_from_gog_games_dir(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
         paths = client.game_install_paths()
         assert_that(any(path.name == "Witcher 3" for path in paths)).is_true()
 
     def test_discovers_from_galaxy_games_dir(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Cyberpunk 2077": {"": []}}, game_dir_name="GOG Galaxy/Games")
+        _platform, client = _make_gog_env(
+            tmp_path,
+            games={"Cyberpunk 2077": {"": []}},
+            game_dir_name="GOG Galaxy/Games",
+        )
         paths = client.game_install_paths()
         assert_that(any(path.name == "Cyberpunk 2077" for path in paths)).is_true()
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "Witcher3"
         game_dir.mkdir(parents=True)
-        platform, client = _make_gog_env(tmp_path, registry_games={"1495134320": game_dir})
+        _platform, client = _make_gog_env(tmp_path, registry_games={"1495134320": game_dir})
         paths = client.game_install_paths()
         assert_that(paths).contains(game_dir)
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, registry_games={"12345": tmp_path / "nonexistent"})
+        _platform, client = _make_gog_env(tmp_path, registry_games={"12345": tmp_path / "nonexistent"})
         paths = client.game_install_paths()
         assert_that(paths).is_length(0)
 
@@ -100,7 +104,7 @@ class TestGogGameDiscovery:
 
 class TestGogRedistScan:
     def test_finds_common_redist(self, tmp_path: Path):
-        platform, client = _make_gog_env(
+        _platform, client = _make_gog_env(
             tmp_path,
             games={"Witcher 3": {"_CommonRedist": ["vcredist.exe", "dxsetup.cab"]}},
         )
@@ -111,7 +115,7 @@ class TestGogRedistScan:
         assert_that(redist[0].client_name).is_equal_to("GOG Galaxy")
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
-        platform, client = _make_gog_env(
+        _platform, client = _make_gog_env(
             tmp_path,
             games={"Witcher 3": {"_CommonRedist": ["readme.txt"]}},
         )
@@ -120,7 +124,7 @@ class TestGogRedistScan:
         assert_that(redist).is_length(0)
 
     def test_exe_outside_redist_ignored(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"bin": ["witcher3.exe"]}})
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"bin": ["witcher3.exe"]}})
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert_that(redist).is_length(0)
@@ -128,7 +132,7 @@ class TestGogRedistScan:
 
 class TestGogDumpScan:
     def test_finds_crash_dumps(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "GOG Games" / "Witcher 3"
         (game_dir / "crash.dmp").write_bytes(b"\x00" * 512)
         entries = list(client.scan_junk())
@@ -136,7 +140,7 @@ class TestGogDumpScan:
         assert_that(dumps).is_length(1)
 
     def test_ignores_zero_size_dumps(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "GOG Games" / "Witcher 3"
         (game_dir / "empty.dmp").write_bytes(b"")
         entries = list(client.scan_junk())
@@ -146,7 +150,7 @@ class TestGogDumpScan:
 
 class TestGogLogScan:
     def test_finds_large_game_logs(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"": []}})
         game_dir = tmp_path / "ProgramFiles" / "GOG Games" / "Witcher 3"
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
@@ -154,7 +158,7 @@ class TestGogLogScan:
         assert_that(logs).is_length(1)
 
     def test_finds_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         logs_dir = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "logs"
         logs_dir.mkdir(parents=True)
         (logs_dir / "galaxy.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
@@ -164,7 +168,7 @@ class TestGogLogScan:
         assert_that(logs[0].description).is_equal_to("GOG Galaxy launcher log")
 
     def test_ignores_small_launcher_logs(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         logs_dir = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "logs"
         logs_dir.mkdir(parents=True)
         (logs_dir / "small.log").write_bytes(b"\x00" * 100)
@@ -175,7 +179,7 @@ class TestGogLogScan:
 
 class TestGogCrashdumps:
     def test_finds_crashdumps(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         crashdumps = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "crashdumps"
         crashdumps.mkdir(parents=True)
         (crashdumps / "dump.dmp").write_bytes(b"\x00" * 4096)
@@ -185,7 +189,7 @@ class TestGogCrashdumps:
         assert_that(dumps[0].description).is_equal_to("GOG Galaxy crash dumps")
 
     def test_ignores_empty_crashdumps(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         crashdumps = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "crashdumps"
         crashdumps.mkdir(parents=True)
         entries = list(client.scan_junk())
@@ -195,7 +199,7 @@ class TestGogCrashdumps:
 
 class TestGogWebcache:
     def test_finds_webcache(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         webcache = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "webcache"
         webcache.mkdir(parents=True)
         (webcache / "cache.bin").write_bytes(b"\x00" * 4096)
@@ -204,7 +208,7 @@ class TestGogWebcache:
         assert_that(cache).is_length(1)
 
     def test_ignores_empty_webcache(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path)
+        _platform, client = _make_gog_env(tmp_path)
         webcache = tmp_path / "ProgramData" / "GOG.com" / "Galaxy" / "webcache"
         webcache.mkdir(parents=True)
         entries = list(client.scan_junk())
@@ -214,12 +218,12 @@ class TestGogWebcache:
 
 class TestGogUnicode:
     def test_cyrillic_game_name(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Ведьмак 3": {"_CommonRedist": ["vcredist.exe"]}})
+        _platform, client = _make_gog_env(tmp_path, games={"Ведьмак 3": {"_CommonRedist": ["vcredist.exe"]}})
         entries = list(client.scan_junk())
         assert_that(entries).is_length(1)
 
     def test_cjk_game_name(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"ゲームテスト": {"redist": ["setup.msi"]}})
+        _platform, client = _make_gog_env(tmp_path, games={"ゲームテスト": {"redist": ["setup.msi"]}})
         entries = list(client.scan_junk())
         assert_that(entries).is_length(1)
 
@@ -232,12 +236,12 @@ class TestGogEdgeCases:
         assert_that(entries).is_equal_to([])
 
     def test_empty_game_dir(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"EmptyGame": {"": []}})
+        _platform, client = _make_gog_env(tmp_path, games={"EmptyGame": {"": []}})
         entries = list(client.scan_junk())
         assert_that(entries).is_equal_to([])
 
     def test_exclusion_filters(self, tmp_path: Path):
-        platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"_CommonRedist": ["vcredist.exe"]}})
+        platform, _client = _make_gog_env(tmp_path, games={"Witcher 3": {"_CommonRedist": ["vcredist.exe"]}})
         exclusions = ExclusionRegistry()
         exclusions.add("Witcher 3", "test exclusion")
         client_with_excl = GogClient(platform, exclusions)
