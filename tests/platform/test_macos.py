@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.ea_app import EaAppClient
@@ -26,15 +27,15 @@ def _macos_platform(tmp_path: Path, **kwargs) -> FakePlatformAdapter:
 class TestMacOSPlatformAdapter:
     def test_appdata_local(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
-        assert platform.appdata_local() == tmp_path / "Library" / "Application Support"
+        assert_that(platform.appdata_local()).is_equal_to(tmp_path / "Library" / "Application Support")
 
     def test_programdata(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
-        assert platform.programdata() == tmp_path / "Shared"
+        assert_that(platform.programdata()).is_equal_to(tmp_path / "Shared")
 
     def test_home(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
-        assert platform.home() == tmp_path
+        assert_that(platform.home()).is_equal_to(tmp_path)
 
 
 class TestSteamMacOS:
@@ -43,12 +44,12 @@ class TestSteamMacOS:
         (steam_dir / "steamapps").mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_not_installed_no_steam_dir(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_scans_redist_on_macos(self, tmp_path: Path):
         steam_dir = tmp_path / "Library" / "Application Support" / "Steam"
@@ -59,8 +60,8 @@ class TestSteamMacOS:
         platform = _macos_platform(tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert len(entries) == 1
-        assert entries[0].category == JunkCategory.REDISTRIBUTABLE
+        assert_that(entries).is_length(1)
+        assert_that(entries[0].category).is_equal_to(JunkCategory.REDISTRIBUTABLE)
 
     def test_scans_shader_cache_on_macos(self, tmp_path: Path):
         steam_dir = tmp_path / "Library" / "Application Support" / "Steam"
@@ -71,7 +72,7 @@ class TestSteamMacOS:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         shader_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(shader_entries) == 1
+        assert_that(shader_entries).is_length(1)
 
     def test_scans_dumps_on_macos(self, tmp_path: Path):
         steam_dir = tmp_path / "Library" / "Application Support" / "Steam"
@@ -83,7 +84,7 @@ class TestSteamMacOS:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category == JunkCategory.CRASH_DUMP]
-        assert len(dump_entries) == 1
+        assert_that(dump_entries).is_length(1)
 
 
 class TestEpicMacOS:
@@ -92,12 +93,12 @@ class TestEpicMacOS:
         launcher_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_not_installed(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_discovers_games_from_manifests(self, tmp_path: Path):
         manifests = tmp_path / "Library" / "Application Support" / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
@@ -109,7 +110,7 @@ class TestEpicMacOS:
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_discovers_games_from_shared(self, tmp_path: Path):
         shared_epic = tmp_path / "Shared" / "Epic Games"
@@ -118,7 +119,7 @@ class TestEpicMacOS:
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_shared_skips_launcher_dir(self, tmp_path: Path):
         shared_epic = tmp_path / "Shared" / "Epic Games"
@@ -128,8 +129,8 @@ class TestEpicMacOS:
         platform = _macos_platform(tmp_path)
         client = EpicClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
-        assert not any(path.name == "Launcher" for path in paths)
+        assert_that(paths).contains(game_dir)
+        assert_that(any(path.name == "Launcher" for path in paths)).is_false()
 
     def test_scans_macos_logs(self, tmp_path: Path):
         logs_dir = tmp_path / "Library" / "Logs" / "Unreal Engine" / "EpicGamesLauncher"
@@ -139,7 +140,7 @@ class TestEpicMacOS:
         client = EpicClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(log_entries) == 1
+        assert_that(log_entries).is_length(1)
 
     def test_scans_macos_cache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "com.epicgames.EpicGamesLauncher"
@@ -149,7 +150,7 @@ class TestEpicMacOS:
         client = EpicClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_game_redist(self, tmp_path: Path):
         shared_epic = tmp_path / "Shared" / "Epic Games"
@@ -161,7 +162,7 @@ class TestEpicMacOS:
         client = EpicClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist_entries) == 1
+        assert_that(redist_entries).is_length(1)
 
 
 class TestEaAppMacOS:
@@ -170,26 +171,26 @@ class TestEaAppMacOS:
         ea_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_via_ea_app(self, tmp_path: Path):
         ea_dir = tmp_path / "Library" / "Application Support" / "Electronic Arts" / "EA app"
         ea_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_via_origin(self, tmp_path: Path):
         origin_dir = tmp_path / "Library" / "Application Support" / "Origin"
         origin_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_not_installed(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_discovers_games_from_applications(self, tmp_path: Path):
         apps = tmp_path / "Applications"
@@ -198,7 +199,7 @@ class TestEaAppMacOS:
         platform = _macos_platform(tmp_path, program_files_dirs=[apps])
         client = EaAppClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_scans_macos_origin_cache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "com.ea.Origin"
@@ -208,7 +209,7 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_macos_ea_app_cache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "EA app"
@@ -218,7 +219,7 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_macos_migrator_cache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "com.EA.EA-app-Migrator"
@@ -228,7 +229,7 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_macos_origin_library_cache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "Origin"
@@ -238,7 +239,7 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_ea_app_logs(self, tmp_path: Path):
         logs_dir = tmp_path / "Library" / "Application Support" / "Electronic Arts" / "EA app" / "Logs"
@@ -248,7 +249,7 @@ class TestEaAppMacOS:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(log_entries) == 1
+        assert_that(log_entries).is_length(1)
 
 
 class TestGogMacOS:
@@ -257,26 +258,26 @@ class TestGogMacOS:
         galaxy_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_via_gog_games_dir(self, tmp_path: Path):
         gog_games = tmp_path / "GOG Games"
         gog_games.mkdir()
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_via_application_support(self, tmp_path: Path):
         galaxy_dir = tmp_path / "Library" / "Application Support" / "GOG.com" / "Galaxy"
         galaxy_dir.mkdir(parents=True)
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_not_installed(self, tmp_path: Path):
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_discovers_games_from_gog_games(self, tmp_path: Path):
         gog_games = tmp_path / "GOG Games"
@@ -285,7 +286,7 @@ class TestGogMacOS:
         platform = _macos_platform(tmp_path)
         client = GogClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_scans_launcher_logs(self, tmp_path: Path):
         galaxy_dir = tmp_path / "Shared" / "GOG.com" / "Galaxy"
@@ -296,7 +297,7 @@ class TestGogMacOS:
         client = GogClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(log_entries) == 1
+        assert_that(log_entries).is_length(1)
 
     def test_scans_macos_webcache(self, tmp_path: Path):
         cache_dir = tmp_path / "Library" / "Caches" / "com.gog.galaxy"
@@ -306,7 +307,7 @@ class TestGogMacOS:
         client = GogClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         cache_entries = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache_entries) == 1
+        assert_that(cache_entries).is_length(1)
 
     def test_scans_crashdumps(self, tmp_path: Path):
         galaxy_dir = tmp_path / "Shared" / "GOG.com" / "Galaxy"
@@ -317,7 +318,7 @@ class TestGogMacOS:
         client = GogClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category == JunkCategory.CRASH_DUMP]
-        assert len(dump_entries) == 1
+        assert_that(dump_entries).is_length(1)
 
     def test_scans_macos_library_logs(self, tmp_path: Path):
         logs_dir = tmp_path / "Library" / "Logs" / "GOG.com" / "Galaxy"
@@ -327,7 +328,7 @@ class TestGogMacOS:
         client = GogClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         log_entries = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(log_entries) == 1
+        assert_that(log_entries).is_length(1)
 
     def test_scans_game_redist(self, tmp_path: Path):
         gog_games = tmp_path / "GOG Games"
@@ -339,14 +340,14 @@ class TestGogMacOS:
         client = GogClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist_entries) == 1
+        assert_that(redist_entries).is_length(1)
 
 
 class TestMacOSWinePrefixes:
     def test_empty_when_no_prefixes_exist(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         adapter = MacOSAdapter()
-        assert adapter.wine_prefixes() == []
+        assert_that(adapter.wine_prefixes()).is_equal_to([])
 
     def test_finds_default_wine_prefix(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -354,7 +355,7 @@ class TestMacOSWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_crossover_bottles(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -363,7 +364,7 @@ class TestMacOSWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_multiple_crossover_bottles(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -374,9 +375,9 @@ class TestMacOSWinePrefixes:
         drive_c_2.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c_1 in prefixes
-        assert drive_c_2 in prefixes
-        assert len(prefixes) == 2
+        assert_that(prefixes).contains(drive_c_1)
+        assert_that(prefixes).contains(drive_c_2)
+        assert_that(prefixes).is_length(2)
 
     def test_finds_whisky_bottles(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -385,7 +386,7 @@ class TestMacOSWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_playonmac_prefixes(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -394,7 +395,7 @@ class TestMacOSWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_all_sources_combined(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -412,11 +413,11 @@ class TestMacOSWinePrefixes:
         playonmac_drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert wine_drive_c in prefixes
-        assert crossover_drive_c in prefixes
-        assert whisky_drive_c in prefixes
-        assert playonmac_drive_c in prefixes
-        assert len(prefixes) == 4
+        assert_that(prefixes).contains(wine_drive_c)
+        assert_that(prefixes).contains(crossover_drive_c)
+        assert_that(prefixes).contains(whisky_drive_c)
+        assert_that(prefixes).contains(playonmac_drive_c)
+        assert_that(prefixes).is_length(4)
 
     def test_skips_bottles_without_drive_c(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -424,7 +425,7 @@ class TestMacOSWinePrefixes:
         (bottles / "empty-bottle").mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert len(prefixes) == 0
+        assert_that(prefixes).is_length(0)
 
     def test_no_duplicates(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -432,4 +433,4 @@ class TestMacOSWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = MacOSAdapter()
         prefixes = adapter.wine_prefixes()
-        assert prefixes.count(drive_c) == 1
+        assert_that(prefixes.count(drive_c)).is_equal_to(1)

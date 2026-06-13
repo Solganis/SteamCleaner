@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from assertpy2 import assert_that
 
 from steamcleaner.platform import create_adapter
 from steamcleaner.platform.linux import LinuxAdapter
@@ -13,7 +14,7 @@ class TestCreateAdapter:
     def test_linux_returns_linux_adapter(self):
         with patch.object(sys, "platform", "linux"):
             adapter = create_adapter()
-        assert isinstance(adapter, LinuxAdapter)
+        assert_that(adapter).is_instance_of(LinuxAdapter)
 
     def test_win32_returns_windows_adapter(self):
         if sys.platform != "win32":
@@ -21,12 +22,12 @@ class TestCreateAdapter:
         adapter = create_adapter()
         from steamcleaner.platform.windows import WindowsAdapter  # winreg is Windows-only
 
-        assert isinstance(adapter, WindowsAdapter)
+        assert_that(adapter).is_instance_of(WindowsAdapter)
 
     def test_darwin_returns_macos_adapter(self):
         with patch.object(sys, "platform", "darwin"):
             adapter = create_adapter()
-        assert isinstance(adapter, MacOSAdapter)
+        assert_that(adapter).is_instance_of(MacOSAdapter)
 
     def test_unsupported_platform_raises(self):
         with patch.object(sys, "platform", "freebsd"), pytest.raises(RuntimeError, match="Unsupported platform"):
@@ -40,13 +41,13 @@ class TestLinuxAdapterProgramFiles:
             patch("steamcleaner.platform.linux.Path.is_dir", return_value=True),
         ):
             paths = adapter.program_files()
-            assert len(paths) > 0
+            assert_that(paths).is_not_empty()
 
     def test_skips_nonexistent_dirs(self):
         adapter = LinuxAdapter()
         with patch("steamcleaner.platform.linux.Path.is_dir", return_value=False):
             paths = adapter.program_files()
-            assert paths == []
+            assert_that(paths).is_equal_to([])
 
 
 class TestBaseAdapterWinePrefixes:
@@ -54,4 +55,4 @@ class TestBaseAdapterWinePrefixes:
         if sys.platform != "win32":
             pytest.skip("Windows-only test")
         adapter = create_adapter()
-        assert adapter.wine_prefixes() == []
+        assert_that(adapter.wine_prefixes()).is_equal_to([])

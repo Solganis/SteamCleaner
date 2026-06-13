@@ -15,6 +15,18 @@ wheels = [
 ]
 
 [[package]]
+name = "assertpy2"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ff/ab/c6f72b2ae5d939caf4e57fe32ab692c41500019f71cbbe5791748c9cea8d/assertpy2-2.3.0.tar.gz", hash = "sha256:863a3967d9bb4d1eda0847556720b17847cb1b35116203e53c2fc6114d7d298b", size = 124476, upload-time = "2026-06-12T23:10:13.918Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/66/c19b2f740c8c07e0f27e865fb2a47554b685f0c1a0ac6ed7cab24cb8d530/assertpy2-2.3.0-py3-none-any.whl", hash = "sha256:bfcd51131a6a61e720da428cc98f79e08148a292b2b7282d3b2bee934b55c5d4", size = 63114, upload-time = "2026-06-12T23:10:12.607Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.5.20"
 source = { registry = "https://pypi.org/simple" }
@@ -309,6 +321,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "assertpy2" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -324,6 +337,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "assertpy2", specifier = "==2.3.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "ruff", specifier = ">=0.15.16" },
@@ -353,4 +367,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/68/0f3b7bb03a7da676ef51b1c0af0bde1e500d69d5f0c807ed63b6f30b66dd/ty-0.0.46-py3-none-win32.whl", hash = "sha256:26db0ce89c573e60132d14e9688c9329a1633b1a8c26fe457025c7c406f7d5e6", size = 10960002, upload-time = "2026-06-09T03:28:02.832Z" },
     { url = "https://files.pythonhosted.org/packages/b1/f4/91ff618b2dee39d0633d23e1adac0174aa1de80df17e270acac534034dbc/ty-0.0.46-py3-none-win_amd64.whl", hash = "sha256:90e8e6d446b9cb7cb4bede9fca7b3c99fd1e2355605ecf431c131a51db2a5e93", size = 12097413, upload-time = "2026-06-09T03:28:27.495Z" },
     { url = "https://files.pythonhosted.org/packages/e5/2e/300174fca375a27a7c28dd80e990d857d7b3e3b25980c65063f980aa2f17/ty-0.0.46-py3-none-win_arm64.whl", hash = "sha256:ebd320d82605079b901a095dc4711037a0c488b4ace79a602fef4df0d3f4cf74", size = 11439595, upload-time = "2026-06-09T03:28:15.355Z" },
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.15.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/94/1a15dd82efb362ac84269196e94cf00f187f7ed21c242792a923cdb1c61f/typing_extensions-4.15.0.tar.gz", hash = "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466", size = 109391, upload-time = "2025-08-25T13:49:26.313Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl", hash = "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548", size = 44614, upload-time = "2025-08-25T13:49:24.86Z" },
 ]

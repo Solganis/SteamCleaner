@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from assertpy2 import assert_that
+
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 
@@ -20,23 +22,23 @@ class TestJunkEntry:
 
     def test_size_mb(self):
         entry = _entry("/tmp/test", 1024 * 1024 * 5)
-        assert entry.size_mb == 5.0
+        assert_that(entry.size_mb).is_equal_to(5.0)
 
     def test_size_mb_fractional(self):
         entry = _entry("/tmp/test", 1024 * 512)
-        assert entry.size_mb == 0.5
+        assert_that(entry.size_mb).is_equal_to(0.5)
 
 
 class TestScanResult:
     def test_empty(self):
         result = ScanResult()
-        assert result.total_bytes == 0
-        assert result.total_mb == 0.0
-        assert result.entries == []
+        assert_that(result.total_bytes).is_equal_to(0)
+        assert_that(result.total_mb).is_equal_to(0.0)
+        assert_that(result.entries).is_equal_to([])
 
     def test_total_bytes(self):
         result = ScanResult(entries=[_entry("/a", 100), _entry("/b", 200)])
-        assert result.total_bytes == 300
+        assert_that(result.total_bytes).is_equal_to(300)
 
     def test_by_category(self):
         entries = [
@@ -46,8 +48,8 @@ class TestScanResult:
         ]
         result = ScanResult(entries=entries)
         grouped = result.by_category()
-        assert len(grouped[JunkCategory.REDISTRIBUTABLE]) == 2
-        assert len(grouped[JunkCategory.SHADER_CACHE]) == 1
+        assert_that(grouped[JunkCategory.REDISTRIBUTABLE]).is_length(2)
+        assert_that(grouped[JunkCategory.SHADER_CACHE]).is_length(1)
 
     def test_by_client(self):
         entries = [
@@ -57,18 +59,18 @@ class TestScanResult:
         ]
         result = ScanResult(entries=entries)
         grouped = result.by_client()
-        assert len(grouped["Steam"]) == 2
-        assert len(grouped["Epic"]) == 1
+        assert_that(grouped["Steam"]).is_length(2)
+        assert_that(grouped["Epic"]).is_length(1)
 
     def test_filter_min_size(self):
         entries = [_entry("/a", 100), _entry("/b", 5000), _entry("/c", 50)]
         result = ScanResult(entries=entries)
         filtered = result.filter_min_size(100)
-        assert len(filtered.entries) == 2
+        assert_that(filtered.entries).is_length(2)
 
     def test_merge(self):
         r1 = ScanResult(entries=[_entry("/a", 100)])
         r2 = ScanResult(entries=[_entry("/b", 200)])
         merged = r1.merge(r2)
-        assert len(merged.entries) == 2
-        assert merged.total_bytes == 300
+        assert_that(merged.entries).is_length(2)
+        assert_that(merged.total_bytes).is_equal_to(300)

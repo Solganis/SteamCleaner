@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.steam import SteamClient, parse_library_folders_vdf
@@ -20,17 +21,17 @@ class TestParseLibraryFoldersVdf:
         escaped = _vdf_escape(library)
         vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{escaped}"\n  }}\n}}')
         paths = parse_library_folders_vdf(vdf)
-        assert library in paths
+        assert_that(paths).contains(library)
 
     def test_missing_file_returns_empty(self, tmp_path: Path):
         result = parse_library_folders_vdf(tmp_path / "nonexistent.vdf")
-        assert result == []
+        assert_that(result).is_equal_to([])
 
     def test_skips_nonexistent_paths(self, tmp_path: Path):
         vdf = tmp_path / "libraryfolders.vdf"
         vdf.write_text('"libraryfolders"\n{\n  "0"\n  {\n    "path"\t\t"/nonexistent/path"\n  }\n}')
         result = parse_library_folders_vdf(vdf)
-        assert result == []
+        assert_that(result).is_equal_to([])
 
     def test_multiple_libraries(self, tmp_path: Path):
         lib_a = tmp_path / "LibA"
@@ -48,26 +49,26 @@ class TestParseLibraryFoldersVdf:
         )
         vdf.write_text(content)
         paths = parse_library_folders_vdf(vdf)
-        assert lib_a in paths
-        assert lib_b in paths
+        assert_that(paths).contains(lib_a)
+        assert_that(paths).contains(lib_b)
 
 
 class TestDirSize:
     def test_calculates_total(self, tmp_path: Path):
         (tmp_path / "a.txt").write_bytes(b"\x00" * 100)
         (tmp_path / "b.txt").write_bytes(b"\x00" * 200)
-        assert dir_size(tmp_path) == 300
+        assert_that(dir_size(tmp_path)).is_equal_to(300)
 
     def test_empty_dir(self, tmp_path: Path):
         empty = tmp_path / "empty"
         empty.mkdir()
-        assert dir_size(empty) == 0
+        assert_that(dir_size(empty)).is_equal_to(0)
 
     def test_nested_files(self, tmp_path: Path):
         sub = tmp_path / "sub"
         sub.mkdir()
         (sub / "file.bin").write_bytes(b"\x00" * 500)
-        assert dir_size(tmp_path) == 500
+        assert_that(dir_size(tmp_path)).is_equal_to(500)
 
 
 class TestSteamNotInstalled:
@@ -75,12 +76,12 @@ class TestSteamNotInstalled:
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert entries == []
+        assert_that(entries).is_equal_to([])
 
     def test_game_install_paths_returns_empty(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
-        assert client.game_install_paths() == []
+        assert_that(client.game_install_paths()).is_equal_to([])
 
 
 class TestSteamClientLibraries:
@@ -105,7 +106,7 @@ class TestSteamClientLibraries:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
-        assert len(redist_entries) > 0
+        assert_that(redist_entries).is_not_empty()
 
     def test_scan_library_without_common_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -114,7 +115,7 @@ class TestSteamClientLibraries:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category.value == "redistributable"]
-        assert len(redist) == 0
+        assert_that(redist).is_length(0)
 
     def test_scan_handles_empty_common(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -123,7 +124,7 @@ class TestSteamClientLibraries:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category.value == "redistributable"]
-        assert len(redist) == 0
+        assert_that(redist).is_length(0)
 
     def test_scan_skips_files_in_common(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -133,7 +134,7 @@ class TestSteamClientLibraries:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert all("not_a_dir" not in str(entry.path) for entry in entries)
+        assert_that(all("not_a_dir" not in str(entry.path) for entry in entries)).is_true()
 
 
 class TestSteamRedistFiltering:
@@ -149,7 +150,7 @@ class TestSteamRedistFiltering:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category.value == "redistributable"]
-        assert len(redist) == 0
+        assert_that(redist).is_length(0)
 
 
 class TestSteamGameLogs:
@@ -163,7 +164,7 @@ class TestSteamGameLogs:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         log_entries = [entry for entry in entries if entry.category.value == "old_log"]
-        assert len(log_entries) == 0
+        assert_that(log_entries).is_length(0)
 
 
 class TestSteamShaderCache:
@@ -177,9 +178,9 @@ class TestSteamShaderCache:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
-        assert len(shader_entries) == 1
-        assert shader_entries[0].size_bytes == 4096
-        assert "730" in shader_entries[0].description
+        assert_that(shader_entries).is_length(1)
+        assert_that(shader_entries[0].size_bytes).is_equal_to(4096)
+        assert_that(shader_entries[0].description).contains("730")
 
     def test_finds_multiple_shader_caches(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -192,7 +193,7 @@ class TestSteamShaderCache:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
-        assert len(shader_entries) == 2
+        assert_that(shader_entries).is_length(2)
 
     def test_no_shader_cache_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -201,7 +202,7 @@ class TestSteamShaderCache:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         shader = [entry for entry in entries if entry.category.value == "shader_cache"]
-        assert len(shader) == 0
+        assert_that(shader).is_length(0)
 
     def test_empty_shader_app_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -212,7 +213,7 @@ class TestSteamShaderCache:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
-        assert len(shader_entries) == 0
+        assert_that(shader_entries).is_length(0)
 
 
 class TestSteamDumps:
@@ -227,9 +228,9 @@ class TestSteamDumps:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
-        assert len(dump_entries) == 1
-        assert dump_entries[0].path == dumps
-        assert dump_entries[0].size_bytes == 3072
+        assert_that(dump_entries).is_length(1)
+        assert_that(dump_entries[0].path).is_equal_to(dumps)
+        assert_that(dump_entries[0].size_bytes).is_equal_to(3072)
 
     def test_ignores_empty_dumps_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -239,7 +240,7 @@ class TestSteamDumps:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
-        assert len(dump_entries) == 0
+        assert_that(dump_entries).is_length(0)
 
     def test_no_dumps_dir(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -248,7 +249,7 @@ class TestSteamDumps:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         dump_entries = [entry for entry in entries if entry.category.value == "crash_dump"]
-        assert len(dump_entries) == 0
+        assert_that(dump_entries).is_length(0)
 
 
 class TestParseLibraryFoldersVdfStringEntries:
@@ -260,13 +261,13 @@ class TestParseLibraryFoldersVdfStringEntries:
         escaped = _vdf_escape(library)
         vdf.write_text(f'"libraryfolders"\n{{\n  "0"\t\t"{escaped}"\n}}')
         paths = parse_library_folders_vdf(vdf)
-        assert library in paths
+        assert_that(paths).contains(library)
 
     def test_old_style_skips_nonexistent(self, tmp_path: Path):
         vdf = tmp_path / "libraryfolders.vdf"
         vdf.write_text('"libraryfolders"\n{\n  "0"\t\t"/no/such/path"\n}')
         paths = parse_library_folders_vdf(vdf)
-        assert paths == []
+        assert_that(paths).is_equal_to([])
 
 
 # noinspection PyProtectedMemberAccess,PyUnresolvedReferences
@@ -300,7 +301,7 @@ class TestConfigVdfFallback:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
-        assert len(redist_entries) > 0
+        assert_that(redist_entries).is_not_empty()
 
     def test_fallback_skips_nonexistent_paths(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -321,7 +322,7 @@ class TestConfigVdfFallback:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert all(not str(path).startswith("/nonexistent") for path in paths)
+        assert_that(all(not str(path).startswith("/nonexistent") for path in paths)).is_true()
 
     def test_modern_vdf_takes_priority(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -356,7 +357,7 @@ class TestConfigVdfFallback:
         client = SteamClient(platform, ExclusionRegistry())
         install_paths = client.game_install_paths()
         modern_found = any(path.is_relative_to(modern_lib) for path in install_paths)
-        assert modern_found
+        assert_that(modern_found).is_true()
 
     def test_no_config_vdf(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -364,7 +365,7 @@ class TestConfigVdfFallback:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert isinstance(entries, list)
+        assert_that(entries).is_instance_of(list)
 
     def test_lowercase_keys_in_config_vdf(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -393,7 +394,7 @@ class TestConfigVdfFallback:
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.path.is_relative_to(extra_lib)]
-        assert len(redist_entries) > 0
+        assert_that(redist_entries).is_not_empty()
 
     def test_fallback_returns_empty_when_store_is_string(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -402,7 +403,7 @@ class TestConfigVdfFallback:
         config_dir.mkdir()
         (config_dir / "config.vdf").write_text('"InstallConfigStore"\t\t"not_a_dict"')
         result = SteamClient._parse_config_vdf_fallback(steam)
-        assert result == []
+        assert_that(result).is_equal_to([])
 
     def test_fallback_returns_empty_when_software_is_string(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -411,7 +412,7 @@ class TestConfigVdfFallback:
         config_dir.mkdir()
         (config_dir / "config.vdf").write_text('"InstallConfigStore"\n{\n  "Software"\t\t"not_a_dict"\n}')
         result = SteamClient._parse_config_vdf_fallback(steam)
-        assert result == []
+        assert_that(result).is_equal_to([])
 
     def test_fallback_returns_empty_when_valve_is_string(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -422,7 +423,7 @@ class TestConfigVdfFallback:
             '"InstallConfigStore"\n{\n  "Software"\n  {\n    "Valve"\t\t"not_a_dict"\n  }\n}'
         )
         result = SteamClient._parse_config_vdf_fallback(steam)
-        assert result == []
+        assert_that(result).is_equal_to([])
 
     def test_fallback_returns_empty_when_steam_section_is_string(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -434,4 +435,4 @@ class TestConfigVdfFallback:
             '      "Steam"\t\t"not_a_dict"\n    }\n  }\n}'
         )
         result = SteamClient._parse_config_vdf_fallback(steam)
-        assert result == []
+        assert_that(result).is_equal_to([])

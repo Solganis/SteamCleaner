@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import flet as ft
+from assertpy2 import assert_that
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 from steamcleaner.ui.gui.i18n import t
@@ -28,11 +29,11 @@ class TestWindowPositionPersistence:
             fake_page.window.height = 768
 
             gui.on_window_event(_make_event(ft.WindowEventType.MOVED))
-            assert gui._geometry_save_timer is not None
+            assert_that(gui._geometry_save_timer).is_not_none()
             gui._geometry_save_timer.join()
 
-            assert get_value("window", "left") == "200"
-            assert get_value("window", "top") == "300"
+            assert_that(get_value("window", "left")).is_equal_to("200")
+            assert_that(get_value("window", "top")).is_equal_to("300")
 
     def test_saves_size_on_resized(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "config.toml"
@@ -46,11 +47,11 @@ class TestWindowPositionPersistence:
             fake_page.window.top = 100
 
             gui.on_window_event(_make_event(ft.WindowEventType.RESIZED))
-            assert gui._geometry_save_timer is not None
+            assert_that(gui._geometry_save_timer).is_not_none()
             gui._geometry_save_timer.join()
 
-            assert get_value("window", "width") == "1200"
-            assert get_value("window", "height") == "800"
+            assert_that(get_value("window", "width")).is_equal_to("1200")
+            assert_that(get_value("window", "height")).is_equal_to("800")
 
     def test_restores_position_on_startup(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "config.toml"
@@ -62,18 +63,18 @@ class TestWindowPositionPersistence:
 
             SteamCleanerGUI(fake_page)
 
-            assert fake_page.window.width == 1100
-            assert fake_page.window.height == 700
-            assert fake_page.window.left == 300
-            assert fake_page.window.top == 400
+            assert_that(fake_page.window.width).is_equal_to(1100)
+            assert_that(fake_page.window.height).is_equal_to(700)
+            assert_that(fake_page.window.left).is_equal_to(300)
+            assert_that(fake_page.window.top).is_equal_to(400)
 
     def test_default_size_without_config(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "missing.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             SteamCleanerGUI(fake_page)
 
-            assert fake_page.window.width == 1024
-            assert fake_page.window.height == 700
+            assert_that(fake_page.window.width).is_equal_to(1024)
+            assert_that(fake_page.window.height).is_equal_to(700)
 
     def test_ignores_irrelevant_events(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "config.toml"
@@ -83,7 +84,7 @@ class TestWindowPositionPersistence:
 
             gui.on_window_event(_make_event(ft.WindowEventType.FOCUS))
 
-            assert get_value("window", "left") is None
+            assert_that(get_value("window", "left")).is_none()
 
 
 class TestThemePersistence:
@@ -92,20 +93,20 @@ class TestThemePersistence:
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             save_value("ui", "theme", "light")
             gui = SteamCleanerGUI(fake_page)
-            assert fake_page.theme_mode == ft.ThemeMode.LIGHT
+            assert_that(fake_page.theme_mode).is_equal_to(ft.ThemeMode.LIGHT)
             gui.on_toggle_theme(None)
 
-            assert get_value("ui", "theme") == "dark"
+            assert_that(get_value("ui", "theme")).is_equal_to("dark")
 
     def test_saves_light_theme(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=config_path):
             save_value("ui", "theme", "dark")
             gui = SteamCleanerGUI(fake_page)
-            assert fake_page.theme_mode == ft.ThemeMode.DARK
+            assert_that(fake_page.theme_mode).is_equal_to(ft.ThemeMode.DARK)
             gui.on_toggle_theme(None)
 
-            assert get_value("ui", "theme") == "light"
+            assert_that(get_value("ui", "theme")).is_equal_to("light")
 
     def test_restores_saved_theme(self, tmp_path: Path, fake_page: MagicMock):
         config_path = tmp_path / "config.toml"
@@ -113,7 +114,7 @@ class TestThemePersistence:
             save_value("ui", "theme", "light")
             SteamCleanerGUI(fake_page)
 
-            assert fake_page.theme_mode == ft.ThemeMode.LIGHT
+            assert_that(fake_page.theme_mode).is_equal_to(ft.ThemeMode.LIGHT)
 
 
 # noinspection PyProtectedMember
@@ -125,33 +126,35 @@ class TestScanCancelCycles:
 
     def test_scan_sets_stop_state(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
-        assert gui._cancel_event is not None
-        assert gui._scan_button.text == t("stop")
+        assert_that(gui._cancel_event).is_not_none()
+        assert_that(gui._scan_button.text).is_equal_to(t("stop"))
 
     def test_second_click_cancels(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
-        assert gui._cancel_event is not None
+        assert_that(gui._cancel_event).is_not_none()
         gui.on_scan(None)
-        assert gui._cancel_event.is_set()
+        assert_that(gui._cancel_event.is_set()).is_true()
 
     def test_reset_scan_ui_clears_state(self, gui: SteamCleanerGUI):
         gui._cancel_event = MagicMock()
         gui._reset_scan_ui()
 
-        assert gui._cancel_event is None
-        assert gui._scan_button.text == t("scan")
-        assert gui._progress.opacity == 0
+        assert_that(gui._cancel_event).is_none()
+        assert_that(gui._scan_button.text).is_equal_to(t("scan"))
+        assert_that(gui._progress.opacity).is_equal_to(0)
 
     def test_multiple_cancel_cycles_keep_working(self, gui: SteamCleanerGUI):
         for cycle in range(5):
             self._start_scan(gui)
-            assert gui._cancel_event is not None, f"cycle {cycle}: scan should set cancel_event"
+            assert_that(gui._cancel_event).described_as(f"cycle {cycle}: scan should set cancel_event").is_not_none()
 
             gui.on_scan(None)
-            assert gui._cancel_event.is_set(), f"cycle {cycle}: stop should set cancel flag"
+            assert_that(gui._cancel_event.is_set()).described_as(
+                f"cycle {cycle}: stop should set cancel flag"
+            ).is_true()
 
             gui._reset_scan_ui()
-            assert gui._cancel_event is None, f"cycle {cycle}: reset should clear cancel_event"
+            assert_that(gui._cancel_event).described_as(f"cycle {cycle}: reset should clear cancel_event").is_none()
 
     def test_scan_after_reset_creates_fresh_event(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
@@ -159,6 +162,6 @@ class TestScanCancelCycles:
         gui._reset_scan_ui()
 
         self._start_scan(gui)
-        assert gui._cancel_event is not None
-        assert not gui._cancel_event.is_set()
-        assert gui._scan_button.text == t("stop")
+        assert_that(gui._cancel_event).is_not_none()
+        assert_that(gui._cancel_event.is_set()).is_false()
+        assert_that(gui._scan_button.text).is_equal_to(t("stop"))

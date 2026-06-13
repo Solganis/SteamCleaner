@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from assertpy2 import assert_that
 from helpers import FakePlatformAdapter, build_fake_steam_tree
 
 from steamcleaner.clients.steam import SteamClient
@@ -11,19 +12,19 @@ class TestSteamClientDetection:
     def test_not_installed(self):
         platform = FakePlatformAdapter(install_path=None)
         client = SteamClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_installed(self, tmp_path: Path):
         steam = tmp_path / "Steam"
         steam.mkdir()
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_name(self, tmp_path: Path):
         platform = FakePlatformAdapter(install_path=None)
         client = SteamClient(platform, ExclusionRegistry())
-        assert client.name == "Steam"
+        assert_that(client.name).is_equal_to("Steam")
 
 
 class TestSteamRedistScan:
@@ -37,9 +38,9 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert len(entries) == 1
-        assert entries[0].category == JunkCategory.REDISTRIBUTABLE
-        assert entries[0].size_bytes == 2048
+        assert_that(entries).is_length(1)
+        assert_that(entries[0].category).is_equal_to(JunkCategory.REDISTRIBUTABLE)
+        assert_that(entries[0].size_bytes).is_equal_to(2048)
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -51,7 +52,7 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert len(entries) == 0
+        assert_that(entries).is_length(0)
 
     def test_nested_redist_no_duplicates(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -66,8 +67,8 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = [entry for entry in client.scan_junk() if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(entries) == 1
-        assert "__Installer" in str(entries[0].path)
+        assert_that(entries).is_length(1)
+        assert_that(str(entries[0].path)).contains("__Installer")
 
     def test_exclusion_filters(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -79,7 +80,7 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         safe_entries = list(client.scan_safe())
-        assert len(safe_entries) == 0
+        assert_that(safe_entries).is_length(0)
 
     def test_unicode_game_name(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -91,7 +92,7 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert len(entries) == 1
+        assert_that(entries).is_length(1)
 
     def test_cjk_game_name(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -103,7 +104,7 @@ class TestSteamRedistScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert len(entries) == 1
+        assert_that(entries).is_length(1)
 
 
 class TestSteamDumpScan:
@@ -120,7 +121,7 @@ class TestSteamDumpScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         dumps = [e for e in client.scan_junk() if e.category == JunkCategory.CRASH_DUMP]
-        assert len(dumps) == 2
+        assert_that(dumps).is_length(2)
 
 
 class TestSteamLogScan:
@@ -136,7 +137,7 @@ class TestSteamLogScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         logs = [e for e in client.scan_junk() if e.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 1
+        assert_that(logs).is_length(1)
 
     def test_ignores_small_logs(self, tmp_path: Path):
         steam = build_fake_steam_tree(
@@ -150,7 +151,7 @@ class TestSteamLogScan:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         logs = [e for e in client.scan_junk() if e.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 0
+        assert_that(logs).is_length(0)
 
 
 class TestSteamShaderCache:
@@ -163,8 +164,8 @@ class TestSteamShaderCache:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         shaders = [e for e in client.scan_junk() if e.category == JunkCategory.SHADER_CACHE]
-        assert len(shaders) == 1
-        assert shaders[0].size_bytes == 4096
+        assert_that(shaders).is_length(1)
+        assert_that(shaders[0].size_bytes).is_equal_to(4096)
 
 
 class TestSteamGameInstallPaths:
@@ -174,14 +175,14 @@ class TestSteamGameInstallPaths:
         client = SteamClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
         names = {path.name for path in paths}
-        assert names == {"GameA", "GameB"}
+        assert_that(names).is_equal_to({"GameA", "GameB"})
 
     def test_skips_library_without_common(self, tmp_path: Path):
         steam = tmp_path / "Steam"
         (steam / "steamapps").mkdir(parents=True)
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        assert client.game_install_paths() == []
+        assert_that(client.game_install_paths()).is_equal_to([])
 
 
 # noinspection PyUnresolvedReferences
@@ -195,7 +196,7 @@ class TestSteamAppidMap:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         appid_map = client._build_appid_map(steam)
-        assert appid_map == {"440": "Team Fortress 2"}
+        assert_that(appid_map).is_equal_to({"440": "Team Fortress 2"})
 
     def test_skips_malformed_manifest(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -205,7 +206,7 @@ class TestSteamAppidMap:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         appid_map = client._build_appid_map(steam)
-        assert appid_map == {}
+        assert_that(appid_map).is_equal_to({})
 
     def test_multiple_manifests(self, tmp_path: Path):
         steam = tmp_path / "Steam"
@@ -216,7 +217,7 @@ class TestSteamAppidMap:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         appid_map = client._build_appid_map(steam)
-        assert appid_map == {"440": "TF2", "730": "CS2"}
+        assert_that(appid_map).is_equal_to({"440": "TF2", "730": "CS2"})
 
 
 class TestSteamClientLogs:
@@ -229,5 +230,5 @@ class TestSteamClientLogs:
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
         dump_entries = [e for e in client.scan_junk() if e.category == JunkCategory.CRASH_DUMP]
-        assert len(dump_entries) == 1
-        assert dump_entries[0].description == "Steam client crash dumps"
+        assert_that(dump_entries).is_length(1)
+        assert_that(dump_entries[0].description).is_equal_to("Steam client crash dumps")
