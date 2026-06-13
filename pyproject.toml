@@ -102,5 +102,5 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",
     "ty>=0.0.46",
-    "assertpy2==2.3.2",
+    "assertpy2==2.3.4",
 ]
