@@ -78,6 +78,7 @@ class TestScanTask:
 
         mock_engine.scan.side_effect = fake_scan
         TestScanTask._run_scan(gui_with_ui, mock_engine)
+        assert isinstance(gui_with_ui._status.value, str)
         assert_that(gui_with_ui._status.value).contains(t("stopped", count=0))
 
     def test_scan_failure(self, gui_with_ui: SteamCleanerGUI):
