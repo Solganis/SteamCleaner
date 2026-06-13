@@ -1,23 +1,22 @@
 # Steam Cleaner
 
-[![Version](https://img.shields.io/github/v/release/Solganis/SteamCleaner)](https://github.com/Solganis/SteamCleaner/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![i18n: EN | RU | ZH | ES | PT-BR](https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg)](#languages)
-
-[![CI](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/github/Solganis/SteamCleaner/graph/badge.svg?token=HFL1FA47T3)](https://codecov.io/github/Solganis/SteamCleaner)
-[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![ty](https://img.shields.io/badge/type--checker-ty-D4AA00.svg)](https://github.com/astral-sh/ty)
+<p align="center">
+  <a href="https://github.com/Solganis/SteamCleaner/releases"><img src="https://img.shields.io/github/v/release/Solganis/SteamCleaner" alt="Version"></a>
+  <a href="https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml"><img src="https://github.com/Solganis/SteamCleaner/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://codecov.io/github/Solganis/SteamCleaner"><img src="https://codecov.io/github/Solganis/SteamCleaner/graph/badge.svg?token=HFL1FA47T3" alt="codecov"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.14-blue.svg" alt="Python 3.14"></a>
+  <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="https://github.com/astral-sh/ty"><img src="https://img.shields.io/badge/type--checker-ty-D4AA00.svg" alt="ty"></a>
+  <br>
+  <a href="#languages"><img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR"></a>
+</p>
 
 **Cross-platform tool** for reclaiming disk space from **Steam**, **Epic Games**, **EA App**, **GOG Galaxy**, and **Ubisoft Connect**.
 
 Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities and modern UI.
 
 Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
-
-**This is a personal passion project**: a way to sharpen my Python skills while trying to build something useful for others.
 
 <p align="center">
   <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
@@ -56,10 +55,17 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Linux (native, Flatpak, Snap)
 - Wine/Proton: all non-Steam clients scan games installed through Wine, Proton (Steam Play), Bottles, Lutris, CrossOver, Game Porting Toolkit, Whisky, and PlayOnMac
 
+## Quick start
+
+Download the latest build from [Releases](https://github.com/Solganis/SteamCleaner/releases), run it, and press **Scan**.
+
+To run from source:
+
+```bash
+uv sync
+uv run steamcleaner
+```
+
 ## Languages
 
 English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil).
-
-## License
-
-[MIT](LICENSE)
