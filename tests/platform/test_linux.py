@@ -1,51 +1,53 @@
 from pathlib import Path
 
+from assertpy2 import assert_that
+
 from steamcleaner.platform.linux import LinuxAdapter
 
 
 class TestLinuxAdapter:
     def test_registry_returns_none(self):
         adapter = LinuxAdapter()
-        assert adapter.read_registry_str("HKLM", r"SOFTWARE\Valve\Steam", "InstallPath") is None
+        assert_that(adapter.read_registry_str("HKLM", r"SOFTWARE\Valve\Steam", "InstallPath")).is_none()
 
     def test_home(self):
         adapter = LinuxAdapter()
-        assert adapter.home() == Path.home()
+        assert_that(adapter.home()).is_equal_to(Path.home())
 
     def test_appdata_local_default(self, monkeypatch):
         monkeypatch.delenv("XDG_DATA_HOME", raising=False)
         adapter = LinuxAdapter()
-        assert adapter.appdata_local() == Path.home() / ".local" / "share"
+        assert_that(adapter.appdata_local()).is_equal_to(Path.home() / ".local" / "share")
 
     def test_appdata_local_xdg(self, monkeypatch):
         monkeypatch.setenv("XDG_DATA_HOME", "/custom/data")
         adapter = LinuxAdapter()
-        assert adapter.appdata_local() == Path("/custom/data")
+        assert_that(adapter.appdata_local()).is_equal_to(Path("/custom/data"))
 
     def test_appdata_roaming_default(self, monkeypatch):
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         adapter = LinuxAdapter()
-        assert adapter.appdata_roaming() == Path.home() / ".config"
+        assert_that(adapter.appdata_roaming()).is_equal_to(Path.home() / ".config")
 
     def test_appdata_roaming_xdg(self, monkeypatch):
         monkeypatch.setenv("XDG_CONFIG_HOME", "/custom/config")
         adapter = LinuxAdapter()
-        assert adapter.appdata_roaming() == Path("/custom/config")
+        assert_that(adapter.appdata_roaming()).is_equal_to(Path("/custom/config"))
 
     def test_list_registry_subkeys_returns_empty(self):
         adapter = LinuxAdapter()
-        assert adapter.list_registry_subkeys("HKLM", r"SOFTWARE\Test") == []
+        assert_that(adapter.list_registry_subkeys("HKLM", r"SOFTWARE\Test")).is_equal_to([])
 
     def test_programdata(self):
         adapter = LinuxAdapter()
-        assert adapter.programdata() == Path("/var/lib")
+        assert_that(adapter.programdata()).is_equal_to(Path("/var/lib"))
 
 
 class TestLinuxWinePrefixes:
     def test_empty_when_no_prefixes_exist(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         adapter = LinuxAdapter()
-        assert adapter.wine_prefixes() == []
+        assert_that(adapter.wine_prefixes()).is_equal_to([])
 
     def test_finds_default_wine_prefix(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -53,7 +55,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_proton_compatdata(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -62,7 +64,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_flatpak_compatdata(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -81,7 +83,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_bottles_native(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -90,7 +92,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_bottles_flatpak(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -99,7 +101,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_finds_lutris_runners(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -108,7 +110,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert drive_c in prefixes
+        assert_that(prefixes).contains(drive_c)
 
     def test_no_duplicates(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -116,7 +118,7 @@ class TestLinuxWinePrefixes:
         drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert prefixes.count(drive_c) == 1
+        assert_that(prefixes.count(drive_c)).is_equal_to(1)
 
     def test_skips_dirs_without_drive_c(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -124,7 +126,7 @@ class TestLinuxWinePrefixes:
         (compatdata / "99999" / "pfx").mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert len(prefixes) == 0
+        assert_that(prefixes).is_length(0)
 
     def test_multiple_sources_combined(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -138,7 +140,7 @@ class TestLinuxWinePrefixes:
         bottle_drive_c.mkdir(parents=True)
         adapter = LinuxAdapter()
         prefixes = adapter.wine_prefixes()
-        assert wine_drive_c in prefixes
-        assert proton_drive_c in prefixes
-        assert bottle_drive_c in prefixes
-        assert len(prefixes) == 3
+        assert_that(prefixes).contains(wine_drive_c)
+        assert_that(prefixes).contains(proton_drive_c)
+        assert_that(prefixes).contains(bottle_drive_c)
+        assert_that(prefixes).is_length(3)

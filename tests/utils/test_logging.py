@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from assertpy2 import assert_that
 
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled, setup_logging
 
@@ -30,9 +31,9 @@ def config_dir(tmp_path, monkeypatch):
 
 def test_setup_logging_disabled_by_default(config_dir):
     logger = setup_logging()
-    assert logger.level == logging.WARNING
-    assert len(logger.handlers) == 0
-    assert not (config_dir / "steamcleaner.log").exists()
+    assert_that(logger.level).is_equal_to(logging.WARNING)
+    assert_that(logger.handlers).is_length(0)
+    assert_that(str(config_dir / "steamcleaner.log")).does_not_exist()
 
 
 def test_setup_logging_enabled_creates_file(config_dir, monkeypatch):
@@ -41,13 +42,13 @@ def test_setup_logging_enabled_creates_file(config_dir, monkeypatch):
         lambda section, key, default=None: "true" if key == "enabled" else default,
     )
     logger = setup_logging()
-    assert logger.level == logging.DEBUG
-    assert len(logger.handlers) == 1
+    assert_that(logger.level).is_equal_to(logging.DEBUG)
+    assert_that(logger.handlers).is_length(1)
     logger.info("test message")
     logger.handlers[0].flush()
-    assert (config_dir / "steamcleaner.log").exists()
+    assert_that(str(config_dir / "steamcleaner.log")).exists()
     content = (config_dir / "steamcleaner.log").read_text(encoding="utf-8")
-    assert "test message" in content
+    assert_that(content).contains("test message")
 
 
 def test_setup_logging_is_idempotent(config_dir, monkeypatch):
@@ -58,7 +59,7 @@ def test_setup_logging_is_idempotent(config_dir, monkeypatch):
     setup_logging()
     setup_logging()
     root_logger = logging.getLogger("steamcleaner")
-    assert len(root_logger.handlers) == 1
+    assert_that(root_logger.handlers).is_length(1)
 
 
 def test_set_logging_enabled_hot_toggle(config_dir, monkeypatch):
@@ -69,21 +70,21 @@ def test_set_logging_enabled_hot_toggle(config_dir, monkeypatch):
     )
     setup_logging()
     root_logger = logging.getLogger("steamcleaner")
-    assert len(root_logger.handlers) == 0
+    assert_that(root_logger.handlers).is_length(0)
 
     set_logging_enabled(True)
-    assert saved_values["enabled"] == "true"
-    assert len(root_logger.handlers) == 1
-    assert root_logger.level == logging.DEBUG
+    assert_that(saved_values["enabled"]).is_equal_to("true")
+    assert_that(root_logger.handlers).is_length(1)
+    assert_that(root_logger.level).is_equal_to(logging.DEBUG)
 
     set_logging_enabled(False)
-    assert saved_values["enabled"] == "false"
-    assert len(root_logger.handlers) == 0
-    assert root_logger.level == logging.WARNING
+    assert_that(saved_values["enabled"]).is_equal_to("false")
+    assert_that(root_logger.handlers).is_length(0)
+    assert_that(root_logger.level).is_equal_to(logging.WARNING)
 
 
 def test_log_file_path_location(config_dir):
-    assert log_file_path() == config_dir / "steamcleaner.log"
+    assert_that(log_file_path()).is_equal_to(config_dir / "steamcleaner.log")
 
 
 def test_is_logging_enabled_reads_config(monkeypatch):
@@ -91,10 +92,10 @@ def test_is_logging_enabled_reads_config(monkeypatch):
         "steamcleaner.utils.logging.get_value",
         lambda section, key, default=None: "true" if key == "enabled" else default,
     )
-    assert is_logging_enabled() is True
+    assert_that(is_logging_enabled()).is_true()
 
     monkeypatch.setattr(
         "steamcleaner.utils.logging.get_value",
         lambda section, key, default=None: "false" if key == "enabled" else default,
     )
-    assert is_logging_enabled() is False
+    assert_that(is_logging_enabled()).is_false()

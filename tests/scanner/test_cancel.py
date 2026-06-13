@@ -1,6 +1,7 @@
 import threading
 from pathlib import Path
 
+from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.steam import SteamClient
@@ -37,7 +38,7 @@ class TestCancelBeforeScan:
         cancel = threading.Event()
         cancel.set()
         result = engine.scan(cancel=cancel)
-        assert len(result.entries) == 0
+        assert_that(result.entries).is_length(0)
 
 
 class TestCancelMidScan:
@@ -50,7 +51,7 @@ class TestCancelMidScan:
             entries.append(entry)
             if len(entries) >= 2:
                 cancel.set()
-        assert len(entries) < 10
+        assert_that(len(entries)).is_less_than(10)
 
     def test_cancel_stops_scan_junk_between_phases(self, tmp_path: Path):
         """Cancel after redist scan should skip shader cache, logs, dumps."""
@@ -63,9 +64,9 @@ class TestCancelMidScan:
             if entry.category == JunkCategory.REDISTRIBUTABLE:
                 cancel.set()
         categories = {entry.category for entry in entries}
-        assert JunkCategory.REDISTRIBUTABLE in categories
-        assert JunkCategory.SHADER_CACHE not in categories
-        assert JunkCategory.OLD_LOG not in categories
+        assert_that(categories).contains(JunkCategory.REDISTRIBUTABLE)
+        assert_that(categories).does_not_contain(JunkCategory.SHADER_CACHE)
+        assert_that(categories).does_not_contain(JunkCategory.OLD_LOG)
 
     def test_partial_results_returned_via_engine(self, tmp_path: Path):
         platform = _make_steam_with_games(tmp_path, 5)
@@ -82,24 +83,24 @@ class TestCancelMidScan:
         threading.Event().wait(0.05)
         cancel.set()
         thread.join(timeout=2)
-        assert not thread.is_alive()
-        assert len(result_holder) == 1
-        assert len(result_holder[0].entries) < 10
+        assert_that(thread.is_alive()).is_false()
+        assert_that(result_holder).is_length(1)
+        assert_that(len(result_holder[0].entries)).is_less_than(10)
 
 
 class TestCancelClientProperty:
     def test_cancelled_false_by_default(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
-        assert not client.cancelled
+        assert_that(client.cancelled).is_false()
 
     def test_cancelled_true_after_set(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = SteamClient(platform, ExclusionRegistry())
         client._cancel = threading.Event()
-        assert client._cancel is not None
+        assert_that(client._cancel).is_not_none()
         client._cancel.set()
-        assert client.cancelled
+        assert_that(client.cancelled).is_true()
 
     def test_cancel_reset_after_scan_safe(self, tmp_path: Path):
         platform = _make_steam_with_games(tmp_path, 1)
@@ -107,4 +108,4 @@ class TestCancelClientProperty:
         cancel = threading.Event()
         for _ in client.scan_safe(cancel=cancel):
             pass
-        assert client._cancel is None
+        assert_that(client._cancel).is_none()

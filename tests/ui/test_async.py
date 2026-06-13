@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import flet as ft
+from assertpy2 import assert_that
 
 from steamcleaner.cleaner.engine import CleanStats
 from steamcleaner.models.junk import JunkCategory, JunkEntry
@@ -59,14 +60,14 @@ class TestScanTask:
     def test_scan_finds_entries(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = self._mock_scan_with_entries(ENTRY_SMALL, ENTRY_LARGE)
         TestScanTask._run_scan(gui_with_ui, mock_engine)
-        assert len(gui_with_ui._result.entries) == 2
+        assert_that(gui_with_ui._result.entries).is_length(2)
 
     def test_scan_resets_ui(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = self._mock_scan_with_entries(ENTRY_SMALL)
         TestScanTask._run_scan(gui_with_ui, mock_engine)
-        assert gui_with_ui._cancel_event is None
-        assert gui_with_ui._scan_button.text == t("scan")
-        assert gui_with_ui._progress.opacity == 0
+        assert_that(gui_with_ui._cancel_event).is_none()
+        assert_that(gui_with_ui._scan_button.text).is_equal_to(t("scan"))
+        assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
 
     def test_scan_cancelled(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = MagicMock()
@@ -77,20 +78,20 @@ class TestScanTask:
 
         mock_engine.scan.side_effect = fake_scan
         TestScanTask._run_scan(gui_with_ui, mock_engine)
-        assert t("stopped", count=0) in gui_with_ui._status.value
+        assert_that(gui_with_ui._status.value).contains(t("stopped", count=0))
 
     def test_scan_failure(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = MagicMock()
         mock_engine.scan.side_effect = OSError("disk error")
         TestScanTask._run_scan(gui_with_ui, mock_engine)
-        assert gui_with_ui._status.value == t("scan_failed")
+        assert_that(gui_with_ui._status.value).is_equal_to(t("scan_failed"))
 
     def test_scan_rebuilds_filters(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = self._mock_scan_with_entries(ENTRY_SMALL, ENTRY_MEDIUM)
         TestScanTask._run_scan(gui_with_ui, mock_engine)
         keys = [option.key for option in gui_with_ui._filter_dropdown.options]
-        assert "redistributable" in keys
-        assert "shader_cache" in keys
+        assert_that(keys).contains("redistributable")
+        assert_that(keys).contains("shader_cache")
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -110,15 +111,15 @@ class TestCleanTask:
         gui_with_ui._selected = {ENTRY_SMALL.path}
         stats = CleanStats(deleted=1, bytes_freed=100)
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
-        assert len(gui_with_ui._result.entries) == 1
-        assert gui_with_ui._result.entries[0] is ENTRY_LARGE
+        assert_that(gui_with_ui._result.entries).is_length(1)
+        assert_that(gui_with_ui._result.entries[0]).is_same_as(ENTRY_LARGE)
 
     def test_clean_clears_selected(self, gui_with_ui: SteamCleanerGUI):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL, ENTRY_MEDIUM])
         gui_with_ui._selected = {ENTRY_SMALL.path, ENTRY_MEDIUM.path}
         stats = CleanStats(deleted=1, bytes_freed=100)
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
-        assert ENTRY_SMALL.path not in gui_with_ui._selected
+        assert_that(gui_with_ui._selected).does_not_contain(ENTRY_SMALL.path)
 
     def test_clean_success_snackbar(self, gui_with_ui: SteamCleanerGUI):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
@@ -139,9 +140,9 @@ class TestCleanTask:
         gui_with_ui._selected = {ENTRY_SMALL.path}
         stats = CleanStats(deleted=1, bytes_freed=100)
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
-        assert gui_with_ui._cleaning is False
-        assert gui_with_ui._scan_button.disabled is False
-        assert gui_with_ui._progress.opacity == 0
+        assert_that(gui_with_ui._cleaning).is_false()
+        assert_that(gui_with_ui._scan_button.disabled).is_false()
+        assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -157,7 +158,7 @@ class TestOnClean:
         with patch("steamcleaner.ui.gui.app.get_value", return_value="true"):
             gui._on_clean(None)
         dialog = gui._page.show_dialog.call_args[0][0]
-        assert isinstance(dialog.content, ft.Text)
+        assert_that(dialog.content).is_instance_of(ft.Text)
 
     def test_permanent_mode_content(self, gui: SteamCleanerGUI):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
@@ -165,7 +166,7 @@ class TestOnClean:
         with patch("steamcleaner.ui.gui.app.get_value", return_value="false"):
             gui._on_clean(None)
         dialog = gui._page.show_dialog.call_args[0][0]
-        assert isinstance(dialog.content, ft.Column)
+        assert_that(dialog.content).is_instance_of(ft.Column)
 
     def test_dialog_has_two_actions(self, gui: SteamCleanerGUI):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
@@ -173,19 +174,19 @@ class TestOnClean:
         with patch("steamcleaner.ui.gui.app.get_value", return_value="true"):
             gui._on_clean(None)
         dialog = gui._page.show_dialog.call_args[0][0]
-        assert len(dialog.actions) == 2
+        assert_that(dialog.actions).is_length(2)
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestConfirmClean:
     def test_sets_cleaning_flag(self, gui: SteamCleanerGUI):
         gui._confirm_clean([ENTRY_SMALL])
-        assert gui._cleaning is True
+        assert_that(gui._cleaning).is_true()
 
     def test_locks_controls(self, gui: SteamCleanerGUI):
         gui._confirm_clean([ENTRY_SMALL])
-        assert gui._scan_button.disabled is True
-        assert gui._sort_dropdown.disabled is True
+        assert_that(gui._scan_button.disabled).is_true()
+        assert_that(gui._sort_dropdown.disabled).is_true()
 
     def test_triggers_clean_task(self, gui: SteamCleanerGUI):
         gui._confirm_clean([ENTRY_SMALL])

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.ea_app import EaAppClient
@@ -59,44 +60,44 @@ class TestEaAppDetection:
     def test_not_installed(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_installed_ea_desktop(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_origin_legacy(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, ea_desktop_exists=False, origin_exists=True)
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_name(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.name == "EA App"
+        assert_that(client.name).is_equal_to("EA App")
 
 
 class TestEaGameDiscovery:
     def test_discovers_from_ea_games_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Battlefield 2042": {"": []}})
         paths = client.game_install_paths()
-        assert any(path.name == "Battlefield 2042" for path in paths)
+        assert_that(any(path.name == "Battlefield 2042" for path in paths)).is_true()
 
     def test_discovers_from_origin_games_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Mass Effect": {"": []}}, game_dir_name="Origin Games")
         paths = client.game_install_paths()
-        assert any(path.name == "Mass Effect" for path in paths)
+        assert_that(any(path.name == "Mass Effect" for path in paths)).is_true()
 
     def test_discovers_from_registry(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "FIFA"
         game_dir.mkdir(parents=True)
         platform, client = _make_ea_env(tmp_path, registry_games={"OFB-EAST:109552639": game_dir})
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_registry_nonexistent_path_skipped(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, registry_games={"OFB-EAST:12345": tmp_path / "nonexistent"})
         paths = client.game_install_paths()
-        assert len(paths) == 0
+        assert_that(paths).is_length(0)
 
     def test_no_duplicate_paths(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Battlefield 2042": {"": []}})
@@ -104,7 +105,7 @@ class TestEaGameDiscovery:
         platform.set_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH, ["bf2042"])
         platform.set_registry("HKLM", rf"{_REGISTRY_GAMES_PATH}\bf2042", "Install Dir", str(game_path))
         paths = client.game_install_paths()
-        assert paths.count(game_path) == 1
+        assert_that(paths.count(game_path)).is_equal_to(1)
 
 
 class TestEaRedistScan:
@@ -115,9 +116,9 @@ class TestEaRedistScan:
         )
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist) == 1
-        assert redist[0].size_bytes == 2048
-        assert redist[0].client_name == "EA App"
+        assert_that(redist).is_length(1)
+        assert_that(redist[0].size_bytes).is_equal_to(2048)
+        assert_that(redist[0].client_name).is_equal_to("EA App")
 
     def test_finds_installer_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(
@@ -126,8 +127,8 @@ class TestEaRedistScan:
         )
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist) == 1
-        assert "__Installer" in str(redist[0].path)
+        assert_that(redist).is_length(1)
+        assert_that(str(redist[0].path)).contains("__Installer")
 
     def test_ignores_non_junk_extensions(self, tmp_path: Path):
         platform, client = _make_ea_env(
@@ -136,7 +137,7 @@ class TestEaRedistScan:
         )
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist) == 0
+        assert_that(redist).is_length(0)
 
     def test_nested_redist_no_duplicates(self, tmp_path: Path):
         platform, client = _make_ea_env(
@@ -150,8 +151,8 @@ class TestEaRedistScan:
         )
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist) == 1
-        assert "__Installer" in str(redist[0].path)
+        assert_that(redist).is_length(1)
+        assert_that(str(redist[0].path)).contains("__Installer")
 
 
 class TestEaDumpScan:
@@ -162,7 +163,7 @@ class TestEaDumpScan:
         (game_dir / "mini.mdmp").write_bytes(b"\x00" * 256)
         entries = list(client.scan_junk())
         dumps = [entry for entry in entries if entry.category == JunkCategory.CRASH_DUMP]
-        assert len(dumps) == 2
+        assert_that(dumps).is_length(2)
 
     def test_ignores_zero_size_dumps(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"NFS Heat": {"": []}})
@@ -170,7 +171,7 @@ class TestEaDumpScan:
         (game_dir / "empty.dmp").write_bytes(b"")
         entries = list(client.scan_junk())
         dumps = [entry for entry in entries if entry.category == JunkCategory.CRASH_DUMP]
-        assert len(dumps) == 0
+        assert_that(dumps).is_length(0)
 
 
 class TestEaLogScan:
@@ -180,7 +181,7 @@ class TestEaLogScan:
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 1
+        assert_that(logs).is_length(1)
 
     def test_ignores_small_game_logs(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"NFS Heat": {"": []}})
@@ -188,7 +189,7 @@ class TestEaLogScan:
         (game_dir / "small.log").write_bytes(b"\x00" * 100)
         entries = list(client.scan_junk())
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 0
+        assert_that(logs).is_length(0)
 
     def test_finds_ea_desktop_launcher_logs(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -197,8 +198,8 @@ class TestEaLogScan:
         (logs_dir / "EADesktop.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 1
-        assert logs[0].description == "EA App launcher log"
+        assert_that(logs).is_length(1)
+        assert_that(logs[0].description).is_equal_to("EA App launcher log")
 
     def test_finds_programdata_logs(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -207,7 +208,7 @@ class TestEaLogScan:
         (logs_dir / "EABackgroundService.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         entries = list(client.scan_junk())
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 1
+        assert_that(logs).is_length(1)
 
     def test_ignores_small_launcher_logs(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -216,7 +217,7 @@ class TestEaLogScan:
         (logs_dir / "small.log").write_bytes(b"\x00" * 100)
         entries = list(client.scan_junk())
         logs = [entry for entry in entries if entry.category == JunkCategory.OLD_LOG]
-        assert len(logs) == 0
+        assert_that(logs).is_length(0)
 
 
 class TestEaLauncherCache:
@@ -227,8 +228,8 @@ class TestEaLauncherCache:
         (cache_dir / "data.bin").write_bytes(b"\x00" * 4096)
         entries = list(client.scan_junk())
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache) == 1
-        assert cache[0].description == "EADesktop cache"
+        assert_that(cache).is_length(1)
+        assert_that(cache[0].description).is_equal_to("EADesktop cache")
 
     def test_finds_ea_launch_helper_cache(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -237,8 +238,8 @@ class TestEaLauncherCache:
         (cache_dir / "qml.cache").write_bytes(b"\x00" * 2048)
         entries = list(client.scan_junk())
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache) == 1
-        assert cache[0].description == "EALaunchHelper cache"
+        assert_that(cache).is_length(1)
+        assert_that(cache[0].description).is_equal_to("EALaunchHelper cache")
 
     def test_finds_both_caches(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -249,7 +250,7 @@ class TestEaLauncherCache:
             (cache_dir / "data.bin").write_bytes(b"\x00" * 1024)
         entries = list(client.scan_junk())
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache) == 2
+        assert_that(cache).is_length(2)
 
     def test_ignores_empty_cache(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path)
@@ -257,7 +258,7 @@ class TestEaLauncherCache:
         cache_dir.mkdir(parents=True)
         entries = list(client.scan_junk())
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
-        assert len(cache) == 0
+        assert_that(cache).is_length(0)
 
 
 class TestEaUnicode:
@@ -267,7 +268,7 @@ class TestEaUnicode:
             games={"Игра Тест": {"_CommonRedist": ["vcredist.exe"]}},
         )
         entries = list(client.scan_junk())
-        assert len(entries) == 1
+        assert_that(entries).is_length(1)
 
     def test_cjk_game_name(self, tmp_path: Path):
         platform, client = _make_ea_env(
@@ -275,7 +276,7 @@ class TestEaUnicode:
             games={"ゲームテスト": {"redist": ["setup.msi"]}},
         )
         entries = list(client.scan_junk())
-        assert len(entries) == 1
+        assert_that(entries).is_length(1)
 
 
 class TestEaEdgeCases:
@@ -283,18 +284,18 @@ class TestEaEdgeCases:
         platform = FakePlatformAdapter(home_dir=tmp_path)
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
-        assert entries == []
+        assert_that(entries).is_equal_to([])
 
     def test_exe_outside_redist_ignored(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"BF2042": {"Binaries": ["game.exe"]}})
         entries = list(client.scan_junk())
         redist = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist) == 0
+        assert_that(redist).is_length(0)
 
     def test_empty_game_dir(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"EmptyGame": {"": []}})
         entries = list(client.scan_junk())
-        assert entries == []
+        assert_that(entries).is_equal_to([])
 
     def test_exclusion_filters(self, tmp_path: Path):
         platform, client = _make_ea_env(
@@ -305,7 +306,7 @@ class TestEaEdgeCases:
         exclusions.add("Battlefield 2042", "test exclusion")
         client_with_excl = EaAppClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
-        assert len(safe_entries) == 0
+        assert_that(safe_entries).is_length(0)
 
     def test_both_ea_and_origin_dirs_scanned(self, tmp_path: Path):
         home = tmp_path / "home"
@@ -333,7 +334,7 @@ class TestEaEdgeCases:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist_entries) == 2
+        assert_that(redist_entries).is_length(2)
 
 
 class TestEaWinePrefix:
@@ -342,21 +343,21 @@ class TestEaWinePrefix:
         (prefix / "Program Files" / "EA Games" / "BF2042").mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_installed_via_wine_prefix_origin(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
         (prefix / "Program Files (x86)" / "Origin Games" / "MassEffect").mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
-        assert client.is_installed()
+        assert_that(client.is_installed()).is_true()
 
     def test_not_installed_empty_prefix(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
         prefix.mkdir(parents=True)
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
-        assert not client.is_installed()
+        assert_that(client.is_installed()).is_false()
 
     def test_discovers_games_from_wine_prefix(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
@@ -365,7 +366,7 @@ class TestEaWinePrefix:
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_discovers_ea_games_from_wine_prefix(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
@@ -374,7 +375,7 @@ class TestEaWinePrefix:
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EaAppClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert game_dir in paths
+        assert_that(paths).contains(game_dir)
 
     def test_scans_junk_in_wine_prefix_game(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
@@ -386,7 +387,7 @@ class TestEaWinePrefix:
         client = EaAppClient(platform, ExclusionRegistry())
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
-        assert len(redist_entries) == 1
+        assert_that(redist_entries).is_length(1)
 
     def test_no_duplicate_with_program_files(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"
@@ -399,4 +400,4 @@ class TestEaWinePrefix:
         )
         client = EaAppClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
-        assert paths.count(game_dir) == 1
+        assert_that(paths.count(game_dir)).is_equal_to(1)

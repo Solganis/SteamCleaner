@@ -1,6 +1,8 @@
 from pathlib import Path
 from unittest.mock import patch
 
+from assertpy2 import assert_that
+
 from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
@@ -25,10 +27,10 @@ class TestCleanEngineDryRun:
         engine = CleanEngine(dry_run=True)
         stats = engine.clean(result)
 
-        assert stats.deleted == 1
-        assert stats.bytes_freed == 1024
-        assert target.exists()
-        assert (target / "file.exe").exists()
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(stats.bytes_freed).is_equal_to(1024)
+        assert_that(str(target)).exists()
+        assert_that(str(target / "file.exe")).exists()
 
     def test_dry_run_reports_all_entries(self, tmp_path: Path):
         entries = []
@@ -41,9 +43,9 @@ class TestCleanEngineDryRun:
         engine = CleanEngine(dry_run=True)
         stats = engine.clean(result)
 
-        assert stats.deleted == 3
-        assert stats.bytes_freed == 1500
-        assert all((tmp_path / name).exists() for name in ("dir_a", "dir_b", "dir_c"))
+        assert_that(stats.deleted).is_equal_to(3)
+        assert_that(stats.bytes_freed).is_equal_to(1500)
+        assert_that(all((tmp_path / name).exists() for name in ("dir_a", "dir_b", "dir_c"))).is_true()
 
     def test_dry_run_callback_fires_for_each(self, tmp_path: Path):
         target = tmp_path / "redist"
@@ -54,8 +56,8 @@ class TestCleanEngineDryRun:
         engine = CleanEngine(dry_run=True)
         engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
 
-        assert len(callback_log) == 1
-        assert callback_log[0][1] is True
+        assert_that(callback_log).is_length(1)
+        assert_that(callback_log[0][1]).is_true()
 
 
 class TestCleanEngineRealDeletion:
@@ -70,8 +72,8 @@ class TestCleanEngineRealDeletion:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 1
-        assert not target.exists()
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(str(target)).does_not_exist()
 
     def test_delete_single_file(self, tmp_path: Path):
         target = tmp_path / "crash.dmp"
@@ -81,8 +83,8 @@ class TestCleanEngineRealDeletion:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 1
-        assert not target.exists()
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(str(target)).does_not_exist()
 
     def test_delete_does_not_affect_siblings(self, tmp_path: Path):
         target = tmp_path / "redist"
@@ -97,9 +99,9 @@ class TestCleanEngineRealDeletion:
         engine = CleanEngine(use_trash=False, dry_run=False)
         engine.clean(result)
 
-        assert not target.exists()
-        assert sibling.exists()
-        assert (sibling / "save.dat").exists()
+        assert_that(str(target)).does_not_exist()
+        assert_that(str(sibling)).exists()
+        assert_that(str(sibling / "save.dat")).exists()
 
     def test_delete_only_specified_entries(self, tmp_path: Path):
         to_delete = tmp_path / "junk"
@@ -114,9 +116,9 @@ class TestCleanEngineRealDeletion:
         engine = CleanEngine(use_trash=False, dry_run=False)
         engine.clean(result)
 
-        assert not to_delete.exists()
-        assert to_keep.exists()
-        assert (to_keep / "data.bin").exists()
+        assert_that(str(to_delete)).does_not_exist()
+        assert_that(str(to_keep)).exists()
+        assert_that(str(to_keep / "data.bin")).exists()
 
 
 class TestCleanEngineSafetyChecks:
@@ -126,8 +128,8 @@ class TestCleanEngineSafetyChecks:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 0
-        assert stats.skipped == 1
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
 
     def test_refuse_symlink_directory(self, tmp_path: Path):
         real_dir = tmp_path / "real_game_data"
@@ -141,10 +143,10 @@ class TestCleanEngineSafetyChecks:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.skipped == 1
-        assert len(stats.errors) == 1
-        assert real_dir.exists()
-        assert (real_dir / "important.dat").exists()
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.errors).is_length(1)
+        assert_that(str(real_dir)).exists()
+        assert_that(str(real_dir / "important.dat")).exists()
 
     def test_refuse_symlink_callback_reports_failure(self, tmp_path: Path):
         real_dir = tmp_path / "real"
@@ -157,8 +159,8 @@ class TestCleanEngineSafetyChecks:
         engine = CleanEngine(use_trash=False, dry_run=False)
         engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
 
-        assert len(callback_log) == 1
-        assert callback_log[0][1] is False
+        assert_that(callback_log).is_length(1)
+        assert_that(callback_log[0][1]).is_false()
 
     def test_real_deletion_callback_reports_success(self, tmp_path: Path):
         target = tmp_path / "junk"
@@ -170,8 +172,8 @@ class TestCleanEngineSafetyChecks:
         engine = CleanEngine(use_trash=False, dry_run=False)
         engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
 
-        assert len(callback_log) == 1
-        assert callback_log[0][1] is True
+        assert_that(callback_log).is_length(1)
+        assert_that(callback_log[0][1]).is_true()
 
     def test_refuse_symlink_preserves_target_contents(self, tmp_path: Path):
         target_dir = tmp_path / "steam_library"
@@ -186,8 +188,8 @@ class TestCleanEngineSafetyChecks:
         engine = CleanEngine(use_trash=False, dry_run=False)
         engine.clean(result)
 
-        assert target_dir.exists()
-        assert game_save.read_bytes() == b"precious data"
+        assert_that(str(target_dir)).exists()
+        assert_that(game_save.read_bytes()).is_equal_to(b"precious data")
 
     def test_error_during_deletion_is_captured(self, tmp_path: Path):
         target = tmp_path / "locked_dir"
@@ -199,10 +201,10 @@ class TestCleanEngineSafetyChecks:
         with patch.object(engine, "_delete", side_effect=PermissionError("Access denied")):
             stats = engine.clean(result)
 
-        assert stats.deleted == 0
-        assert stats.skipped == 1
-        assert "Access denied" in stats.errors[0]
-        assert target.exists()
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.errors[0]).contains("Access denied")
+        assert_that(str(target)).exists()
 
     def test_error_callback_reports_failure(self, tmp_path: Path):
         target = tmp_path / "failing"
@@ -215,18 +217,18 @@ class TestCleanEngineSafetyChecks:
         with patch.object(engine, "_delete", side_effect=OSError("disk error")):
             engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
 
-        assert len(callback_log) == 1
-        assert callback_log[0][1] is False
+        assert_that(callback_log).is_length(1)
+        assert_that(callback_log[0][1]).is_false()
 
     def test_empty_scan_result_does_nothing(self):
         result = ScanResult(entries=[])
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 0
-        assert stats.skipped == 0
-        assert stats.bytes_freed == 0
-        assert stats.errors == []
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(0)
+        assert_that(stats.bytes_freed).is_equal_to(0)
+        assert_that(stats.errors).is_empty()
 
 
 class TestCleanEngineMultipleEntries:
@@ -240,9 +242,9 @@ class TestCleanEngineMultipleEntries:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 1
-        assert stats.skipped == 1
-        assert stats.bytes_freed == 100
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.bytes_freed).is_equal_to(100)
 
     def test_multiple_valid_deletions(self, tmp_path: Path):
         entries = []
@@ -256,9 +258,9 @@ class TestCleanEngineMultipleEntries:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 3
-        assert stats.bytes_freed == 768
-        assert all(not (tmp_path / name).exists() for name in ("cache_a", "cache_b", "cache_c"))
+        assert_that(stats.deleted).is_equal_to(3)
+        assert_that(stats.bytes_freed).is_equal_to(768)
+        assert_that(all(not (tmp_path / name).exists() for name in ("cache_a", "cache_b", "cache_c"))).is_true()
 
     def test_partial_failure_continues(self, tmp_path: Path):
         good = tmp_path / "deletable"
@@ -281,11 +283,11 @@ class TestCleanEngineMultipleEntries:
         with patch.object(engine, "_delete", side_effect=selective_delete):
             stats = engine.clean(result)
 
-        assert stats.deleted == 1
-        assert stats.skipped == 1
-        assert stats.bytes_freed == 100
-        assert not good.exists()
-        assert bad.exists()
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.bytes_freed).is_equal_to(100)
+        assert_that(str(good)).does_not_exist()
+        assert_that(str(bad)).exists()
 
     def test_bytes_freed_matches_deleted_entries(self, tmp_path: Path):
         small = tmp_path / "small.dmp"
@@ -302,8 +304,8 @@ class TestCleanEngineMultipleEntries:
         engine = CleanEngine(use_trash=False, dry_run=False)
         stats = engine.clean(result)
 
-        assert stats.deleted == 2
-        assert stats.bytes_freed == 5100
+        assert_that(stats.deleted).is_equal_to(2)
+        assert_that(stats.bytes_freed).is_equal_to(5100)
 
 
 class TestCleanEngineTrashMode:
@@ -319,7 +321,7 @@ class TestCleanEngineTrashMode:
             stats = engine.clean(result)
 
         mock_trash.assert_called_once_with(str(target))
-        assert stats.deleted == 1
+        assert_that(stats.deleted).is_equal_to(1)
 
     def test_trash_error_is_captured(self, tmp_path: Path):
         target = tmp_path / "untrashable"
@@ -331,6 +333,6 @@ class TestCleanEngineTrashMode:
         with patch("steamcleaner.cleaner.engine.send2trash", side_effect=OSError("trash full")):
             stats = engine.clean(result)
 
-        assert stats.deleted == 0
-        assert stats.skipped == 1
-        assert "trash full" in stats.errors[0]
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.errors[0]).contains("trash full")
