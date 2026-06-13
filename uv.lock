@@ -16,14 +16,14 @@ wheels = [
 
 [[package]]
 name = "assertpy2"
-version = "2.3.0"
+version = "2.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/ab/c6f72b2ae5d939caf4e57fe32ab692c41500019f71cbbe5791748c9cea8d/assertpy2-2.3.0.tar.gz", hash = "sha256:863a3967d9bb4d1eda0847556720b17847cb1b35116203e53c2fc6114d7d298b", size = 124476, upload-time = "2026-06-12T23:10:13.918Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/aa/1618539bf2ae38a1d85cbc377af4d85f6485f16c885dd863e4a061d66029/assertpy2-2.3.2.tar.gz", hash = "sha256:a41089e4349524352cd3e8cdbc54ef3e66d6394f98bfe574ffaa3eab286fc2a7", size = 127310, upload-time = "2026-06-13T14:46:35.752Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/66/c19b2f740c8c07e0f27e865fb2a47554b685f0c1a0ac6ed7cab24cb8d530/assertpy2-2.3.0-py3-none-any.whl", hash = "sha256:bfcd51131a6a61e720da428cc98f79e08148a292b2b7282d3b2bee934b55c5d4", size = 63114, upload-time = "2026-06-12T23:10:12.607Z" },
+    { url = "https://files.pythonhosted.org/packages/df/41/9481b9b782b09734782c1be4f61f408ecd6860ef420a68b5dd626458d086/assertpy2-2.3.2-py3-none-any.whl", hash = "sha256:2f7d6178b9df719b1e9d1e3250baeb9f16f40945a9b9be6fab4031bfa5a6501d", size = 64432, upload-time = "2026-06-13T14:46:34.574Z" },
 ]
 
 [[package]]
@@ -337,7 +337,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "assertpy2", specifier = "==2.3.0" },
+    { name = "assertpy2", specifier = "==2.3.2" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "ruff", specifier = ">=0.15.16" },

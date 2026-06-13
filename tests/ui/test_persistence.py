@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import Event, Timer
 from unittest.mock import MagicMock, patch
 
 import flet as ft
@@ -29,7 +30,7 @@ class TestWindowPositionPersistence:
             fake_page.window.height = 768
 
             gui.on_window_event(_make_event(ft.WindowEventType.MOVED))
-            assert_that(gui._geometry_save_timer).is_not_none()
+            assert isinstance(gui._geometry_save_timer, Timer)
             gui._geometry_save_timer.join()
 
             assert_that(get_value("window", "left")).is_equal_to("200")
@@ -47,7 +48,7 @@ class TestWindowPositionPersistence:
             fake_page.window.top = 100
 
             gui.on_window_event(_make_event(ft.WindowEventType.RESIZED))
-            assert_that(gui._geometry_save_timer).is_not_none()
+            assert isinstance(gui._geometry_save_timer, Timer)
             gui._geometry_save_timer.join()
 
             assert_that(get_value("window", "width")).is_equal_to("1200")
@@ -131,7 +132,7 @@ class TestScanCancelCycles:
 
     def test_second_click_cancels(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
-        assert_that(gui._cancel_event).is_not_none()
+        assert isinstance(gui._cancel_event, Event)
         gui.on_scan(None)
         assert_that(gui._cancel_event.is_set()).is_true()
 
@@ -146,7 +147,7 @@ class TestScanCancelCycles:
     def test_multiple_cancel_cycles_keep_working(self, gui: SteamCleanerGUI):
         for cycle in range(5):
             self._start_scan(gui)
-            assert_that(gui._cancel_event).described_as(f"cycle {cycle}: scan should set cancel_event").is_not_none()
+            assert isinstance(gui._cancel_event, Event), f"cycle {cycle}: scan should set cancel_event"
 
             gui.on_scan(None)
             assert_that(gui._cancel_event.is_set()).described_as(
@@ -162,6 +163,6 @@ class TestScanCancelCycles:
         gui._reset_scan_ui()
 
         self._start_scan(gui)
-        assert_that(gui._cancel_event).is_not_none()
+        assert isinstance(gui._cancel_event, Event)
         assert_that(gui._cancel_event.is_set()).is_false()
         assert_that(gui._scan_button.text).is_equal_to(t("stop"))

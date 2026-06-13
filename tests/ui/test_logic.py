@@ -1,5 +1,6 @@
 import queue
 from pathlib import Path
+from threading import Event
 from unittest.mock import MagicMock, patch
 
 import flet as ft
@@ -218,11 +219,9 @@ class TestOnKeyboard:
         return event
 
     def test_escape_cancels_scan(self, gui: SteamCleanerGUI):
-        from threading import Event
-
         gui._cancel_event = Event()
         gui._on_keyboard(self._make_key_event("Escape"))
-        assert_that(gui._cancel_event).is_not_none()
+        assert isinstance(gui._cancel_event, Event)
         assert_that(gui._cancel_event.is_set()).is_true()
 
     def test_escape_clears_selection(self, gui: SteamCleanerGUI):
@@ -338,11 +337,13 @@ class TestUpdateTotals:
         self._with_state(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE], selected={ENTRY_SMALL.path, ENTRY_MEDIUM.path})
         gui._update_totals()
         expected_selected = ENTRY_SMALL.size_bytes + ENTRY_MEDIUM.size_bytes
+        assert isinstance(gui._total_label.value, str)
         assert_that(str(expected_selected) in gui._total_label.value or "5.0" in gui._total_label.value).is_true()
 
     def test_filter_note_when_filtered(self, gui: SteamCleanerGUI):
         self._with_state(gui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE], visible=[ENTRY_SMALL])
         gui._update_totals()
+        assert isinstance(gui._total_label.value, str)
         assert_that(gui._total_label.value).contains(t("total_shown", shown=1))
 
     def test_empty_result_disables_select_all(self, gui: SteamCleanerGUI):
