@@ -99,6 +99,11 @@ class TestEaGameDiscovery:
         paths = client.game_install_paths()
         assert_that(paths).is_length(0)
 
+    def test_registry_missing_install_dir_value_skipped(self, tmp_path: Path):
+        _platform, client = _make_ea_env(tmp_path)
+        _platform.set_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH, ["OFB-EAST:0"])
+        assert_that(client.game_install_paths()).is_length(0)
+
     def test_no_duplicate_paths(self, tmp_path: Path):
         platform, client = _make_ea_env(tmp_path, games={"Battlefield 2042": {"": []}})
         game_path = tmp_path / "ProgramFiles" / "EA Games" / "Battlefield 2042"

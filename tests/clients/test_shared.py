@@ -188,6 +188,16 @@ class TestScanGame:
         entries = list(scan_game(game, "TestClient", lambda: False))
         assert_that(entries).is_length(0)
 
+    def test_skips_redist_dir_with_zero_size(self, tmp_path: Path):
+        game = tmp_path / "Game"
+        redist = game / "_CommonRedist"
+        redist.mkdir(parents=True)
+        # Junk-extension file present but empty -> redist junk_size is 0, nothing yielded.
+        (redist / "empty.exe").write_bytes(b"")
+        entries = list(scan_game(game, "TestClient", lambda: False))
+        redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
+        assert_that(redist_entries).is_length(0)
+
 
 class TestScanLauncherLogs:
     def test_finds_large_log_files(self, tmp_path: Path):

@@ -101,3 +101,17 @@ class TestConfig:
         with patch("steamcleaner.utils.config._config_path", return_value=path):
             save_value("scan", "custom_paths", [])
             assert_that(get_list("scan", "custom_paths")).is_equal_to([])
+
+    def test_write_config_preserves_non_dict_section(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        path.write_text('orphan = "scalar"\n', encoding="utf-8")
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            save_value("ui", "theme", "dark")
+            assert_that(get_value("ui", "theme")).is_equal_to("dark")
+            assert_that(get_value("orphan", "anything", "fallback")).is_equal_to("fallback")
+
+    def test_get_list_returns_empty_for_scalar_key(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            save_value("ui", "theme", "dark")
+            assert_that(get_list("ui", "theme")).is_equal_to([])

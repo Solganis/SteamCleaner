@@ -52,6 +52,25 @@ class TestParseLibraryFoldersVdf:
         assert_that(paths).contains(lib_a)
         assert_that(paths).contains(lib_b)
 
+    def test_libraryfolders_not_a_dict(self, tmp_path: Path):
+        vdf = tmp_path / "libraryfolders.vdf"
+        vdf.write_text('"libraryfolders"\t\t"not_a_dict"')
+        assert_that(parse_library_folders_vdf(vdf)).is_equal_to([])
+
+    def test_skips_entry_without_path_key(self, tmp_path: Path):
+        vdf = tmp_path / "libraryfolders.vdf"
+        vdf.write_text('"libraryfolders"\n{\n  "0"\n  {\n    "label"\t\t"foo"\n  }\n}')
+        assert_that(parse_library_folders_vdf(vdf)).is_equal_to([])
+
+    def test_skips_entry_neither_dict_nor_str(self, tmp_path: Path, monkeypatch):
+        # The VDF parser only yields str or nested dict; inject an int to exercise the
+        # defensive branch that skips any other entry type.
+        monkeypatch.setattr(
+            "steamcleaner.clients.steam.load_vdf",
+            lambda _path: {"libraryfolders": {"0": 123}},
+        )
+        assert_that(parse_library_folders_vdf(tmp_path / "libraryfolders.vdf")).is_equal_to([])
+
 
 class TestDirSize:
     def test_calculates_total(self, tmp_path: Path):
@@ -433,6 +452,65 @@ class TestConfigVdfFallback:
         (config_dir / "config.vdf").write_text(
             '"InstallConfigStore"\n{\n  "Software"\n  {\n    "Valve"\n    {\n'
             '      "Steam"\t\t"not_a_dict"\n    }\n  }\n}'
+        )
+        result = SteamClient._parse_config_vdf_fallback(steam)
+        assert_that(result).is_equal_to([])
+
+    def test_install_already_listed_in_vdf(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        extra_lib = tmp_path / "ExtraLib"
+        (extra_lib / "steamapps" / "common").mkdir(parents=True)
+        vdf = steam / "steamapps" / "libraryfolders.vdf"
+        escaped_install = _vdf_escape(steam)
+        escaped_extra = _vdf_escape(extra_lib)
+        vdf.write_text(
+            '"libraryfolders"\n{\n'
+            f'  "0"\n  {{\n    "path"\t\t"{escaped_install}"\n  }}\n'
+            f'  "1"\n  {{\n    "path"\t\t"{escaped_extra}"\n  }}\n'
+            "}"
+        )
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        # Two libraries present skip the config.vdf fallback; install already listed is
+        # not inserted again.
+        folders = client._library_folders()
+        assert_that(folders.count(steam)).is_equal_to(1)
+        assert_that(folders).contains(extra_lib)
+
+    def test_fallback_dedups_path_already_in_vdf(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        shared_lib = tmp_path / "SharedLib"
+        (shared_lib / "steamapps" / "common").mkdir(parents=True)
+        escaped = _vdf_escape(shared_lib)
+        vdf = steam / "steamapps" / "libraryfolders.vdf"
+        vdf.write_text(f'"libraryfolders"\n{{\n  "0"\n  {{\n    "path"\t\t"{escaped}"\n  }}\n}}')
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text(
+            '"InstallConfigStore"\n{\n'
+            '  "Software"\n  {\n'
+            '    "Valve"\n    {\n'
+            '      "Steam"\n      {\n'
+            f'        "BaseInstallFolder_1"\t\t"{escaped}"\n'
+            "      }\n    }\n  }\n}"
+        )
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        # shared_lib is listed in both libraryfolders.vdf and config.vdf; the fallback
+        # dedups it so it appears once.
+        folders = client._library_folders()
+        assert_that(folders.count(shared_lib)).is_equal_to(1)
+
+    def test_fallback_skips_non_baseinstallfolder_keys(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        config_dir = steam / "config"
+        config_dir.mkdir()
+        (config_dir / "config.vdf").write_text(
+            '"InstallConfigStore"\n{\n  "Software"\n  {\n    "Valve"\n    {\n'
+            '      "Steam"\n      {\n        "RunningAppID"\t\t"440"\n      }\n    }\n  }\n}'
         )
         result = SteamClient._parse_config_vdf_fallback(steam)
         assert_that(result).is_equal_to([])

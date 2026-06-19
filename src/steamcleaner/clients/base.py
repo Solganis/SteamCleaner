@@ -23,10 +23,12 @@ class GameClient(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """Return the human-readable client name."""
 
     @abc.abstractmethod
-    def is_installed(self) -> bool: ...
+    def is_installed(self) -> bool:
+        """Return whether the client is installed on this machine."""
 
     def game_install_paths(self) -> list[Path]:
         return []

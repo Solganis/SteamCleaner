@@ -127,6 +127,15 @@ class TestListSubdirs:
     def test_nonexistent_dir(self, tmp_path: Path):
         assert_that(list_subdirs(tmp_path / "nope")).is_equal_to([])
 
+    def test_skips_reparse_point_subdir(self, tmp_path: Path):
+        real = tmp_path / "real"
+        real.mkdir()
+        junction = tmp_path / "junction"
+        junction.mkdir()
+        with patch("steamcleaner.utils.fs.is_reparse_point", side_effect=lambda path: path.name == "junction"):
+            result = list_subdirs(tmp_path)
+        assert_that({path.name for path in result}).is_equal_to({"real"})
+
 
 class TestSafeRmtree:
     def test_removes_dir(self, tmp_path: Path):

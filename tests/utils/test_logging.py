@@ -83,6 +83,15 @@ def test_set_logging_enabled_hot_toggle(config_dir, monkeypatch):
     assert_that(root_logger.level).is_equal_to(logging.WARNING)
 
 
+def test_set_logging_enabled_noop_when_already_enabled(config_dir, monkeypatch):
+    monkeypatch.setattr("steamcleaner.utils.logging.save_value", lambda section, key, value: None)
+    set_logging_enabled(True)
+    root_logger = logging.getLogger("steamcleaner")
+    assert_that(root_logger.handlers).is_length(1)
+    set_logging_enabled(True)
+    assert_that(root_logger.handlers).is_length(1)
+
+
 def test_log_file_path_location(config_dir):
     assert_that(log_file_path()).is_equal_to(config_dir / "steamcleaner.log")
 

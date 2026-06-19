@@ -80,6 +80,12 @@ class TestUbisoftDetection:
         client = UbisoftClient(platform, ExclusionRegistry())
         assert_that(client.name).is_equal_to("Ubisoft Connect")
 
+    def test_registry_launcher_dir_nonexistent(self, tmp_path: Path):
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", programdata_dir=tmp_path / "ProgramData")
+        platform.set_registry("HKLM", _REGISTRY_LAUNCHER_PATH, "InstallDir", str(tmp_path / "nonexistent"))
+        client = UbisoftClient(platform, ExclusionRegistry())
+        assert_that(client.is_installed()).is_false()
+
 
 class TestUbisoftGameDiscovery:
     def test_discovers_from_default_games_dir(self, tmp_path: Path):
@@ -117,6 +123,11 @@ class TestUbisoftGameDiscovery:
         client = UbisoftClient(platform, ExclusionRegistry())
         paths = client.game_install_paths()
         assert_that(paths).contains(game_dir)
+
+    def test_registry_missing_install_dir_value_skipped(self, tmp_path: Path):
+        platform, client = _make_ubisoft_env(tmp_path)
+        platform.set_registry_subkeys("HKLM", _REGISTRY_INSTALLS_PATH, ["635"])
+        assert_that(any("nonexistent" in str(path) for path in client.game_install_paths())).is_false()
 
 
 class TestUbisoftRedistScan:

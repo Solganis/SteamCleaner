@@ -26,6 +26,12 @@ class TestSteamClientDetection:
         client = SteamClient(platform, ExclusionRegistry())
         assert_that(client.name).is_equal_to("Steam")
 
+    def test_registry_path_points_to_missing_dir(self, tmp_path: Path):
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        platform.set_registry("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath", str(tmp_path / "ghost"))
+        client = SteamClient(platform, ExclusionRegistry())
+        assert_that(client.is_installed()).is_false()
+
 
 class TestSteamRedistScan:
     def test_finds_redist_dir(self, tmp_path: Path):
@@ -218,6 +224,16 @@ class TestSteamAppidMap:
         client = SteamClient(platform, ExclusionRegistry())
         appid_map = client._build_appid_map(steam)
         assert_that(appid_map).is_equal_to({"440": "TF2", "730": "CS2"})
+
+    def test_skips_manifest_with_scalar_appstate(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        steamapps = steam / "steamapps"
+        (steamapps / "common").mkdir(parents=True)
+        # AppState is a scalar string, not a nested block.
+        (steamapps / "appmanifest_111.acf").write_text('"AppState"\t\t"broken"')
+        platform = FakePlatformAdapter(install_path=steam)
+        client = SteamClient(platform, ExclusionRegistry())
+        assert_that(client._build_appid_map(steam)).is_equal_to({})
 
 
 class TestSteamClientLogs:

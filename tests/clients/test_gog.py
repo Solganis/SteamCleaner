@@ -101,6 +101,21 @@ class TestGogGameDiscovery:
         paths = client.game_install_paths()
         assert_that(paths.count(game_path)).is_equal_to(1)
 
+    def test_registry_missing_path_value_skipped(self, tmp_path: Path):
+        platform, client = _make_gog_env(tmp_path)
+        platform.set_registry_subkeys("HKLM", _REGISTRY_GAMES_PATH, ["123"])
+        assert_that(client.game_install_paths()).is_length(0)
+
+    def test_home_gog_games_no_duplicate(self, tmp_path: Path):
+        home = tmp_path / "home"
+        game_dir = home / "GOG Games" / "Witcher3"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(
+            home_dir=home, program_files_dirs=[home], programdata_dir=tmp_path / "ProgramData"
+        )
+        client = GogClient(platform, ExclusionRegistry())
+        assert_that(client.game_install_paths().count(game_dir)).is_equal_to(1)
+
 
 class TestGogRedistScan:
     def test_finds_common_redist(self, tmp_path: Path):

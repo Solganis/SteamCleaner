@@ -112,6 +112,29 @@ class TestEpicGameDiscovery:
         paths = client.game_install_paths()
         assert_that(paths.count(game_path)).is_equal_to(1)
 
+    def test_manifest_non_item_file_skipped(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path)
+        manifests = tmp_path / "ProgramData" / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
+        manifests.mkdir(parents=True)
+        (manifests / "notes.txt").write_text("not a manifest", encoding="utf-8")
+        assert_that(client.game_install_paths()).is_length(0)
+
+    def test_manifest_empty_install_location_skipped(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path)
+        manifests = tmp_path / "ProgramData" / "Epic" / "EpicGamesLauncher" / "Data" / "Manifests"
+        manifests.mkdir(parents=True)
+        (manifests / "g.item").write_text(json.dumps({"InstallLocation": ""}), encoding="utf-8")
+        assert_that(client.game_install_paths()).is_length(0)
+
+    def test_shared_programdata_no_duplicate(self, tmp_path: Path):
+        home = tmp_path / "home"
+        programdata = tmp_path / "ProgramData"
+        game_dir = programdata / "Epic Games" / "Fortnite"
+        game_dir.mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=home, program_files_dirs=[programdata], programdata_dir=programdata)
+        client = EpicClient(platform, ExclusionRegistry())
+        assert_that(client.game_install_paths().count(game_dir)).is_equal_to(1)
+
 
 class TestEpicRedistScan:
     def test_finds_redist(self, tmp_path: Path):
@@ -277,6 +300,13 @@ class TestEpicWebcache:
         cache = [entry for entry in entries if entry.category == JunkCategory.SHADER_CACHE]
         assert_that(cache).is_length(0)
 
+    def test_ignores_empty_macos_cache(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path)
+        macos_cache = tmp_path / "home" / "Library" / "Caches" / "com.epicgames.EpicGamesLauncher"
+        macos_cache.mkdir(parents=True)
+        cache = [entry for entry in client.scan_junk() if entry.category == JunkCategory.SHADER_CACHE]
+        assert_that(cache).is_length(0)
+
 
 class TestEpicUnicode:
     def test_cyrillic_game_name(self, tmp_path: Path):
@@ -340,6 +370,13 @@ class TestEpicWinePrefix:
         platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
         client = EpicClient(platform, ExclusionRegistry())
         assert_that(client.is_installed()).is_false()
+
+    def test_game_paths_wine_prefix_without_epic_dir(self, tmp_path: Path):
+        prefix = tmp_path / "wine" / "drive_c"
+        prefix.mkdir(parents=True)
+        platform = FakePlatformAdapter(home_dir=tmp_path / "home", wine_prefix_dirs=[prefix])
+        client = EpicClient(platform, ExclusionRegistry())
+        assert_that(client.game_install_paths()).is_length(0)
 
     def test_discovers_games_from_wine_prefix(self, tmp_path: Path):
         prefix = tmp_path / "wine" / "drive_c"

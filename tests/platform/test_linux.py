@@ -128,6 +128,34 @@ class TestLinuxWinePrefixes:
         prefixes = adapter.wine_prefixes()
         assert_that(prefixes).is_length(0)
 
+    def test_flatpak_compatdata_skips_dir_without_drive_c(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        flatpak = (
+            tmp_path
+            / ".var"
+            / "app"
+            / "com.valvesoftware.Steam"
+            / ".local"
+            / "share"
+            / "Steam"
+            / "steamapps"
+            / "compatdata"
+        )
+        (flatpak / "67890" / "pfx").mkdir(parents=True)
+        assert_that(LinuxAdapter().wine_prefixes()).is_length(0)
+
+    def test_bottles_skips_dir_without_drive_c(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        bottles_root = tmp_path / ".local" / "share" / "bottles" / "bottles"
+        (bottles_root / "empty-bottle").mkdir(parents=True)
+        assert_that(LinuxAdapter().wine_prefixes()).is_length(0)
+
+    def test_lutris_skips_dir_without_drive_c(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        lutris = tmp_path / ".local" / "share" / "lutris" / "runners" / "wine"
+        (lutris / "broken-prefix").mkdir(parents=True)
+        assert_that(LinuxAdapter().wine_prefixes()).is_length(0)
+
     def test_multiple_sources_combined(self, tmp_path: Path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         wine_drive_c = tmp_path / ".wine" / "drive_c"
