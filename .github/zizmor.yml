@@ -1,0 +1,12 @@
+# Justified suppressions. Everything else must pass.
+rules:
+  cache-poisoning:
+    # Release runs only on maintainer-pushed v* tags; the Flutter SDK and flet
+    # build cache are reused by design to keep release builds fast. Low confidence.
+    ignore:
+      - release.yml
+  superfluous-actions:
+    # softprops/action-gh-release handles multi-file globs and generated release
+    # notes; intentionally preferred over a hand-rolled `gh release` script step.
+    ignore:
+      - release.yml
