@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from assertpy2 import assert_that
@@ -37,6 +38,13 @@ class TestClientRegistry:
         count_after_first = len(ClientRegistry._client_classes)
         ClientRegistry.discover()
         assert_that(len(ClientRegistry._client_classes)).is_equal_to(count_after_first)
+
+    def test_discover_swallows_import_failure(self):
+        ClientRegistry.clear()
+        with patch("steamcleaner.clients.registry.importlib.import_module", side_effect=ImportError("boom")):
+            ClientRegistry.discover()
+        assert_that(ClientRegistry._discovered).is_true()
+        assert_that(ClientRegistry._client_classes).is_length(0)
 
     def test_create_all_yields_instances(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)

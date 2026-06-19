@@ -30,6 +30,12 @@ class TestConfig:
         with patch("steamcleaner.utils.config._config_path", return_value=tmp_path / "missing.toml"):
             assert_that(load_config()).is_equal_to({})
 
+    def test_load_malformed_toml_returns_empty(self, tmp_path: Path):
+        path = tmp_path / "config.toml"
+        path.write_text("[unclosed_section", encoding="utf-8")
+        with patch("steamcleaner.utils.config._config_path", return_value=path):
+            assert_that(load_config()).is_equal_to({})
+
     def test_save_and_load(self, tmp_path: Path):
         path = tmp_path / "config.toml"
         with patch("steamcleaner.utils.config._config_path", return_value=path):
