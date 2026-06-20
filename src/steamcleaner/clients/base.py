@@ -12,6 +12,8 @@ _logger = logging.getLogger(__name__)
 
 
 class GameClient(abc.ABC):
+    """Base class for a game client: detects its install and yields junk entries bound to itself."""
+
     def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         self._platform = platform
         self._exclusions = exclusions

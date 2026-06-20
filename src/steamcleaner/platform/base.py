@@ -3,6 +3,8 @@ from pathlib import Path
 
 
 class PlatformAdapter(abc.ABC):
+    """OS abstraction for registry and well-known directory lookups, injected into clients."""
+
     @abc.abstractmethod
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
         """Read a string value from the platform registry (Windows-only concept)."""

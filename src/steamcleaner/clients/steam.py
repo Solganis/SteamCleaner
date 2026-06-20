@@ -35,6 +35,8 @@ def parse_library_folders_vdf(path: Path) -> list[Path]:
 
 @ClientRegistry.register
 class SteamClient(GameClient):
+    """Steam client: resolves libraries via libraryfolders.vdf/config.vdf and scans them."""
+
     def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         super().__init__(platform, exclusions)
         self._install_path: Path | None = None

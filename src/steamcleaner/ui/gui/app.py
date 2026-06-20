@@ -42,7 +42,7 @@ _CATEGORY_COLORS = {
 
 
 class WindowHider:
-    """Finds the Flutter window handle so Python can show it when ready."""
+    """Find the Flutter window handle so Python can show it when ready."""
 
     def __init__(self) -> None:
         self._hwnd: int | None = None

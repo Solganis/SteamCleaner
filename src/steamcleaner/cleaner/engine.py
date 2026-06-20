@@ -17,6 +17,8 @@ CleanCallback = Callable[[JunkEntry, bool], None]
 
 @dataclass(frozen=True, slots=True)
 class CleanStats:
+    """Outcome of a clean run: counts, freed bytes, and per-entry error messages."""
+
     deleted: int = 0
     skipped: int = 0
     errors: list[str] = field(default_factory=list)
@@ -24,11 +26,21 @@ class CleanStats:
 
 
 class CleanEngine:
+    """Engine that deletes scanned junk, honoring dry-run, trash, and reparse-point safety."""
+
     def __init__(self, *, use_trash: bool = True, dry_run: bool = False) -> None:
         self._use_trash = use_trash
         self._dry_run = dry_run
 
     def clean(self, result: ScanResult, callback: CleanCallback | None = None) -> CleanStats:
+        """Delete (or simulate deleting) every entry in result.
+
+        Respects the engine's dry_run and use_trash settings, refuses to delete through
+        reparse points, and invokes callback(entry, deleted) per entry when provided.
+
+        Returns:
+            CleanStats with deleted/skipped counts, freed bytes, and error messages.
+        """
         deleted = 0
         skipped = 0
         errors: list[str] = []
