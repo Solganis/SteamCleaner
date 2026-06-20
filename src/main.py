@@ -32,7 +32,7 @@ def _find_flutter_window() -> None:
         result = [None]
 
         # noinspection PyUnresolvedReferences
-        def enum_callback(handle, _) -> bool:
+        def enum_callback(handle: int, _: int) -> bool:
             buffer = ctypes.create_unicode_buffer(256)
             user32.GetClassNameW(handle, buffer, 256)
             if "FLUTTER" in buffer.value.upper():

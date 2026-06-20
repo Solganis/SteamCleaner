@@ -46,11 +46,13 @@ target-version = "py314"
 [tool.ruff.lint]
 preview = true
 explicit-preview-rules = true
-select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM", "RUF"]
-ignore = ["UP037"]  # flet build bundles Python 3.12, forward-ref strings still needed
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM", "RUF", "ANN"]
+ignore = ["UP037", "ANN401"]  # UP037: flet bundles 3.12, forward-ref strings; ANN401: Any needed for config dicts
 
 [tool.ruff.lint.per-file-ignores]
 "src/main.py" = ["E402"]  # delayed imports for startup perf logging
+"src/steamcleaner/ui/*" = ["ANN001"]  # flet event-handler params are dynamically typed (no flet stubs)
+"tests/*" = ["ANN"]  # tests omit -> None and fixture-param annotations by convention
 
 [tool.ty.environment]
 python-version = "3.14"
