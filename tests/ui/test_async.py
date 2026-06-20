@@ -31,12 +31,14 @@ ENTRY_MEDIUM = _make_entry("medium_shader", JunkCategory.SHADER_CACHE, 5000)
 ENTRY_LARGE = _make_entry("large_dump", JunkCategory.CRASH_DUMP, 90000)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestScanTask:
     @staticmethod
     def _mock_scan_with_entries(*entries: JunkEntry):
         mock_engine = MagicMock()
 
+        # parameters match the patched scan() signature; unused in this stub
         # noinspection PyUnusedLocal
         def fake_scan(progress=None, on_found=None, cancel=None, custom_paths=None):
             for entry in entries:
@@ -72,6 +74,7 @@ class TestScanTask:
     def test_scan_cancelled(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = MagicMock()
 
+        # parameters match the patched scan() signature; unused in this stub
         # noinspection PyUnusedLocal
         def fake_scan(progress=None, on_found=None, cancel=None, custom_paths=None):
             cancel.set()
@@ -95,6 +98,7 @@ class TestScanTask:
         assert_that(keys).contains("shader_cache")
 
 
+# test reads protected GUI members and mock attributes that PyCharm does not resolve
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestCleanTask:
     @staticmethod
@@ -146,6 +150,7 @@ class TestCleanTask:
         assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
 
 
+# test reads protected GUI members and mock attributes that PyCharm does not resolve
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestOnClean:
     def test_no_selection_returns_early(self, gui: SteamCleanerGUI):
@@ -178,6 +183,7 @@ class TestOnClean:
         assert_that(dialog.actions).is_length(2)
 
 
+# test reads protected GUI members and mock attributes that PyCharm does not resolve
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestConfirmClean:
     def test_sets_cleaning_flag(self, gui: SteamCleanerGUI):

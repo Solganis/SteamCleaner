@@ -34,6 +34,7 @@ ENTRY_MEDIUM = _make_entry("medium_shader", JunkCategory.SHADER_CACHE, 5000)
 ENTRY_LARGE = _make_entry("large_dump", JunkCategory.CRASH_DUMP, 90000)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestDisplayPath:
     def test_with_display_name(self):
@@ -71,6 +72,7 @@ class TestDisplayPath:
         assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to("Override")
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestApplySortFilter:
     @staticmethod
@@ -149,6 +151,7 @@ class TestApplySortFilter:
         assert_that(gui._visible_entries).is_equal_to([])
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestToggleSelection:
     def test_toggle_adds_to_selected(self, gui: SteamCleanerGUI):
@@ -168,6 +171,7 @@ class TestToggleSelection:
         assert_that(gui._selected).does_not_contain(path)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestSetControlsLocked:
     def test_locked_disables_controls(self, gui: SteamCleanerGUI):
@@ -206,6 +210,7 @@ class TestSetControlsLocked:
         assert_that(gui._select_all_button.disabled).is_false()
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestOnKeyboard:
     @staticmethod
@@ -270,6 +275,7 @@ class TestOnKeyboard:
         assert_that(gui._search_query).is_equal_to("")
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestRebuildFilterOptions:
     @staticmethod
@@ -309,6 +315,7 @@ class TestRebuildFilterOptions:
         assert_that(gui._category_filter).is_equal_to("shader_cache")
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestUpdateTotals:
     @staticmethod
@@ -352,6 +359,7 @@ class TestUpdateTotals:
         assert_that(gui._select_all_button.disabled).is_true()
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestUpdateEmptyState:
     def test_visible_entries_hides_state(self, gui_with_ui: SteamCleanerGUI):
@@ -377,6 +385,7 @@ class TestUpdateEmptyState:
         assert_that(gui_with_ui._empty_state.controls[2].value).is_equal_to(t("empty_scan"))
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestDrainFoundQueue:
     def test_empty_queue_no_change(self, gui_with_ui: SteamCleanerGUI):

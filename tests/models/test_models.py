@@ -14,6 +14,7 @@ class TestJunkEntry:
     def test_frozen(self):
         entry = _entry("/tmp/test", 1024)
         try:
+            # intentional write to a frozen-dataclass field to assert it raises AttributeError
             # noinspection PyDataclass
             entry.size_bytes = 0
             raise AssertionError("should be frozen")

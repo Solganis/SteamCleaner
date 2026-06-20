@@ -27,6 +27,7 @@ ENTRY_MEDIUM = _make_entry("medium_shader", JunkCategory.SHADER_CACHE, 5000)
 ENTRY_LARGE = _make_entry("large_dump", JunkCategory.CRASH_DUMP, 90000)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 def _populate_list(gui: SteamCleanerGUI, entries: list[JunkEntry]):
     gui._result = ScanResult(entries=list(entries))
@@ -36,6 +37,7 @@ def _populate_list(gui: SteamCleanerGUI, entries: list[JunkEntry]):
         gui._results_list.controls.append(gui._make_row(entry, index))
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestOnSelectAll:
     def test_select_all_adds_paths(self, gui_with_ui: SteamCleanerGUI):
@@ -75,6 +77,7 @@ class TestOnSelectAll:
         assert_that(gui_with_ui._select_all_button.text).is_equal_to(t("select_all"))
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestOnRowClick:
     def test_click_selects_row(self, gui_with_ui: SteamCleanerGUI):

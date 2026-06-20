@@ -16,6 +16,7 @@ def _make_event(event_type: ft.WindowEventType) -> MagicMock:
     return event
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestWindowPositionPersistence:
     def test_saves_position_on_moved(self, tmp_path: Path, fake_page: MagicMock):
@@ -118,6 +119,7 @@ class TestThemePersistence:
             assert_that(fake_page.theme_mode).is_equal_to(ft.ThemeMode.LIGHT)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestScanCancelCycles:
     @staticmethod

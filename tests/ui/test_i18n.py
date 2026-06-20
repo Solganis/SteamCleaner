@@ -9,6 +9,7 @@ from steamcleaner.ui.gui.i18n import LANGUAGES, t
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "steamcleaner" / "ui" / "gui" / "locales"
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMemberAccess
 class TestLocaleFiles:
     def test_all_languages_have_json_files(self):
@@ -42,6 +43,7 @@ class TestLocaleFiles:
             assert_that(extra).described_as(f"{lang_code} has extra keys: {extra}").is_empty()
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMemberAccess
 class TestTranslationFunction:
     def test_returns_english_by_default(self):
@@ -63,6 +65,7 @@ class TestTranslationFunction:
         assert_that(english).contains("ready")
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMemberAccess
 class TestLoadTranslations:
     def test_load_english(self):

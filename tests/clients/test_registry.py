@@ -12,6 +12,7 @@ from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 @pytest.fixture(autouse=True)
 def _restore_registry():
@@ -23,6 +24,7 @@ def _restore_registry():
     ClientRegistry._discovered = saved_discovered
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 class TestClientRegistry:
     def test_clear_removes_all_clients(self):

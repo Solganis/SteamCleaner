@@ -289,6 +289,7 @@ class TestParseLibraryFoldersVdfStringEntries:
         assert_that(paths).is_equal_to([])
 
 
+# test reads protected client internals that PyCharm does not resolve
 # noinspection PyProtectedMemberAccess,PyUnresolvedReferences
 class TestConfigVdfFallback:
     def test_fallback_finds_legacy_folders(self, tmp_path: Path):

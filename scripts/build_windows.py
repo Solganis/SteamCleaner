@@ -42,6 +42,7 @@ HIDE_WINDOW_FORCED = (
 )
 
 
+# shutil.which() carries a PathLike-as-cmd deprecation note for Windows before Python 3.12; we pass a str
 # noinspection PyDeprecation
 def find_flutter_sdk(hint: Path | None = None) -> Path:
     if hint and (hint / "bin" / "flutter.bat").exists():
@@ -74,6 +75,7 @@ def flutter_executable(sdk: Path) -> str:
     return str(sdk / "bin" / "flutter")
 
 
+# shutil.which() carries a PathLike-as-cmd deprecation note for Windows before Python 3.12; we pass a str
 # noinspection PyDeprecation
 def flet_build() -> None:
     print("=== Step 1/4: flet build windows ===")

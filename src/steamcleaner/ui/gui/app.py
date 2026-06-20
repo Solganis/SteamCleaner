@@ -63,6 +63,7 @@ class WindowHider:
     def stop(self) -> None:
         self._stop.set()
 
+    # flet control / ctypes attribute resolved at runtime; no type stubs
     # noinspection PyUnresolvedReferences
     def show(self) -> None:
         if self._hwnd is None or sys.platform != "win32":
@@ -72,6 +73,7 @@ class WindowHider:
         user32 = ctypes.windll.user32
         user32.ShowWindow(self._hwnd, 5)
 
+    # flet control / ctypes attribute resolved at runtime; no type stubs
     # noinspection PyUnresolvedReferences
     def _find_window(self) -> None:
         import ctypes
@@ -83,10 +85,12 @@ class WindowHider:
         swp_nozorder = 0x0004
         swp_noactivate = 0x0010
 
+        # flet control / ctypes attribute resolved at runtime; no type stubs
         # noinspection PyUnresolvedReferences
         def find_flutter() -> int | None:
             found: list[int | None] = [None]
 
+            # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
             def callback(window_handle, _) -> bool:
                 buf = ctypes.create_unicode_buffer(256)
@@ -257,6 +261,7 @@ class SteamCleanerGUI:
             elif self._text_input_focused:
                 self._search_field.value = ""
                 self._search_query = ""
+                # flet control / ctypes attribute resolved at runtime; no type stubs
                 # noinspection PyUnresolvedReferences
                 self._page.focus()
                 self._refresh_list()
@@ -606,8 +611,10 @@ class SteamCleanerGUI:
                 self._row_cache[entry.path] = container
             else:
                 is_selected = entry.path in self._selected
+                # flet control / ctypes attribute resolved at runtime; no type stubs
                 # noinspection PyUnresolvedReferences
                 row = container.content
+                # flet control / ctypes attribute resolved at runtime; no type stubs
                 # noinspection PyUnresolvedReferences
                 row.controls[0].value = is_selected
                 if is_selected:
@@ -685,8 +692,10 @@ class SteamCleanerGUI:
             self._selected.add(path)
             is_selected = True
         for index, container in enumerate(self._results_list.controls):
+            # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
             row = container.content
+            # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
             checkbox = row.controls[0]
             if self._visible_entries[index].path == path:
@@ -731,8 +740,10 @@ class SteamCleanerGUI:
             self._select_all_button.text = t("deselect_all")
             new_state = True
         for index, container in enumerate(self._results_list.controls):
+            # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
             row = container.content
+            # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
             checkbox = row.controls[0]
             checkbox.value = new_state
@@ -757,6 +768,7 @@ class SteamCleanerGUI:
         if self._search_timer is not None:
             self._search_timer.cancel()
         self._search_timer = threading.Timer(0.1, lambda: self._page.run_task(self._do_search_refresh))
+        # flet control / ctypes attribute resolved at runtime; no type stubs
         # noinspection PyUnresolvedReferences
         self._search_timer.start()
 

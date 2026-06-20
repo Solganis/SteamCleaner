@@ -31,6 +31,7 @@ def gui(tmp_path: Path, fake_page: MagicMock) -> SteamCleanerGUI:
         return SteamCleanerGUI(fake_page)
 
 
+# test deliberately accesses a protected member
 # noinspection PyProtectedMember
 @pytest.fixture
 def gui_with_ui(tmp_path: Path, fake_page: MagicMock) -> SteamCleanerGUI:

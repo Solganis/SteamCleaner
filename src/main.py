@@ -16,6 +16,7 @@ def _elapsed() -> str:
     return f"[{(time.perf_counter() - _start_time) * 1000:9.1f}ms]"
 
 
+# ctypes attribute resolved at runtime; no type stubs
 # noinspection PyUnresolvedReferences
 def _find_flutter_window() -> None:
     global _flutter_hwnd
@@ -27,10 +28,12 @@ def _find_flutter_window() -> None:
     user32 = ctypes.windll.user32
     callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
+    # ctypes attribute resolved at runtime; no type stubs
     # noinspection PyUnresolvedReferences
     def find_flutter() -> int | None:
         result = [None]
 
+        # ctypes attribute resolved at runtime; no type stubs
         # noinspection PyUnresolvedReferences
         def enum_callback(handle: int, _: int) -> bool:
             buffer = ctypes.create_unicode_buffer(256)
@@ -62,11 +65,11 @@ def _find_flutter_window() -> None:
 threading.Thread(target=_find_flutter_window, daemon=True).start()
 _logger.debug("%s Thread launched, importing flet", _elapsed())
 
-import flet as ft
+import flet as ft  # noqa: E402  # deferred until the window-finder thread starts (startup perf)
 
 _logger.debug("%s Flet imported", _elapsed())
 
-from steamcleaner.ui.gui.app import SteamCleanerGUI, WindowHider
+from steamcleaner.ui.gui.app import SteamCleanerGUI, WindowHider  # noqa: E402  # deferred, see flet import above
 
 _logger.debug("%s App module imported, calling ft.run()", _elapsed())
 

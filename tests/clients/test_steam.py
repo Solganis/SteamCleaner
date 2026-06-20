@@ -191,6 +191,7 @@ class TestSteamGameInstallPaths:
         assert_that(client.game_install_paths()).is_equal_to([])
 
 
+# test calls a protected member (_build_appid_map) that PyCharm does not resolve
 # noinspection PyUnresolvedReferences
 class TestSteamAppidMap:
     def test_parses_manifest_files(self, tmp_path: Path):
