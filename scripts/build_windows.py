@@ -1,10 +1,11 @@
 """Two-step Windows build: flet build -> patch -> flutter rebuild.
 
 Flet's Flutter runner shows the window before Python gets control, causing a
-visible flash on startup. This script patches two files after flet build:
+visible flash on startup. This script patches three files after flet build:
 
 1. lib/main.dart: sets hideWindowOnStart = true so Dart skips windowManager.show()
-2. windows/runner/flutter_window.cpp: removes SetNextFrameCallback -> Show()
+2. windows/runner/flutter_window.cpp: forces hide_window_on_start = true so the native
+   runner does not Show() the window on the first frame (the app shows it when ready)
 3. windows/runner/win32_window.cpp: sets BLACK_BRUSH background to prevent white flash
 
 Then rebuilds via flutter build to compile the patches into the final binary.
@@ -33,18 +34,16 @@ FLUTTER_RELEASE = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Rele
 FLUTTER_APP_ICON = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_icon.ico"
 CUSTOM_ICON = ROOT / "assets" / "icon.ico"
 
-SHOW_CALLBACK_BLOCK = """\
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
-
-  // Flutter can complete the first frame before the "show window" callback is
-  // registered. The following call ensures a frame is pending to ensure the
-  // window is shown. It is a no-op if the first frame hasn't completed yet.
-  flutter_controller_->ForceRedraw();"""
-
-SHOW_CALLBACK_REPLACEMENT = """\
-  flutter_controller_->ForceRedraw();"""
+HIDE_WINDOW_DEFAULT = (
+    "  const bool hide_window_on_start =\n"
+    "      false ||\n"
+    '      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
+)
+HIDE_WINDOW_FORCED = (
+    "  const bool hide_window_on_start =\n"
+    "      true ||\n"
+    '      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
+)
 
 
 # noinspection PyDeprecation
@@ -109,16 +108,20 @@ def patch_sources() -> None:
     elif '"True".toLowerCase()' in dart_text:
         print("  main.dart: already patched")
     else:
-        print("  WARNING: main.dart hideWindowOnStart pattern not found", file=sys.stderr)
+        print("  ERROR: main.dart hideWindowOnStart pattern not found", file=sys.stderr)
+        sys.exit(1)
 
     cpp_text = FLUTTER_WINDOW_CPP.read_text(encoding="utf-8")
-    if "SetNextFrameCallback" in cpp_text:
-        cpp_text = cpp_text.replace(SHOW_CALLBACK_BLOCK, SHOW_CALLBACK_REPLACEMENT)
+    if HIDE_WINDOW_DEFAULT in cpp_text:
+        cpp_text = cpp_text.replace(HIDE_WINDOW_DEFAULT, HIDE_WINDOW_FORCED)
         FLUTTER_WINDOW_CPP.write_text(cpp_text, encoding="utf-8")
-        print("  flutter_window.cpp: removed SetNextFrameCallback -> Show()")
+        print("  flutter_window.cpp: forced hide_window_on_start = true")
         patched = True
-    else:
+    elif HIDE_WINDOW_FORCED in cpp_text:
         print("  flutter_window.cpp: already patched")
+    else:
+        print("  ERROR: flutter_window.cpp hide_window_on_start pattern not found", file=sys.stderr)
+        sys.exit(1)
 
     win32_text = WIN32_WINDOW_CPP.read_text(encoding="utf-8")
     if "window_class.hbrBackground = 0;" in win32_text:
@@ -132,7 +135,8 @@ def patch_sources() -> None:
     elif "BLACK_BRUSH" in win32_text:
         print("  win32_window.cpp: already patched")
     else:
-        print("  WARNING: win32_window.cpp hbrBackground pattern not found", file=sys.stderr)
+        print("  ERROR: win32_window.cpp hbrBackground pattern not found", file=sys.stderr)
+        sys.exit(1)
 
     if CUSTOM_ICON.exists() and FLUTTER_APP_ICON.exists():
         shutil.copy2(CUSTOM_ICON, FLUTTER_APP_ICON)
