@@ -35,14 +35,10 @@ FLUTTER_APP_ICON = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_ico
 CUSTOM_ICON = ROOT / "assets" / "icon.ico"
 
 HIDE_WINDOW_DEFAULT = (
-    "  const bool hide_window_on_start =\n"
-    "      false ||\n"
-    '      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
+    '  const bool hide_window_on_start =\n      false ||\n      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
 )
 HIDE_WINDOW_FORCED = (
-    "  const bool hide_window_on_start =\n"
-    "      true ||\n"
-    '      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
+    '  const bool hide_window_on_start =\n      true ||\n      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
 )
 
 

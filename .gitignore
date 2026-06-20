@@ -5,6 +5,7 @@ __pycache__/
 # testing
 .pytest_cache/
 .coverage
+.hypothesis/
 
 # packaging
 *.egg-info/

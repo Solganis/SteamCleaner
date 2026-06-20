@@ -14,8 +14,8 @@ classifiers = [
 ]
 dependencies = [
     "darkdetect>=0.8",
-    "flet>=0.25",
-    "send2trash>=1.8",
+    "flet>=0.85",
+    "send2trash>=2.1",
 ]
 
 [project.urls]
@@ -102,8 +102,9 @@ exclude_lines = [
 [dependency-groups]
 dev = [
     "ruff>=0.15.18",
-    "pytest>=8.0",
-    "pytest-cov>=6.0",
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
     "ty>=0.0.51",
-    "assertpy2==2.5.1",
+    "assertpy2==2.7.0",
+    "hypothesis>=6.155",
 ]
