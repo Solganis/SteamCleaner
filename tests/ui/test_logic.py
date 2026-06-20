@@ -46,7 +46,7 @@ class TestDisplayPath:
             game_root=Path("C:/Games/TestGame"),
         )
         result = SteamCleanerGUI._display_path(entry)
-        assert_that(result).is_equal_to(r"TestGame\_CommonRedist\vcredist.exe")
+        assert_that(result).is_equal_to(str(Path("TestGame") / "_CommonRedist" / "vcredist.exe"))
 
     def test_without_game_root_or_display_name(self):
         entry = _make_entry("some_file.exe")
