@@ -1,23 +1,48 @@
 # Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+Contributions of docs, tests, or code are welcome. Please open an issue first to discuss substantial changes.
 
-## Getting started
+## Workflow
 
-1. Fork the repository
-2. Clone your fork and create a feature branch
-3. Install dependencies: `uv sync`
-4. Make your changes
+1. Fork the repo
+2. Clone your fork (`git clone <your_fork_url>`)
+3. Create a branch (`git checkout -b my_branch`)
+4. Install dependencies: `uv sync`
+5. Make your changes
+6. Run the [verification pipeline](#verification-pipeline) and fix any issues
+7. Commit using [Conventional Commits](#commit-style)
+8. Push your branch (`git push origin my_branch`)
+9. Open a [Pull Request](https://github.com/Solganis/SteamCleaner/pulls)
 
-## Code style
+## Requirements
 
 - Python 3.14+
-- Format and lint with [Ruff](https://github.com/astral-sh/ruff): `uv run ruff check src/ tests/` and `uv run ruff format src/ tests/`
-- Type check with [ty](https://github.com/astral-sh/ty): `uv run ty check src/`
-- Run tests: `uv run pytest tests/ -v`
+- [uv](https://docs.astral.sh/uv/) as the package manager
 
-## Pull requests
+## Verification pipeline
 
-- Keep PRs focused on a single change
-- Ensure all checks pass (lint, format, type check, tests)
-- Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
+Run all checks before submitting a PR. Every step must pass.
+
+```bash
+# lint
+uv run ruff check src/ tests/
+
+# format
+uv run ruff format --check src/ tests/
+
+# type check
+uv run ty check src/
+
+# tests with coverage (must be 100%)
+uv run pytest tests/ -v --cov=steamcleaner --cov-report=term-missing
+```
+
+CI requires 100% code coverage.
+
+## Commit style
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`, `ci:`, `style:`, etc.
+
+## Tests
+
+Write tests for every new feature or bug fix. Use `assertpy2` assertions (`assert_that`) in tests.
