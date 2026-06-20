@@ -17,7 +17,7 @@ def config_dir() -> Path:
     return base / "steamcleaner"
 
 
-def _config_path() -> Path:  # pragma: no cover
+def _config_path() -> Path:  # pragma: no cover  # patched out in every test
     return config_dir() / "config.toml"
 
 

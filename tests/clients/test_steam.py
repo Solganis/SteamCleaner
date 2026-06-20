@@ -126,7 +126,7 @@ class TestSteamDumpScan:
         (game_dir / "mini.mdmp").write_bytes(b"\x00" * 256)
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        dumps = [e for e in client.scan_junk() if e.category == JunkCategory.CRASH_DUMP]
+        dumps = [entry for entry in client.scan_junk() if entry.category == JunkCategory.CRASH_DUMP]
         assert_that(dumps).is_length(2)
 
 
@@ -142,7 +142,7 @@ class TestSteamLogScan:
         (game_dir / "output.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        logs = [e for e in client.scan_junk() if e.category == JunkCategory.OLD_LOG]
+        logs = [entry for entry in client.scan_junk() if entry.category == JunkCategory.OLD_LOG]
         assert_that(logs).is_length(1)
 
     def test_ignores_small_logs(self, tmp_path: Path):
@@ -156,7 +156,7 @@ class TestSteamLogScan:
         (game_dir / "small.log").write_bytes(b"\x00" * 100)
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        logs = [e for e in client.scan_junk() if e.category == JunkCategory.OLD_LOG]
+        logs = [entry for entry in client.scan_junk() if entry.category == JunkCategory.OLD_LOG]
         assert_that(logs).is_length(0)
 
 
@@ -169,7 +169,7 @@ class TestSteamShaderCache:
         (steam / "steamapps" / "common").mkdir(parents=True)
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        shaders = [e for e in client.scan_junk() if e.category == JunkCategory.SHADER_CACHE]
+        shaders = [entry for entry in client.scan_junk() if entry.category == JunkCategory.SHADER_CACHE]
         assert_that(shaders).is_length(1)
         assert_that(shaders[0].size_bytes).is_equal_to(4096)
 
@@ -245,6 +245,6 @@ class TestSteamClientLogs:
         (steam / "steamapps" / "common").mkdir(parents=True)
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        dump_entries = [e for e in client.scan_junk() if e.category == JunkCategory.CRASH_DUMP]
+        dump_entries = [entry for entry in client.scan_junk() if entry.category == JunkCategory.CRASH_DUMP]
         assert_that(dump_entries).is_length(1)
         assert_that(dump_entries[0].description).is_equal_to("Steam client crash dumps")

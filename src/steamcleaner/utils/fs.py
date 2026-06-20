@@ -11,7 +11,7 @@ _logger = logging.getLogger(__name__)
 def is_reparse_point(path: Path) -> bool:
     """Check if path is a symlink, junction, or other reparse point."""
     try:
-        attrs = path.lstat().st_file_attributes  # type: ignore[attr-defined]
+        attrs = path.lstat().st_file_attributes  # type: ignore[attr-defined]  # Windows-only stat attr
         return bool(attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT)
     # parens required: ruff py314 removes them (PEP 758), but flet build bundles older Python
     except (AttributeError, OSError):  # fmt: skip
@@ -87,4 +87,4 @@ def format_size(size_bytes: int) -> str:
         value /= 1024
         if value < 1024 or unit == "TB":
             return f"{value:.1f} {unit}"
-    return f"{size_bytes} B"  # pragma: no cover
+    return f"{size_bytes} B"  # pragma: no cover  # unreachable: TB iteration always returns
