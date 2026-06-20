@@ -1,4 +1,9 @@
-# Steam Cleaner
+<h1 align="center">Steam Cleaner</h1>
+
+<p align="center">
+  <b>Reclaim disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.</b><br>
+  Spiritual successor to <a href="https://github.com/Codeusa/SteamCleaner">Codeusa/SteamCleaner</a> (archived, C#/.NET), rewritten from scratch in Python.
+</p>
 
 <p align="center">
   <a href="https://github.com/Solganis/SteamCleaner/releases"><img src="https://img.shields.io/github/v/release/Solganis/SteamCleaner" alt="Version"></a>
@@ -9,25 +14,37 @@
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="https://github.com/astral-sh/ty"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json" alt="ty"></a>
   <br>
-  <a href="#languages"><img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR"></a>
+  <img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR">
 </p>
-
-**Cross-platform tool** for reclaiming disk space from **Steam**, **Epic Games**, **EA App**, **GOG Galaxy**, and **Ubisoft Connect**.
-
-Spiritual successor to [Codeusa/SteamCleaner](https://github.com/Codeusa/SteamCleaner) (archived, C#/.NET), rewritten from scratch in Python with significantly expanded detection capabilities and modern UI.
-
-Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
 
 <p align="center">
   <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
 </p>
 
+Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
+
+---
+
+## Quick start
+
+Download the latest build from [Releases](https://github.com/Solganis/SteamCleaner/releases), run it, and press **Scan**.
+
+To run from source:
+
+```bash
+uv sync
+uv run steamcleaner
+```
+
+---
+
 ## Features
 
-- **Cross-platform desktop app** with automatic dark/light theme
-- **Scans** Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect
-- **Finds** redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries
+- **Cross-platform desktop app** (Windows, macOS, Linux) with automatic dark/light theme
+- **Scans** Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
+- **Finds** redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries
 - **Safe by default**: files go to system trash, symlinks and junctions are never followed
+- **5 languages**: English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
 - **Keyboard shortcuts** for scan, select, clean, and cancel
 
 ## What it finds
@@ -47,25 +64,3 @@ Games accumulate gigabytes of junk files over time: redistributable installers, 
 - Symlinks and junction points are never followed or deleted through
 - Files go to system trash by default, not permanent deletion
 - Each detected item shows its exact path, category, and size before removal
-
-## Supported platforms
-
-- Windows 10/11
-- macOS (Apple Silicon and Intel)
-- Linux (native, Flatpak, Snap)
-- Wine/Proton: all non-Steam clients scan games installed through Wine, Proton (Steam Play), Bottles, Lutris, CrossOver, Game Porting Toolkit, Whisky, and PlayOnMac
-
-## Quick start
-
-Download the latest build from [Releases](https://github.com/Solganis/SteamCleaner/releases), run it, and press **Scan**.
-
-To run from source:
-
-```bash
-uv sync
-uv run steamcleaner
-```
-
-## Languages
-
-English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil).
