@@ -21,7 +21,10 @@
   <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
 </p>
 
-Games accumulate gigabytes of junk files over time: redistributable installers, shader caches, crash dumps, old logs, and unused cross-platform binaries. Steam Cleaner finds them and lets you safely remove what you don't need.
+<p align="center">
+  Games accumulate gigabytes of junk over time: redistributable installers, shader caches, crash dumps, old logs, unused cross-platform binaries.<br>
+  Steam Cleaner finds them and lets you safely remove what you don't need.
+</p>
 
 ---
 
