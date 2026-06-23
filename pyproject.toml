@@ -103,7 +103,7 @@ dev = [
     "ruff>=0.15.18",
     "pytest>=9.0",
     "pytest-cov>=7.0",
-    "ty>=0.0.51",
-    "assertpy2==2.7.0",
+    "ty>=0.0.52",
+    "assertpy2==2.8.1",
     "hypothesis>=6.155",
 ]
