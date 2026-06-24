@@ -248,14 +248,14 @@ class TestOnKeyboard:
             gui._on_keyboard(self._make_key_event("F5"))
             mock_scan.assert_not_called()
 
-    def test_ctrl_a_selects_all(self, gui: SteamCleanerGUI):
+    def test_ctrl_a_selects_all(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "linux")
         with patch.object(gui, "_on_select_all") as mock_select:
             gui._on_keyboard(self._make_key_event("A", ctrl=True))
             mock_select.assert_called_once_with(None)
 
-    def test_ctrl_a_blocked_during_scan(self, gui: SteamCleanerGUI):
-        from threading import Event
-
+    def test_ctrl_a_blocked_during_scan(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "linux")
         gui._cancel_event = Event()
         with patch.object(gui, "_on_select_all") as mock_select:
             gui._on_keyboard(self._make_key_event("A", ctrl=True))
