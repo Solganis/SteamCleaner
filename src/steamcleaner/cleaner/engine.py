@@ -93,6 +93,16 @@ class CleanEngine:
         return CleanStats(deleted=deleted, skipped=skipped, errors=errors, bytes_freed=bytes_freed)
 
     def _delete(self, path: Path) -> None:
+        """Delete path, re-checking reparse-point safety immediately before the destructive call.
+
+        clean() already filters reparse points while iterating, but a path can be swapped for a
+        symlink or junction between that check and this call (TOCTOU). Re-checking here narrows the
+        race window to the instant before deletion, so a swap cannot redirect us into real game data.
+        The guard is uniform across all three modes; shutil.rmtree alone would not refuse a Windows
+        junction at the top level (it only rejects symlinks via os.path.islink).
+        """
+        if is_reparse_point(path):
+            raise RuntimeError(f"Path became a reparse point before deletion: {path}")
         if self._use_trash:
             send2trash(str(path))
         elif path.is_dir():

@@ -191,6 +191,26 @@ class TestCleanEngineSafetyChecks:
         assert_that(str(target_dir)).exists()
         assert_that(game_save.read_bytes()).is_equal_to(b"precious data")
 
+    def test_toctou_reparse_swap_after_gate_is_refused(self, tmp_path: Path):
+        target = tmp_path / "redist"
+        target.mkdir()
+        (target / "file.exe").write_bytes(b"\x00" * 100)
+
+        result = ScanResult(entries=[_make_entry(target, size=100)])
+        engine = CleanEngine(use_trash=False, dry_run=False)
+
+        # First call is clean()'s gate (path still looks safe); second is _delete()'s re-check,
+        # by which point the path was swapped for a junction. The engine must refuse and keep data.
+        with patch("steamcleaner.cleaner.engine.is_reparse_point", side_effect=[False, True]):
+            stats = engine.clean(result)
+
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.errors).is_length(1)
+        assert_that(stats.errors[0]).contains("reparse point")
+        assert_that(str(target)).exists()
+        assert_that(str(target / "file.exe")).exists()
+
     def test_error_during_deletion_is_captured(self, tmp_path: Path):
         target = tmp_path / "locked_dir"
         target.mkdir()
@@ -245,6 +265,23 @@ class TestCleanEngineMultipleEntries:
         assert_that(stats.deleted).is_equal_to(1)
         assert_that(stats.skipped).is_equal_to(1)
         assert_that(stats.bytes_freed).is_equal_to(100)
+
+    def test_missing_entry_does_not_abort_remaining(self, tmp_path: Path):
+        # A non-existent entry must be skipped, not end the loop: a valid entry placed after it
+        # still gets cleaned. Pins the `continue` (not `break`) in the path-no-longer-exists branch.
+        missing = tmp_path / "already_gone"
+        valid = tmp_path / "redist"
+        valid.mkdir()
+        (valid / "setup.exe").write_bytes(b"\x00" * 100)
+
+        result = ScanResult(entries=[_make_entry(missing, 200), _make_entry(valid, 100)])
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        stats = engine.clean(result)
+
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(stats.bytes_freed).is_equal_to(100)
+        assert_that(str(valid)).does_not_exist()
 
     def test_multiple_valid_deletions(self, tmp_path: Path):
         entries = []
