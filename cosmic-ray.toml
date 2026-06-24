@@ -1,0 +1,38 @@
+# Mutation-testing config for the safety-critical logic modules.
+#
+# Opt-in tooling: cosmic-ray is not a project dependency. Run it ad-hoc via uvx (ephemeral) so the
+# lock stays lean. The project venv must be synced first (`uv sync`) because the test-command below
+# shells back into it for pytest. From the repo root:
+#   uvx --from cosmic-ray==8.4.6 cosmic-ray init cosmic-ray.toml mutation.sqlite
+#   uvx --from cosmic-ray==8.4.6 cr-filter-operators mutation.sqlite cosmic-ray.toml
+#   uvx --from cosmic-ray==8.4.6 cosmic-ray exec cosmic-ray.toml mutation.sqlite
+#   uvx --from cosmic-ray==8.4.6 cr-rate mutation.sqlite
+#
+# The GUI, platform-specific adapters, and entry points are excluded from mutation, mirroring the
+# coverage omit list (they are paint/IO/event-loop code, tested via launch rather than assertions).
+
+[cosmic-ray]
+module-path = "src/steamcleaner"
+timeout = 90.0
+excluded-modules = [
+    "src/steamcleaner/ui/*",
+    "src/steamcleaner/platform/windows.py",
+    "src/steamcleaner/platform/macos.py",
+    "src/steamcleaner/app.py",
+    "src/steamcleaner/__main__.py",
+]
+# Wrapped in `uv run --no-sync` so uv resolves the project interpreter regardless of PATH: a bare
+# `python` is spawned via subprocess and on Windows hits the Microsoft Store stub instead of the venv.
+test-command = "uv run --no-sync python -m pytest tests --ignore=tests/ui -x -q -p no:cacheprovider"
+
+[cosmic-ray.distributor]
+name = "local"
+
+# The `|` in `X | None` type unions is never a runtime bitwise-or in this codebase, and PEP 649
+# defers annotation evaluation on 3.14, so these mutants are unkillable equivalents that only
+# depress the score. Drop them so the result reflects real assertion quality.
+# Apply after init with: cr-filter-operators <session> cosmic-ray.toml
+[cosmic-ray.filters.operators-filter]
+exclude-operators = [
+    "core/ReplaceBinaryOperator_BitOr_.*",
+]
