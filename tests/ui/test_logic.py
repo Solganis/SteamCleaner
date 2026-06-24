@@ -214,13 +214,13 @@ class TestSetControlsLocked:
 # noinspection PyProtectedMember
 class TestOnKeyboard:
     @staticmethod
-    def _make_key_event(key: str, ctrl: bool = False) -> MagicMock:
+    def _make_key_event(key: str, ctrl: bool = False, meta: bool = False) -> MagicMock:
         event = MagicMock()
         event.key = key
         event.ctrl = ctrl
         event.shift = False
         event.alt = False
-        event.meta = False
+        event.meta = meta
         return event
 
     def test_escape_cancels_scan(self, gui: SteamCleanerGUI):
@@ -273,6 +273,52 @@ class TestOnKeyboard:
         with patch.object(gui, "_refresh_list"):
             gui._on_keyboard(self._make_key_event("Escape"))
         assert_that(gui._search_query).is_equal_to("")
+
+    def test_delete_cleans_selection(self, gui: SteamCleanerGUI):
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._selected.add(ENTRY_SMALL.path)
+        with patch.object(gui, "_on_clean") as mock_clean:
+            gui._on_keyboard(self._make_key_event("Delete"))
+            mock_clean.assert_called_once_with(None)
+
+    def test_cmd_a_selects_all_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        with patch.object(gui, "_on_select_all") as mock_select:
+            gui._on_keyboard(self._make_key_event("A", meta=True))
+            mock_select.assert_called_once_with(None)
+
+    def test_ctrl_a_ignored_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        with patch.object(gui, "_on_select_all") as mock_select:
+            gui._on_keyboard(self._make_key_event("A", ctrl=True))
+            mock_select.assert_not_called()
+
+    def test_cmd_q_quits_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        gui._on_keyboard(self._make_key_event("Q", meta=True))
+        gui._page.run_task.assert_called_once()
+
+    def test_cmd_r_triggers_scan_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        with patch.object(gui, "on_scan") as mock_scan:
+            gui._on_keyboard(self._make_key_event("R", meta=True))
+            mock_scan.assert_called_once_with(None)
+
+    def test_cmd_backspace_cleans_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._selected.add(ENTRY_SMALL.path)
+        with patch.object(gui, "_on_clean") as mock_clean:
+            gui._on_keyboard(self._make_key_event("Backspace", meta=True))
+            mock_clean.assert_called_once_with(None)
+
+    def test_bare_backspace_does_not_clean_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+        monkeypatch.setattr("sys.platform", "darwin")
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._selected.add(ENTRY_SMALL.path)
+        with patch.object(gui, "_on_clean") as mock_clean:
+            gui._on_keyboard(self._make_key_event("Backspace"))
+            mock_clean.assert_not_called()
 
 
 # test deliberately accesses a protected member

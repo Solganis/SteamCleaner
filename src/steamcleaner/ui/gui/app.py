@@ -248,6 +248,23 @@ class SteamCleanerGUI:
     def _set_text_input_focus(self, focused: bool) -> None:
         self._text_input_focused = focused
 
+    @staticmethod
+    def _cmd_pressed(event: ft.KeyboardEvent) -> bool:
+        """Primary command modifier: Cmd (meta) on macOS, Ctrl on Windows/Linux."""
+        return event.meta if sys.platform == "darwin" else event.ctrl
+
+    @staticmethod
+    def _is_scan_shortcut(event: ft.KeyboardEvent, cmd_pressed: bool) -> bool:
+        """F5 on every platform, plus Cmd+R on macOS where function keys are unreliable."""
+        return event.key == "F5" or (sys.platform == "darwin" and event.key == "R" and cmd_pressed)
+
+    @staticmethod
+    def _is_clean_shortcut(event: ft.KeyboardEvent, cmd_pressed: bool) -> bool:
+        """Delete on Windows/Linux; Cmd+Backspace (move to trash) or forward Delete on macOS."""
+        if sys.platform == "darwin":
+            return event.key == "Delete" or (event.key == "Backspace" and cmd_pressed)
+        return event.key == "Delete"
+
     def _on_keyboard(self, event: ft.KeyboardEvent) -> None:
         if event.key == "Escape":
             if self._dialog_open:
@@ -270,13 +287,15 @@ class SteamCleanerGUI:
         if self._text_input_focused:
             return
 
-        if event.key == "F5" and not self._cleaning:
+        cmd_pressed = self._cmd_pressed(event)
+        idle = self._cancel_event is None and not self._cleaning
+        if self._is_scan_shortcut(event, cmd_pressed) and not self._cleaning:
             self.on_scan(None)
-        elif event.key == "Q" and event.ctrl:
+        elif event.key == "Q" and cmd_pressed:
             self._page.run_task(self._page.window.close)
-        elif event.key == "A" and event.ctrl and self._cancel_event is None and not self._cleaning:
+        elif event.key == "A" and cmd_pressed and idle:
             self._on_select_all(None)
-        elif event.key == "Delete" and self._selected and self._cancel_event is None and not self._cleaning:
+        elif self._is_clean_shortcut(event, cmd_pressed) and self._selected and idle:
             self._on_clean(None)
 
     def _build_ui(self) -> None:
@@ -1132,6 +1151,10 @@ class SteamCleanerGUI:
         self._open_dialog(dialog)
 
     def _on_about_click(self, _event) -> None:
+        is_macos = sys.platform == "darwin"
+        modifier = "⌘" if is_macos else "Ctrl"
+        scan_keys = "F5 / ⌘R" if is_macos else "F5"
+        delete_keys = "⌘⌫ / Delete" if is_macos else "Delete"
         dialog = ft.AlertDialog(
             title=ft.Row(
                 [
@@ -1150,11 +1173,11 @@ class SteamCleanerGUI:
                     ),
                     ft.Divider(height=16),
                     ft.Text(t("keyboard_shortcuts"), weight=ft.FontWeight.BOLD, size=13),
-                    ft.Text(t("shortcut_scan"), size=12),
-                    ft.Text(t("shortcut_select_all"), size=12),
-                    ft.Text(t("shortcut_delete"), size=12),
+                    ft.Text(t("shortcut_scan", keys=scan_keys), size=12),
+                    ft.Text(t("shortcut_select_all", mod=modifier), size=12),
+                    ft.Text(t("shortcut_delete", keys=delete_keys), size=12),
                     ft.Text(t("shortcut_escape"), size=12),
-                    ft.Text(t("shortcut_quit"), size=12),
+                    ft.Text(t("shortcut_quit", mod=modifier), size=12),
                     ft.Divider(height=16),
                     ft.Row(
                         [
