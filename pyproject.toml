@@ -100,10 +100,10 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.18",
-    "pytest>=9.0",
-    "pytest-cov>=7.0",
-    "ty>=0.0.52",
+    "ruff>=0.15.19",
+    "pytest>=9.1",
+    "pytest-cov>=7.1",
+    "ty>=0.0.53",
     "assertpy2==2.8.1",
-    "hypothesis>=6.155",
+    "hypothesis>=6.155.7",
 ]
