@@ -27,7 +27,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.platforms }}" != "all" ]]; then
             echo 'matrix={"include":[{"os":"windows-latest","platform":"windows","artifact":"SteamCleaner-windows"}]}' >> "$GITHUB_OUTPUT"
           else
-            echo 'matrix={"include":[{"os":"windows-latest","platform":"windows","artifact":"SteamCleaner-windows"},{"os":"ubuntu-latest","platform":"linux","artifact":"SteamCleaner-linux"},{"os":"macos-latest","platform":"macos","artifact":"SteamCleaner-macos"}]}' >> "$GITHUB_OUTPUT"
+            echo 'matrix={"include":[{"os":"windows-latest","platform":"windows","artifact":"SteamCleaner-windows"},{"os":"ubuntu-latest","platform":"linux","artifact":"SteamCleaner-linux"},{"os":"macos-15","platform":"macos","artifact":"SteamCleaner-macos"}]}' >> "$GITHUB_OUTPUT"
           fi
 
   build:
