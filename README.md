@@ -28,42 +28,63 @@
 
 ---
 
-## Quick start
+<h2 align="center">Quick start</h2>
 
-Download the latest build from [Releases](https://github.com/Solganis/SteamCleaner/releases), run it, and press **Scan**.
+<p align="center">
+  Download the latest build from <a href="https://github.com/Solganis/SteamCleaner/releases">Releases</a>, run it, and press <b>Scan</b>.<br>
+  Or run from source:
+</p>
 
-To run from source:
+<p align="center">
+  <code>uv sync</code> &nbsp;then&nbsp; <code>uv run steamcleaner</code>
+</p>
 
-```bash
-uv sync
-uv run steamcleaner
-```
+<h2 align="center">Features</h2>
 
----
+<p align="center">
+  <b>Cross-platform desktop app</b> (Windows, macOS, Linux) with automatic dark/light theme<br>
+  <b>Safe by default</b>: files go to system trash, symlinks and junctions are never followed<br>
+  <b>Scans</b> Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers<br>
+  <b>Finds</b> redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries<br>
+  <b>5 languages</b>: English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)<br>
+  <b>Keyboard shortcuts</b> for scan, select, clean, and cancel
+</p>
 
-## Features
+<h2 align="center">Safety</h2>
 
-- **Cross-platform desktop app** (Windows, macOS, Linux) with automatic dark/light theme
-- **Scans** Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
-- **Finds** redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries
-- **Safe by default**: files go to system trash, symlinks and junctions are never followed
-- **5 languages**: English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
-- **Keyboard shortcuts** for scan, select, clean, and cancel
+<p align="center">
+  Known game files are never touched (e.g. <code>Steamworks Shared</code>, <code>Heroes of the Storm</code>, <code>Penumbra Overture</code>, <code>Medieval II Total War</code>)<br>
+  Symlinks and junction points are never followed or deleted through<br>
+  Files go to system trash by default, not permanent deletion<br>
+  Each detected item shows its exact path, category, and size before removal
+</p>
 
-## What it finds
+<h2 align="center">What it finds</h2>
 
-| Category | Examples |
-|----------|----------|
-| Redistributable installers | DirectX, Visual C++, .NET, PhysX, OpenAL in `_CommonRedist`, `redist`, `installer` |
-| Shader/web cache | Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache |
-| Crash dumps | `.dmp`, `.mdmp` files in game directories and launcher crash folders |
-| Old logs | Log files over 1 MB in game directories and launcher logs |
-| Cross-platform binaries | Ren'Py `lib/darwin-*`, `lib/linux-*` on Windows (and vice versa) |
-| Bundled installers | Setup/installer executables inside game folders |
+<div align="center">
+<table>
+<tr><th>Category</th><th>Examples</th></tr>
+<tr><td>Redistributable installers</td><td>DirectX, Visual C++, .NET, PhysX, OpenAL in <code>_CommonRedist</code>, <code>redist</code>, <code>installer</code></td></tr>
+<tr><td>Shader/web cache</td><td>Steam shader cache, Epic/GOG webcache, EA Desktop cache, Ubisoft Connect cache</td></tr>
+<tr><td>Crash dumps</td><td><code>.dmp</code>, <code>.mdmp</code> files in game directories and launcher crash folders</td></tr>
+<tr><td>Old logs</td><td>Log files over 1 MB in game directories and launcher logs</td></tr>
+<tr><td>Cross-platform binaries</td><td>Ren'Py <code>lib/darwin-*</code>, <code>lib/linux-*</code> on Windows (and vice versa)</td></tr>
+<tr><td>Bundled installers</td><td>Setup/installer executables inside game folders</td></tr>
+</table>
+</div>
 
-## Safety
+<h2 align="center">Keyboard shortcuts</h2>
 
-- Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
-- Symlinks and junction points are never followed or deleted through
-- Files go to system trash by default, not permanent deletion
-- Each detected item shows its exact path, category, and size before removal
+<div align="center">
+<table>
+<tr><td><kbd>F5</kbd></td><td>Start / stop scan (<kbd>⌘R</kbd> on macOS)</td></tr>
+<tr><td><kbd>Ctrl+A</kbd></td><td>Select / deselect all</td></tr>
+<tr><td><kbd>Delete</kbd></td><td>Clean selected items (<kbd>⌘⌫</kbd> on macOS)</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Cancel scan, deselect, or clear search</td></tr>
+<tr><td><kbd>Ctrl+Q</kbd></td><td>Quit application</td></tr>
+</table>
+</div>
+
+<p align="center">
+  <sub>On macOS, use <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd>.</sub>
+</p>
