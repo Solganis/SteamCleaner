@@ -1,0 +1,74 @@
+name: Mutation
+
+on:
+  schedule:
+    - cron: "0 4 * * 1" # weekly, Monday 04:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - cleaner/engine.py
+          - scanner/exclusions.py
+          - scanner/engine.py
+          - scanner/patterns.py
+          - utils/fs.py
+          - utils/vdf.py
+          - utils/config.py
+          - models/scan_result.py
+          - clients/registry.py
+          - clients/base.py
+          - clients/shared.py
+          - clients/steam.py
+          - clients/epic.py
+          - clients/ea_app.py
+          - clients/gog.py
+          - clients/ubisoft.py
+          - platform/__init__.py
+          - platform/linux.py
+          - platform/base.py
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+
+      - run: uv sync
+
+      - name: Run mutation testing
+        env:
+          MODULE: ${{ matrix.module }}
+        run: |
+          # Reuse the committed config (test-command, timeout, operators-filter) and only swap the
+          # target module, so CI and local runs stay in sync from a single source of truth.
+          sed "s#^module-path = .*#module-path = \"src/steamcleaner/${MODULE}\"#" cosmic-ray.toml > run.toml
+
+          uvx --from cosmic-ray==8.4.6 cosmic-ray baseline run.toml
+          uvx --from cosmic-ray==8.4.6 cosmic-ray init run.toml session.sqlite
+          uvx --from cosmic-ray==8.4.6 cr-filter-operators session.sqlite run.toml
+          uvx --from cosmic-ray==8.4.6 cosmic-ray exec run.toml session.sqlite
+
+          {
+            echo "### Mutation: ${MODULE}"
+            echo ""
+            echo "Surviving mutants: $(uvx --from cosmic-ray==8.4.6 cr-rate session.sqlite)%"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::Surviving mutants (${MODULE})"
+          uvx --from cosmic-ray==8.4.6 cr-report session.sqlite
+          echo "::endgroup::"

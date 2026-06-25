@@ -92,3 +92,5 @@
 <p align="center">
   <sub>On macOS, use <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd>.</sub>
 </p>
+
+---

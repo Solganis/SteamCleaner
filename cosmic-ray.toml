@@ -2,25 +2,24 @@
 #
 # Opt-in tooling: cosmic-ray is not a project dependency. Run it ad-hoc via uvx (ephemeral) so the
 # lock stays lean. The project venv must be synced first (`uv sync`) because the test-command below
-# shells back into it for pytest. From the repo root:
+# shells back into it for pytest.
+#
+# Per-module by design: point module-path at one source file and run. The Mutation CI workflow
+# (.github/workflows/mutation.yml) sweeps every module in a matrix by rewriting module-path. To run
+# a single module locally, edit module-path below, then from the repo root:
+#   uvx --from cosmic-ray==8.4.6 cosmic-ray baseline cosmic-ray.toml
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray init cosmic-ray.toml mutation.sqlite
 #   uvx --from cosmic-ray==8.4.6 cr-filter-operators mutation.sqlite cosmic-ray.toml
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray exec cosmic-ray.toml mutation.sqlite
-#   uvx --from cosmic-ray==8.4.6 cr-rate mutation.sqlite
+#   uvx --from cosmic-ray==8.4.6 cr-rate mutation.sqlite   # survival rate, lower is better
 #
-# The GUI, platform-specific adapters, and entry points are excluded from mutation, mirroring the
-# coverage omit list (they are paint/IO/event-loop code, tested via launch rather than assertions).
+# For a whole-package run instead, set module-path = "src/steamcleaner" and list the GUI, platform
+# adapters, and entry points (mirroring the coverage omit list) under excluded-modules.
 
 [cosmic-ray]
-module-path = "src/steamcleaner"
+module-path = "src/steamcleaner/cleaner/engine.py"
 timeout = 90.0
-excluded-modules = [
-    "src/steamcleaner/ui/*",
-    "src/steamcleaner/platform/windows.py",
-    "src/steamcleaner/platform/macos.py",
-    "src/steamcleaner/app.py",
-    "src/steamcleaner/__main__.py",
-]
+excluded-modules = []
 # Wrapped in `uv run --no-sync` so uv resolves the project interpreter regardless of PATH: a bare
 # `python` is spawned via subprocess and on Windows hits the Microsoft Store stub instead of the venv.
 test-command = "uv run --no-sync python -m pytest tests --ignore=tests/ui -x -q -p no:cacheprovider"
@@ -29,8 +28,8 @@ test-command = "uv run --no-sync python -m pytest tests --ignore=tests/ui -x -q 
 name = "local"
 
 # The `|` in `X | None` type unions is never a runtime bitwise-or in this codebase, and PEP 649
-# defers annotation evaluation on 3.14, so these mutants are unkillable equivalents that only
-# depress the score. Drop them so the result reflects real assertion quality.
+# defers annotation evaluation on 3.14, so these mutants are unkillable equivalents that only depress
+# the score. Drop them so the result reflects real assertion quality.
 # Apply after init with: cr-filter-operators <session> cosmic-ray.toml
 [cosmic-ray.filters.operators-filter]
 exclude-operators = [
