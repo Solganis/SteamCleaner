@@ -41,27 +41,23 @@
 
 <h2 align="center">Features</h2>
 
-<div align="center">
-<table>
-<tr><td><b>Cross-platform</b></td><td>Desktop app for Windows, macOS, and Linux with automatic dark/light theme</td></tr>
-<tr><td><b>Safe by default</b></td><td>Files go to system trash; symlinks and junctions are never followed</td></tr>
-<tr><td><b>Scans</b></td><td>Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers</td></tr>
-<tr><td><b>Finds</b></td><td>Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries</td></tr>
-<tr><td><b>5 languages</b></td><td>English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)</td></tr>
-<tr><td><b>Shortcuts</b></td><td>Keyboard shortcuts for scan, select, clean, and cancel</td></tr>
-</table>
-</div>
+<p align="center">
+  <b>Cross-platform</b> &middot; Desktop app for Windows, macOS, and Linux with automatic dark/light theme<br>
+  <b>Safe by default</b> &middot; Files go to system trash; symlinks and junctions are never followed<br>
+  <b>Scans</b> &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers<br>
+  <b>Finds</b> &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries<br>
+  <b>5 languages</b> &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)<br>
+  <b>Shortcuts</b> &middot; Keyboard shortcuts for scan, select, clean, and cancel
+</p>
 
 <h2 align="center">Safety</h2>
 
-<div align="center">
-<table>
-<tr><td><b>Game files</b></td><td>Known game files are never touched (e.g. <code>Steamworks Shared</code>, <code>Heroes of the Storm</code>, <code>Penumbra Overture</code>, <code>Medieval II Total War</code>)</td></tr>
-<tr><td><b>Symlinks</b></td><td>Symlinks and junction points are never followed or deleted through</td></tr>
-<tr><td><b>Recoverable</b></td><td>Files go to system trash by default, not permanent deletion</td></tr>
-<tr><td><b>Transparent</b></td><td>Each detected item shows its exact path, category, and size before removal</td></tr>
-</table>
-</div>
+<p align="center">
+  <b>Game files</b> &middot; Known game files are never touched (e.g. <code>Steamworks Shared</code>, <code>Heroes of the Storm</code>, <code>Penumbra Overture</code>, <code>Medieval II Total War</code>)<br>
+  <b>Symlinks</b> &middot; Symlinks and junction points are never followed or deleted through<br>
+  <b>Recoverable</b> &middot; Files go to system trash by default, not permanent deletion<br>
+  <b>Transparent</b> &middot; Each detected item shows its exact path, category, and size before removal
+</p>
 
 <h2 align="center">What it finds</h2>
 
