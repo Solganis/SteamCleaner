@@ -23,7 +23,7 @@ from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_lo
 
 _logger = logging.getLogger(__name__)
 
-_VERSION = "1.0.0"
+_VERSION = "1.1.0"
 _GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL = "https://boosty.to/solganis"
 _DONATE_URL = "https://www.donationalerts.com/r/Solganis"
