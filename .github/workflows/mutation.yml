@@ -19,26 +19,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module:
-          - cleaner/engine.py
-          - scanner/exclusions.py
-          - scanner/engine.py
-          - scanner/patterns.py
-          - utils/fs.py
-          - utils/vdf.py
-          - utils/config.py
-          - models/scan_result.py
-          - clients/registry.py
-          - clients/base.py
-          - clients/shared.py
-          - clients/steam.py
-          - clients/epic.py
-          - clients/ea_app.py
-          - clients/gog.py
-          - clients/ubisoft.py
-          - platform/__init__.py
-          - platform/linux.py
-          - platform/base.py
+        # max = per-module survival ceiling (%), set from the baseline run plus headroom for
+        # run-to-run noise. The gate fails the job if survival exceeds it. Tighten as tests improve.
+        include:
+          - { module: cleaner/engine.py, max: 24 }
+          - { module: scanner/exclusions.py, max: 38 }
+          - { module: scanner/engine.py, max: 18 }
+          - { module: scanner/patterns.py, max: 78 } # pure data (pattern table), mutants mostly equivalent
+          - { module: utils/fs.py, max: 48 }
+          - { module: utils/vdf.py, max: 32 }
+          - { module: utils/config.py, max: 20 }
+          - { module: models/scan_result.py, max: 8 }
+          - { module: clients/registry.py, max: 35 }
+          - { module: clients/base.py, max: 28 }
+          - { module: clients/shared.py, max: 25 }
+          - { module: clients/steam.py, max: 8 }
+          - { module: clients/epic.py, max: 8 }
+          - { module: clients/ea_app.py, max: 5 }
+          - { module: clients/gog.py, max: 5 }
+          - { module: clients/ubisoft.py, max: 5 }
+          - { module: platform/__init__.py, max: 5 } # no mutable statements after filtering
+          - { module: platform/linux.py, max: 5 }
+          - { module: platform/base.py, max: 48 }
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -53,6 +55,7 @@ jobs:
       - name: Run mutation testing
         env:
           MODULE: ${{ matrix.module }}
+          MAX_SURVIVAL: ${{ matrix.max }}
         run: |
           # Reuse the committed config (test-command, timeout, operators-filter) and only swap the
           # target module, so CI and local runs stay in sync from a single source of truth.
@@ -72,3 +75,7 @@ jobs:
           echo "::group::Surviving mutants (${MODULE})"
           uvx --from cosmic-ray==8.4.6 cr-report session.sqlite
           echo "::endgroup::"
+
+          # Regression gate: exit non-zero if survival exceeds the per-module ceiling. Runs last so the
+          # summary and full report are always emitted, even when the gate fails the job.
+          uvx --from cosmic-ray==8.4.6 cr-rate --fail-over "${MAX_SURVIVAL}" session.sqlite
