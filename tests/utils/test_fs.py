@@ -1,4 +1,6 @@
+import stat
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from assertpy2 import assert_that
@@ -41,6 +43,15 @@ class TestIsReparsePoint:
 
     def test_nonexistent(self, tmp_path: Path):
         assert_that(is_reparse_point(tmp_path / "nope")).is_false()
+
+    def test_windows_reparse_attribute(self, tmp_path: Path):
+        # On Linux/macOS lstat() has no st_file_attributes, so the Windows attribute path is
+        # otherwise unreachable. Mock lstat so the reparse-flag check runs on every OS.
+        target = tmp_path / "item"
+        target.mkdir()
+        fake_stat = SimpleNamespace(st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        with patch.object(Path, "lstat", return_value=fake_stat):
+            assert_that(is_reparse_point(target)).is_true()
 
 
 class TestWalkFiles:
