@@ -109,20 +109,16 @@ jobs:
         run: |
           for archive in artifacts/SteamCleaner-windows.zip artifacts/SteamCleaner-linux.tar.xz artifacts/SteamCleaner-macos.tar.xz; do
             cosign sign-blob --yes \
-              --output-signature "${archive}.sig" \
-              --output-certificate "${archive}.pem" \
+              --bundle "${archive}.sigstore.json" \
               "${archive}"
           done
       - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           files: |
             artifacts/SteamCleaner-windows.zip
-            artifacts/SteamCleaner-windows.zip.sig
-            artifacts/SteamCleaner-windows.zip.pem
+            artifacts/SteamCleaner-windows.zip.sigstore.json
             artifacts/SteamCleaner-linux.tar.xz
-            artifacts/SteamCleaner-linux.tar.xz.sig
-            artifacts/SteamCleaner-linux.tar.xz.pem
+            artifacts/SteamCleaner-linux.tar.xz.sigstore.json
             artifacts/SteamCleaner-macos.tar.xz
-            artifacts/SteamCleaner-macos.tar.xz.sig
-            artifacts/SteamCleaner-macos.tar.xz.pem
+            artifacts/SteamCleaner-macos.tar.xz.sigstore.json
           generate_release_notes: true
