@@ -126,14 +126,24 @@ jobs:
         run: |
           jq -c '.dsseEnvelope' "$BUNDLE_PATH" > artifacts/provenance.intoto.jsonl
           test -s artifacts/provenance.intoto.jsonl
+      - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+      - name: Generate SBOMs (CycloneDX)
+        run: |
+          for platform in windows linux macos; do
+            syft scan "dir:artifacts/SteamCleaner-${platform}" \
+              -o "cyclonedx-json=artifacts/SteamCleaner-${platform}.sbom.cdx.json"
+          done
       - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         with:
           files: |
             artifacts/SteamCleaner-windows.zip
             artifacts/SteamCleaner-windows.zip.sigstore.json
+            artifacts/SteamCleaner-windows.sbom.cdx.json
             artifacts/SteamCleaner-linux.tar.xz
             artifacts/SteamCleaner-linux.tar.xz.sigstore.json
+            artifacts/SteamCleaner-linux.sbom.cdx.json
             artifacts/SteamCleaner-macos.tar.xz
             artifacts/SteamCleaner-macos.tar.xz.sigstore.json
+            artifacts/SteamCleaner-macos.sbom.cdx.json
             artifacts/provenance.intoto.jsonl
           generate_release_notes: true
