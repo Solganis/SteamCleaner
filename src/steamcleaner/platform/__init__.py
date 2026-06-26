@@ -5,7 +5,7 @@ from steamcleaner.platform.base import PlatformAdapter
 
 def create_adapter() -> PlatformAdapter:
     match sys.platform:
-        case "win32":
+        case "win32":  # pragma: no cover - Windows-only branch (winreg); tested on the Windows CI runner
             from steamcleaner.platform.windows import WindowsAdapter
 
             return WindowsAdapter()
