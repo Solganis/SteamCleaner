@@ -13,9 +13,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "darkdetect>=0.8",
-    "flet>=0.85",
-    "send2trash>=2.1",
+    "darkdetect>=0.8.0",
+    "flet>=0.85.3",
+    "send2trash>=2.1.0",
 ]
 
 [project.urls]
@@ -100,10 +100,10 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.19",
-    "pytest>=9.1",
-    "pytest-cov>=7.1",
-    "ty>=0.0.53",
-    "assertpy2==2.8.1",
-    "hypothesis>=6.155.7",
+    "ruff>=0.15.20",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ty>=0.0.57",
+    "assertpy2>=2.15.0",
+    "hypothesis>=6.156.3",
 ]
