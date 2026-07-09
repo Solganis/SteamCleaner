@@ -981,7 +981,7 @@ class SteamCleanerGUI:
         def run_clean() -> None:
             selected_result = ScanResult(entries=entries)
             use_trash = get_value("clean", "use_trash", "true") == "true"
-            cleaner = CleanEngine(use_trash=use_trash, dry_run=False)
+            cleaner = CleanEngine(use_trash=use_trash, dry_run=False, exclusions=ExclusionRegistry())
             stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
             clean_done.set()
 

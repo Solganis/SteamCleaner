@@ -6,6 +6,7 @@ from assertpy2 import assert_that
 from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
 def _make_entry(path: Path, size: int = 1024, category: JunkCategory = JunkCategory.REDISTRIBUTABLE) -> JunkEntry:
@@ -249,6 +250,73 @@ class TestCleanEngineSafetyChecks:
         assert_that(stats.skipped).is_equal_to(0)
         assert_that(stats.bytes_freed).is_equal_to(0)
         assert_that(stats.errors).is_empty()
+
+
+class TestCleanEngineExclusionGate:
+    def test_refuse_builtin_excluded_path(self, tmp_path: Path):
+        protected = tmp_path / "steamapps" / "common" / "Steamworks Shared" / "redist"
+        protected.mkdir(parents=True)
+        (protected / "shared.dll").write_bytes(b"\x00" * 128)
+
+        result = ScanResult(entries=[_make_entry(protected, size=128)])
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        stats = engine.clean(result)
+
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(stats.errors).is_length(1)
+        assert_that(stats.errors[0]).contains("protected")
+        assert_that(str(protected)).exists()
+        assert_that(str(protected / "shared.dll")).exists()
+
+    def test_excluded_path_is_refused_before_deletion_even_in_dry_run(self, tmp_path: Path):
+        protected = tmp_path / "StarCraft" / "support"
+        protected.mkdir(parents=True)
+
+        result = ScanResult(entries=[_make_entry(protected)])
+        engine = CleanEngine(use_trash=False, dry_run=True)
+        stats = engine.clean(result)
+
+        assert_that(stats.deleted).is_equal_to(0)
+        assert_that(stats.skipped).is_equal_to(1)
+
+    def test_excluded_path_callback_reports_failure(self, tmp_path: Path):
+        protected = tmp_path / "Heroes of the Storm" / "support"
+        protected.mkdir(parents=True)
+
+        result = ScanResult(entries=[_make_entry(protected)])
+        callback_log: list[tuple[JunkEntry, bool]] = []
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        engine.clean(result, callback=lambda entry, success: callback_log.append((entry, success)))
+
+        assert_that(callback_log).is_length(1)
+        assert_that(callback_log[0][1]).is_false()
+
+    def test_user_added_exclusion_is_refused_at_delete_time(self, tmp_path: Path):
+        protected = tmp_path / "MyMod" / "keepme"
+        protected.mkdir(parents=True)
+        (protected / "data.bin").write_bytes(b"\x00" * 64)
+
+        registry = ExclusionRegistry()
+        registry.add("keepme", "user-defined exclusion")
+        result = ScanResult(entries=[_make_entry(protected, size=64)])
+        engine = CleanEngine(use_trash=False, dry_run=False, exclusions=registry)
+        stats = engine.clean(result)
+
+        assert_that(stats.skipped).is_equal_to(1)
+        assert_that(str(protected)).exists()
+
+    def test_ordinary_junk_still_deletes_with_builtins_active(self, tmp_path: Path):
+        junk = tmp_path / "SomeGame" / "_CommonRedist" / "vcredist"
+        junk.mkdir(parents=True)
+        (junk / "vc.exe").write_bytes(b"\x00" * 64)
+
+        result = ScanResult(entries=[_make_entry(junk, size=64)])
+        engine = CleanEngine(use_trash=False, dry_run=False)
+        stats = engine.clean(result)
+
+        assert_that(stats.deleted).is_equal_to(1)
+        assert_that(str(junk)).does_not_exist()
 
 
 class TestCleanEngineMultipleEntries:

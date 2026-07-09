@@ -8,6 +8,7 @@ from send2trash import send2trash
 
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import is_reparse_point
 
 _logger = logging.getLogger(__name__)
@@ -26,17 +27,28 @@ class CleanStats:
 
 
 class CleanEngine:
-    """Engine that deletes scanned junk, honoring dry-run, trash, and reparse-point safety."""
+    """Engine that deletes scanned junk, honoring dry-run, trash, exclusion, and reparse-point safety."""
 
-    def __init__(self, *, use_trash: bool = True, dry_run: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        use_trash: bool = True,
+        dry_run: bool = False,
+        exclusions: ExclusionRegistry | None = None,
+    ) -> None:
         self._use_trash = use_trash
         self._dry_run = dry_run
+        # Enforce the never-delete list at delete time, not only during scan_safe(). Default to the
+        # builtins so the guarantee holds even when a caller wires no registry; this is the last-line
+        # guard against a protected path reaching deletion via custom_paths, a bug, or a future path.
+        self._exclusions = exclusions or ExclusionRegistry()
 
     def clean(self, result: ScanResult, callback: CleanCallback | None = None) -> CleanStats:
         """Delete (or simulate deleting) every entry in result.
 
-        Respects the engine's dry_run and use_trash settings, refuses to delete through
-        reparse points, and invokes callback(entry, deleted) per entry when provided.
+        Respects the engine's dry_run and use_trash settings, refuses to delete paths on the
+        exclusion list or through reparse points, and invokes callback(entry, deleted) per entry
+        when provided.
 
         Returns:
             CleanStats with deleted/skipped counts, freed bytes, and error messages.
@@ -57,6 +69,14 @@ class CleanEngine:
             if not entry.path.exists():
                 _logger.debug("Path no longer exists, skipping: %s", entry.path)
                 skipped += 1
+                continue
+
+            if self._exclusions.is_excluded(entry.path):
+                _logger.warning("Refusing to delete excluded path: %s", entry.path)
+                skipped += 1
+                errors.append(f"Skipped protected path: {entry.path}")
+                if callback:
+                    callback(entry, False)
                 continue
 
             if is_reparse_point(entry.path):
