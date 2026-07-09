@@ -2,7 +2,7 @@
 name = "steamcleaner"
 version = "1.1.1"
 description = "Cross-platform tool for reclaiming disk space from game clients"
-requires-python = ">=3.14"
+requires-python = ">=3.14"  # modern syntax only: match/case, PEP 758 except, | unions, generics in builtins
 license = "MIT"
 authors = [{name = "Solganis"}]
 keywords = ["steam", "epic", "gog", "ubisoft", "ea", "disk-cleanup", "cache-cleaner"]
@@ -12,6 +12,9 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
+# Runtime deps, kept deliberately small: darkdetect = OS light/dark theme detection; flet = GUI framework
+# and `flet build` toolchain (kept on the 0.85 stable line); send2trash = recoverable deletion to the
+# system trash, the core "nothing is permanently removed by default" safety guarantee.
 dependencies = [
     "darkdetect>=0.8.0",
     "flet>=0.85.3",
@@ -22,13 +25,17 @@ dependencies = [
 Repository = "https://github.com/Solganis/SteamCleaner"
 Issues = "https://github.com/Solganis/SteamCleaner/issues"
 
+# Console entry point: `steamcleaner` launches the GUI.
 [project.scripts]
 steamcleaner = "steamcleaner.app:main"
 
+# `flet build` release-binary config. org = reverse-DNS bundle identifier baked into the native app;
+# product = the display name of the built binary.
 [tool.flet]
 org = "dev.steamcleaner"
 product = "SteamCleaner"
 
+# Where `flet build` finds the app package (src-layout root).
 [tool.flet.app]
 path = "src"
 
@@ -36,18 +43,37 @@ path = "src"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# src-layout: the importable package lives under src/, not the repo root.
 [tool.hatch.build.targets.wheel]
 packages = ["src/steamcleaner"]
 
 [tool.ruff]
+# 120 feeds both `ruff format` and the E501 lint; line length is a hard rule, not just a formatter hint.
 line-length = 120
-target-version = "py314"
+target-version = "py314"  # our minimum Python; UP rewrites target this floor
 
 [tool.ruff.lint]
+# Opt into preview rules only when named explicitly in `select`, never the whole unstable set.
 preview = true
 explicit-preview-rules = true
-select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM", "RUF", "ANN"]
-ignore = ["UP037", "ANN401"]  # UP037: flet bundles 3.12, forward-ref strings; ANN401: Any needed for config dicts
+
+# Curated set, not "ALL": each prefix is here on purpose. Plugin name + why we keep it.
+select = [
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes - unused imports/names, undefined names
+    "W",    # pycodestyle warnings
+    "I",    # isort - import ordering
+    "N",    # pep8-naming - naming conventions
+    "UP",   # pyupgrade - modernize syntax to the py314 floor
+    "B",    # flake8-bugbear - likely bugs and footguns
+    "A",    # flake8-builtins - don't shadow builtins
+    "SIM",  # flake8-simplify - collapse redundant constructs
+    "RUF",  # Ruff-specific rules
+    "ANN",  # flake8-annotations - require type hints on everything (project rule)
+]
+# UP037: flet bundles Python 3.12, so forward-ref annotation strings must stay quoted; ANN401: Any is
+# needed for the free-form TOML config dicts loaded from ~/.config/steamcleaner/config.toml.
+ignore = ["UP037", "ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/steamcleaner/ui/*" = ["ANN001"]  # flet event-handler params are dynamically typed (no flet stubs)
@@ -55,9 +81,13 @@ ignore = ["UP037", "ANN401"]  # UP037: flet bundles 3.12, forward-ref strings; A
 
 [tool.ty.environment]
 python-version = "3.14"
+# "all", not a single OS: SteamCleaner ships a per-OS PlatformAdapter (windows/linux/macos), so ty must
+# type-check every platform's code path, not just the CI runner's view (contrast Seekbar, pinned to win32).
 python-platform = "all"
 
 [tool.ty.rules]
+# Downgrade to warn (not error) globally: flet controls and winreg expose dynamic attributes with no
+# stubs, so this rule fires pervasively; the two overrides below silence the files where it is pure noise.
 unresolved-attribute = "warn"
 
 # winreg module has no type stubs; all registry access triggers false positives
@@ -74,12 +104,15 @@ unresolved-attribute = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "tests"]
-addopts = "--import-mode=importlib"
+pythonpath = ["src", "tests"]  # import the package from src/ and shared test helpers from tests/
+addopts = "--import-mode=importlib"  # modern import mode: no sys.path insertion, plays well with src-layout
 
 [tool.coverage.run]
 branch = true
 source = ["steamcleaner"]
+# Kept out of the 100% target because they cannot be unit-tested on the runner: ui/* is flet GUI paint;
+# windows.py/macos.py call OS-native APIs (winreg, ~/Library) not exercisable on every platform;
+# __main__.py and app.py are entry-point wiring. linux.py stays in - pure XDG path logic, DI-testable anywhere.
 omit = [
     "src/steamcleaner/ui/*",
     "src/steamcleaner/platform/windows.py",
@@ -89,15 +122,17 @@ omit = [
 ]
 
 [tool.coverage.report]
+# Non-executable or unreachable-by-design lines that should not count against coverage.
 exclude_lines = [
     "if __name__ == .__main__.",
     "if TYPE_CHECKING:",
-    "except OSError",
+    "except OSError",  # defensive IO guards, hard to trigger deterministically
     "pragma: no cover",
-    "if self\\.cancelled",
+    "if self\\.cancelled",  # thread-driven cancellation branches
     "if cancel and cancel\\.is_set",
 ]
 
+# Dev/test/build tooling (not shipped): linter, type checker, test stack, assertion and property libs.
 [dependency-groups]
 dev = [
     "ruff>=0.15.20",
