@@ -135,10 +135,10 @@ exclude_lines = [
 # Dev/test/build tooling (not shipped): linter, type checker, test stack, assertion and property libs.
 [dependency-groups]
 dev = [
-    "ruff>=0.15.20",
+    "ruff>=0.15.21",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ty>=0.0.57",
+    "ty>=0.0.58",
     "assertpy2>=2.15.0",
-    "hypothesis>=6.156.3",
+    "hypothesis>=6.156.6",
 ]
