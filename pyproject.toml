@@ -13,11 +13,11 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 # Runtime deps, kept deliberately small: darkdetect = OS light/dark theme detection; flet = GUI framework
-# and `flet build` toolchain (kept on the 0.85 stable line); send2trash = recoverable deletion to the
-# system trash, the core "nothing is permanently removed by default" safety guarantee.
+# and `flet build` toolchain; send2trash = recoverable deletion to the system trash, the core
+# "nothing is permanently removed by default" safety guarantee.
 dependencies = [
     "darkdetect>=0.8.0",
-    "flet>=0.85.3",
+    "flet>=0.86.1",
     "send2trash>=2.1.0",
 ]
 
@@ -135,10 +135,10 @@ exclude_lines = [
 # Dev/test/build tooling (not shipped): linter, type checker, test stack, assertion and property libs.
 [dependency-groups]
 dev = [
-    "ruff>=0.15.21",
+    "ruff>=0.15.22",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ty>=0.0.58",
-    "assertpy2>=2.15.0",
-    "hypothesis>=6.156.6",
+    "ty>=0.0.61",
+    "assertpy2>=2.17.0",
+    "hypothesis>=6.157.0",
 ]
