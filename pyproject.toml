@@ -17,7 +17,7 @@ classifiers = [
 # "nothing is permanently removed by default" safety guarantee.
 dependencies = [
     "darkdetect>=0.8.0",
-    "flet>=0.86.1",
+    "flet>=0.86.2",
     "send2trash>=2.1.0",
 ]
 
@@ -135,10 +135,10 @@ exclude_lines = [
 # Dev/test/build tooling (not shipped): linter, type checker, test stack, assertion and property libs.
 [dependency-groups]
 dev = [
-    "ruff>=0.15.22",
+    "ruff>=0.16.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ty>=0.0.61",
-    "assertpy2>=2.17.0",
-    "hypothesis>=6.157.0",
+    "ty>=0.0.63",
+    "assertpy2>=2.18.0",
+    "hypothesis>=6.161.5",
 ]
