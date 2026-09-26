@@ -76,7 +76,7 @@ class TestScanTask:
 
         # parameters match the patched scan() signature; unused in this stub
         # noinspection PyUnusedLocal
-        def fake_scan(progress=None, on_found=None, cancel=None, custom_paths=None):
+        def fake_scan(cancel: threading.Event, progress=None, on_found=None, custom_paths=None):
             cancel.set()
 
         mock_engine.scan.side_effect = fake_scan
@@ -126,19 +126,19 @@ class TestCleanTask:
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
         assert_that(gui_with_ui._selected).does_not_contain(ENTRY_SMALL.path)
 
-    def test_clean_success_snackbar(self, gui_with_ui: SteamCleanerGUI):
+    def test_clean_success_snackbar(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
         gui_with_ui._selected = {ENTRY_SMALL.path}
         stats = CleanStats(deleted=1, bytes_freed=100)
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
-        gui_with_ui._page.overlay.append.assert_called_once()
+        fake_page.overlay.append.assert_called_once()
 
-    def test_clean_errors_dialog(self, gui_with_ui: SteamCleanerGUI):
+    def test_clean_errors_dialog(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
         gui_with_ui._selected = {ENTRY_SMALL.path}
         stats = CleanStats(deleted=0, skipped=1, errors=["permission denied: small_redist"])
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
-        gui_with_ui._page.show_dialog.assert_called_once()
+        fake_page.show_dialog.assert_called_once()
 
     def test_clean_resets_state(self, gui_with_ui: SteamCleanerGUI):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
@@ -153,33 +153,33 @@ class TestCleanTask:
 # test reads protected GUI members and mock attributes that PyCharm does not resolve
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestOnClean:
-    def test_no_selection_returns_early(self, gui: SteamCleanerGUI):
+    def test_no_selection_returns_early(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._selected = set()
         gui._on_clean(None)
-        gui._page.show_dialog.assert_not_called()
+        fake_page.show_dialog.assert_not_called()
 
-    def test_trash_mode_content(self, gui: SteamCleanerGUI):
+    def test_trash_mode_content(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected = {ENTRY_SMALL.path}
         with patch("steamcleaner.ui.gui.app.get_value", return_value="true"):
             gui._on_clean(None)
-        dialog = gui._page.show_dialog.call_args[0][0]
+        dialog = fake_page.show_dialog.call_args[0][0]
         assert_that(dialog.content).is_instance_of(ft.Text)
 
-    def test_permanent_mode_content(self, gui: SteamCleanerGUI):
+    def test_permanent_mode_content(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected = {ENTRY_SMALL.path}
         with patch("steamcleaner.ui.gui.app.get_value", return_value="false"):
             gui._on_clean(None)
-        dialog = gui._page.show_dialog.call_args[0][0]
+        dialog = fake_page.show_dialog.call_args[0][0]
         assert_that(dialog.content).is_instance_of(ft.Column)
 
-    def test_dialog_has_two_actions(self, gui: SteamCleanerGUI):
+    def test_dialog_has_two_actions(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected = {ENTRY_SMALL.path}
         with patch("steamcleaner.ui.gui.app.get_value", return_value="true"):
             gui._on_clean(None)
-        dialog = gui._page.show_dialog.call_args[0][0]
+        dialog = fake_page.show_dialog.call_args[0][0]
         assert_that(dialog.actions).is_length(2)
 
 
@@ -195,6 +195,6 @@ class TestConfirmClean:
         assert_that(gui._scan_button.disabled).is_true()
         assert_that(gui._sort_dropdown.disabled).is_true()
 
-    def test_triggers_clean_task(self, gui: SteamCleanerGUI):
+    def test_triggers_clean_task(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._confirm_clean([ENTRY_SMALL])
-        gui._page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL])
+        fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL])

@@ -41,6 +41,29 @@ _CATEGORY_COLORS = {
 }
 
 
+def _row_background(index: int, *, selected: bool) -> str | None:
+    """Background of a result row: tinted when selected, zebra-striped otherwise."""
+    if selected:
+        return ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+    return ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+
+
+def _row_checkbox(container: ft.Control) -> ft.Checkbox:
+    """The selection checkbox of a result row built by `SteamCleanerGUI._make_row`."""
+    assert isinstance(container, ft.Container)
+    assert isinstance(container.content, ft.Row)
+    checkbox = container.content.controls[0]
+    assert isinstance(checkbox, ft.Checkbox)
+    return checkbox
+
+
+def _paint_row(container: ft.Control, index: int, *, selected: bool) -> None:
+    """Show a result row as selected or not: its checkbox and its background."""
+    assert isinstance(container, ft.Container)
+    _row_checkbox(container).value = selected
+    container.bgcolor = _row_background(index, selected=selected)
+
+
 class WindowHider:
     """Find the Flutter window handle so Python can show it when ready."""
 
@@ -92,7 +115,7 @@ class WindowHider:
 
             # flet control / ctypes attribute resolved at runtime; no type stubs
             # noinspection PyUnresolvedReferences
-            def callback(window_handle, _) -> bool:
+            def callback(window_handle: int, _: int) -> bool:
                 buf = ctypes.create_unicode_buffer(256)
                 user32.GetClassNameW(window_handle, buf, 256)
                 if "FLUTTER" in buf.value.upper():
@@ -237,11 +260,11 @@ class SteamCleanerGUI:
                 self._maximize_button.tooltip = t("maximize")
                 self._maximize_button.update()
 
-    def _on_minimize_click(self, _event) -> None:
+    def _on_minimize_click(self, _event: ft.Event[ft.IconButton] | None) -> None:
         self._page.window.minimized = True
         self._page.update()
 
-    def _on_maximize_click(self, _event) -> None:
+    def _on_maximize_click(self, _event: ft.Event[ft.IconButton] | None) -> None:
         self._page.window.maximized = not self._page.window.maximized
         self._page.update()
 
@@ -564,10 +587,6 @@ class SteamCleanerGUI:
             ],
         )
 
-        row_bg = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
-        if is_selected:
-            row_bg = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
-
         return ft.Container(
             content=ft.Row(
                 [
@@ -594,7 +613,7 @@ class SteamCleanerGUI:
             ),
             padding=ft.Padding.symmetric(horizontal=4, vertical=2),
             border_radius=4,
-            bgcolor=row_bg,
+            bgcolor=_row_background(index, selected=is_selected),
             ink=True,
             on_click=lambda event, path=entry_path: self._on_row_click(path),
         )
@@ -626,17 +645,7 @@ class SteamCleanerGUI:
                 container = self._make_row(entry, index)
                 self._row_cache[entry.path] = container
             else:
-                is_selected = entry.path in self._selected
-                # flet control / ctypes attribute resolved at runtime; no type stubs
-                # noinspection PyUnresolvedReferences
-                row = container.content
-                # flet control / ctypes attribute resolved at runtime; no type stubs
-                # noinspection PyUnresolvedReferences
-                row.controls[0].value = is_selected
-                if is_selected:
-                    container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
-                else:
-                    container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+                _paint_row(container, index, selected=entry.path in self._selected)
             self._results_list.controls.append(container)
         self._update_empty_state()
         self._update_totals()
@@ -708,18 +717,8 @@ class SteamCleanerGUI:
             self._selected.add(path)
             is_selected = True
         for index, container in enumerate(self._results_list.controls):
-            # flet control / ctypes attribute resolved at runtime; no type stubs
-            # noinspection PyUnresolvedReferences
-            row = container.content
-            # flet control / ctypes attribute resolved at runtime; no type stubs
-            # noinspection PyUnresolvedReferences
-            checkbox = row.controls[0]
             if self._visible_entries[index].path == path:
-                checkbox.value = is_selected
-                if is_selected:
-                    container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
-                else:
-                    container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+                _paint_row(container, index, selected=is_selected)
                 break
         self._update_totals()
         self._page.update()
@@ -745,7 +744,7 @@ class SteamCleanerGUI:
             parent = path.parent if path.is_file() else path
             subprocess.Popen(["xdg-open", str(parent)])
 
-    def _on_select_all(self, _event) -> None:
+    def _on_select_all(self, _event: ft.Event[ft.Button] | None) -> None:
         visible_paths = {entry.path for entry in self._visible_entries}
         if visible_paths.issubset(self._selected):
             self._selected -= visible_paths
@@ -756,42 +755,30 @@ class SteamCleanerGUI:
             self._select_all_button.content = t("deselect_all")
             new_state = True
         for index, container in enumerate(self._results_list.controls):
-            # flet control / ctypes attribute resolved at runtime; no type stubs
-            # noinspection PyUnresolvedReferences
-            row = container.content
-            # flet control / ctypes attribute resolved at runtime; no type stubs
-            # noinspection PyUnresolvedReferences
-            checkbox = row.controls[0]
-            checkbox.value = new_state
-            if new_state:
-                container.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
-            else:
-                container.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+            _paint_row(container, index, selected=new_state)
         self._update_totals()
         self._page.update()
 
-    def _on_sort_changed(self, event) -> None:
+    def _on_sort_changed(self, event: ft.Event[ft.Dropdown]) -> None:
         self._sort_key = event.control.value
         self._refresh_list()
 
-    def _on_filter_changed(self, event) -> None:
+    def _on_filter_changed(self, event: ft.Event[ft.Dropdown]) -> None:
         value = event.control.value
         self._category_filter = None if value == "all" else value
         self._refresh_list()
 
-    def _on_search_changed(self, event) -> None:
+    def _on_search_changed(self, event: ft.Event[ft.TextField]) -> None:
         self._search_query = event.control.value or ""
         if self._search_timer is not None:
             self._search_timer.cancel()
         self._search_timer = threading.Timer(0.1, lambda: self._page.run_task(self._do_search_refresh))
-        # flet control / ctypes attribute resolved at runtime; no type stubs
-        # noinspection PyUnresolvedReferences
         self._search_timer.start()
 
     async def _do_search_refresh(self) -> None:
         self._refresh_list()
 
-    def on_toggle_theme(self, _event) -> None:
+    def on_toggle_theme(self, _event: ft.Event[ft.IconButton] | None) -> None:
         if self._page.theme_mode == ft.ThemeMode.DARK:
             self._page.theme_mode = ft.ThemeMode.LIGHT
             self._theme_button.icon = ft.Icons.DARK_MODE
@@ -819,7 +806,7 @@ class SteamCleanerGUI:
         self._results_list.disabled = locked
         self._results_list.opacity = 0.4 if locked else 1.0
 
-    def on_scan(self, _event) -> None:
+    def on_scan(self, _event: ft.Event[ft.Button] | None) -> None:
         if self._cancel_event is not None:
             self._cancel_event.set()
             return
@@ -908,7 +895,7 @@ class SteamCleanerGUI:
                 "scan_progress", items=len(self._result.entries), size=format_size(self._result.total_bytes)
             )
 
-    def _on_clean(self, _event) -> None:
+    def _on_clean(self, _event: ft.Event[ft.Button] | None) -> None:
         if not self._selected:
             return
 
@@ -1033,7 +1020,7 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _on_settings_click(self, _event) -> None:
+    def _on_settings_click(self, _event: ft.Event[ft.IconButton] | None) -> None:
         use_trash = get_value("clean", "use_trash", "true") == "true"
         delete_hint = ft.Text(
             t("delete_mode_hint_trash") if use_trash else t("delete_mode_hint_permanent"),
@@ -1147,7 +1134,7 @@ class SteamCleanerGUI:
         )
         self._open_dialog(dialog)
 
-    def _on_about_click(self, _event) -> None:
+    def _on_about_click(self, _event: ft.Event[ft.IconButton] | None) -> None:
         is_macos = sys.platform == "darwin"
         modifier = "⌘" if is_macos else "Ctrl"
         scan_keys = "F5 / ⌘R" if is_macos else "F5"
@@ -1221,7 +1208,7 @@ class SteamCleanerGUI:
         self._dialog_open = False
         self._page.pop_dialog()
 
-    def _copy_with_feedback(self, event, address: str, label: str) -> None:
+    def _copy_with_feedback(self, event: ft.Event[ft.TextButton], address: str, label: str) -> None:
         button = event.control
 
         async def do_copy() -> None:

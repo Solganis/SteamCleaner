@@ -301,10 +301,10 @@ class TestOnKeyboard:
             gui._on_keyboard(self._make_key_event("A", ctrl=True))
             mock_select.assert_not_called()
 
-    def test_cmd_q_quits_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
+    def test_cmd_q_quits_on_macos(self, gui: SteamCleanerGUI, monkeypatch, fake_page: MagicMock):
         monkeypatch.setattr("sys.platform", "darwin")
         gui._on_keyboard(self._make_key_event("Q", meta=True))
-        gui._page.run_task.assert_called_once()
+        fake_page.run_task.assert_called_once()
 
     def test_cmd_r_triggers_scan_on_macos(self, gui: SteamCleanerGUI, monkeypatch):
         monkeypatch.setattr("sys.platform", "darwin")
@@ -427,16 +427,22 @@ class TestUpdateEmptyState:
         gui_with_ui._visible_entries = []
         gui_with_ui._update_empty_state()
         assert_that(gui_with_ui._empty_state.visible).is_true()
-        assert_that(gui_with_ui._empty_state.controls[1].icon).is_equal_to(ft.Icons.FILTER_LIST_OFF)
-        assert_that(gui_with_ui._empty_state.controls[2].value).is_equal_to(t("empty_filter"))
+        icon_control, text_control = gui_with_ui._empty_state.controls[1:3]
+        assert isinstance(icon_control, ft.Icon)
+        assert isinstance(text_control, ft.Text)
+        assert_that(icon_control.icon).is_equal_to(ft.Icons.FILTER_LIST_OFF)
+        assert_that(text_control.value).is_equal_to(t("empty_filter"))
 
     def test_no_results_shows_search_icon(self, gui_with_ui: SteamCleanerGUI):
         gui_with_ui._result = ScanResult(entries=[])
         gui_with_ui._visible_entries = []
         gui_with_ui._update_empty_state()
         assert_that(gui_with_ui._empty_state.visible).is_true()
-        assert_that(gui_with_ui._empty_state.controls[1].icon).is_equal_to(ft.Icons.SEARCH_OFF)
-        assert_that(gui_with_ui._empty_state.controls[2].value).is_equal_to(t("empty_scan"))
+        icon_control, text_control = gui_with_ui._empty_state.controls[1:3]
+        assert isinstance(icon_control, ft.Icon)
+        assert isinstance(text_control, ft.Text)
+        assert_that(icon_control.icon).is_equal_to(ft.Icons.SEARCH_OFF)
+        assert_that(text_control.value).is_equal_to(t("empty_scan"))
 
 
 # test deliberately accesses a protected member
