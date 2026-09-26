@@ -11,6 +11,7 @@
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray init cosmic-ray.toml mutation.sqlite
 #   uvx --from cosmic-ray==8.4.6 cr-filter-operators mutation.sqlite cosmic-ray.toml
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray exec cosmic-ray.toml mutation.sqlite
+#   uv run python scripts/drop_type_checking_survivors.py mutation.sqlite
 #   uvx --from cosmic-ray==8.4.6 cr-rate mutation.sqlite   # survival rate, lower is better
 #
 # For a whole-package run instead, set module-path = "src/steamcleaner" and list the GUI, platform

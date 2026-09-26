@@ -65,6 +65,7 @@ jobs:
           uvx --from cosmic-ray==8.4.6 cosmic-ray init run.toml session.sqlite
           uvx --from cosmic-ray==8.4.6 cr-filter-operators session.sqlite run.toml
           uvx --from cosmic-ray==8.4.6 cosmic-ray exec run.toml session.sqlite
+          uv run python scripts/drop_type_checking_survivors.py session.sqlite
 
           {
             echo "### Mutation: ${MODULE}"
