@@ -152,22 +152,26 @@ class TestParseVdfRealisticSteam:
 \t\t}
 \t}
 }"""
-        result = parse_vdf(text)
-        folders = result["libraryfolders"]
-        assert_that(folders).is_instance_of(dict)
-        assert_that(folders).is_length(2)
-
-        folder_0 = folders["0"]
-        assert_that(folder_0).is_instance_of(dict)
-        assert_that(folder_0["path"]).is_equal_to("C:\\Program Files (x86)\\Steam")
-
-        folder_1 = folders["1"]
-        assert_that(folder_1).is_instance_of(dict)
-        assert_that(folder_1["path"]).is_equal_to("D:\\SteamLibrary")
-
-        apps = folder_0["apps"]
-        assert_that(apps).is_instance_of(dict)
-        assert_that(apps["730"]).is_equal_to("987654321")
+        assert_that(parse_vdf(text)).is_equal_to(
+            {
+                "libraryfolders": {
+                    "0": {
+                        "path": "C:\\Program Files (x86)\\Steam",
+                        "label": "",
+                        "contentid": "1234567890",
+                        "totalsize": "0",
+                        "update_clean_bytes_tally": "0",
+                        "time_last_update_corruption": "0",
+                        "apps": {"228980": "12345678", "730": "987654321"},
+                    },
+                    "1": {
+                        "path": "D:\\SteamLibrary",
+                        "label": "",
+                        "apps": {"570": "11111111"},
+                    },
+                }
+            }
+        )
 
     def test_config_vdf_with_base_install_folders(self):
         text = """\
@@ -185,11 +189,20 @@ class TestParseVdfRealisticSteam:
 \t\t}
 \t}
 }"""
-        result = parse_vdf(text)
-        steam = result["InstallConfigStore"]["Software"]["Valve"]["Steam"]
-        assert_that(steam).is_instance_of(dict)
-        assert_that(steam["BaseInstallFolder_1"]).is_equal_to("D:\\SteamLibrary")
-        assert_that(steam["BaseInstallFolder_2"]).is_equal_to("E:\\Games\\Steam")
+        assert_that(parse_vdf(text)).is_equal_to(
+            {
+                "InstallConfigStore": {
+                    "Software": {
+                        "Valve": {
+                            "Steam": {
+                                "BaseInstallFolder_1": "D:\\SteamLibrary",
+                                "BaseInstallFolder_2": "E:\\Games\\Steam",
+                            }
+                        }
+                    }
+                }
+            }
+        )
 
     def test_appmanifest_acf(self):
         text = """\
@@ -201,12 +214,17 @@ class TestParseVdfRealisticSteam:
 \t"StateFlags"\t\t"4"
 \t"installdir"\t\t"Counter-Strike Global Offensive"
 }"""
-        result = parse_vdf(text)
-        state = result["AppState"]
-        assert_that(state).is_instance_of(dict)
-        assert_that(state["appid"]).is_equal_to("730")
-        assert_that(state["name"]).is_equal_to("Counter-Strike 2")
-        assert_that(state["installdir"]).is_equal_to("Counter-Strike Global Offensive")
+        assert_that(parse_vdf(text)).is_equal_to(
+            {
+                "AppState": {
+                    "appid": "730",
+                    "Universe": "1",
+                    "name": "Counter-Strike 2",
+                    "StateFlags": "4",
+                    "installdir": "Counter-Strike Global Offensive",
+                }
+            }
+        )
 
 
 class TestLoadVdf:
