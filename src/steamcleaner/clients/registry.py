@@ -35,7 +35,7 @@ class ClientRegistry:
             if module_info.name not in _SKIP_MODULES:
                 try:
                     importlib.import_module(f"steamcleaner.clients.{module_info.name}")
-                except (ImportError, SyntaxError, AttributeError):  # fmt: skip  # parens: flet bundles 3.12
+                except ImportError, SyntaxError, AttributeError:
                     _logger.error("Failed to import client: %s", module_info.name, exc_info=True)
         _logger.debug("Discovery complete: %d clients", len(cls._client_classes))
         cls._discovered = True

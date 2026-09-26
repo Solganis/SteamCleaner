@@ -852,7 +852,7 @@ class SteamCleanerGUI:
                 exclusions = ExclusionRegistry()
                 engine = ScanEngine(platform, exclusions)
                 engine.scan(progress=on_progress, on_found=on_found, cancel=cancel)
-            except (OSError, ValueError, KeyError):  # fmt: skip  # parens required: flet build bundles Python 3.12
+            except OSError, ValueError, KeyError:
                 _logger.error("Scan failed", exc_info=True)
                 status_text[0] = t("scan_failed")
             finally:
