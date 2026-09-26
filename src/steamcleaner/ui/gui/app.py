@@ -278,9 +278,6 @@ class SteamCleanerGUI:
             elif self._text_input_focused:
                 self._search_field.value = ""
                 self._search_query = ""
-                # flet control / ctypes attribute resolved at runtime; no type stubs
-                # noinspection PyUnresolvedReferences
-                self._page.focus()
                 self._refresh_list()
             return
 

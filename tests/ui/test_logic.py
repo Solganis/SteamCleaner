@@ -274,6 +274,14 @@ class TestOnKeyboard:
             gui._on_keyboard(self._make_key_event("Escape"))
         assert_that(gui._search_query).is_equal_to("")
 
+    def test_escape_in_search_refreshes_list(self, gui: SteamCleanerGUI):
+        gui._page = MagicMock(spec=ft.Page)
+        gui._text_input_focused = True
+        gui._search_field.value = "something"
+        with patch.object(gui, "_refresh_list") as mock_refresh:
+            gui._on_keyboard(self._make_key_event("Escape"))
+        mock_refresh.assert_called_once()
+
     def test_delete_cleans_selection(self, gui: SteamCleanerGUI):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected.add(ENTRY_SMALL.path)
