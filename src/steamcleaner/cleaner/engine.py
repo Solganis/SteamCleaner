@@ -20,7 +20,7 @@ _logger = logging.getLogger(__name__)
 CleanCallback = Callable[[JunkEntry, bool], None]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CleanStats:
     """Outcome of a clean run: counts, freed bytes, and per-entry error messages."""
 

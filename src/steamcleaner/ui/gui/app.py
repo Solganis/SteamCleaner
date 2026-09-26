@@ -6,7 +6,8 @@ import subprocess
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Final
 
 import darkdetect
 import flet as ft
@@ -27,22 +28,24 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-_VERSION = "1.1.1"
-_GITHUB_URL = "https://github.com/Solganis/SteamCleaner"
-_BOOSTY_URL = "https://boosty.to/solganis"
-_DONATE_URL = "https://www.donationalerts.com/r/Solganis"
-_TON_ADDRESS = "UQAZDskr7UZE9Hn8Q8asCfmYIsicgL0KS9YNvRJ5NF53OPPo"
-_USDT_TRC20_ADDRESS = "TG32fyLCxPcTCmtFXayDkvAvAF9goci9st"
+_VERSION: Final = "1.1.1"
+_GITHUB_URL: Final = "https://github.com/Solganis/SteamCleaner"
+_BOOSTY_URL: Final = "https://boosty.to/solganis"
+_DONATE_URL: Final = "https://www.donationalerts.com/r/Solganis"
+_TON_ADDRESS: Final = "UQAZDskr7UZE9Hn8Q8asCfmYIsicgL0KS9YNvRJ5NF53OPPo"
+_USDT_TRC20_ADDRESS: Final = "TG32fyLCxPcTCmtFXayDkvAvAF9goci9st"
 
-_PADDING_H = 16
-_CATEGORY_COLORS = {
-    "redistributable": ft.Colors.ORANGE_700,
-    "shader_cache": ft.Colors.PURPLE_700,
-    "crash_dump": ft.Colors.RED_700,
-    "old_log": ft.Colors.BLUE_GREY_700,
-    "installer": ft.Colors.AMBER_700,
-    "cross_platform": ft.Colors.TEAL_700,
-}
+_PADDING_H: Final = 16
+_CATEGORY_COLORS: Final = MappingProxyType(
+    {
+        "redistributable": ft.Colors.ORANGE_700,
+        "shader_cache": ft.Colors.PURPLE_700,
+        "crash_dump": ft.Colors.RED_700,
+        "old_log": ft.Colors.BLUE_GREY_700,
+        "installer": ft.Colors.AMBER_700,
+        "cross_platform": ft.Colors.TEAL_700,
+    }
+)
 
 
 def _row_background(index: int, *, selected: bool) -> str | None:

@@ -1,17 +1,17 @@
 import logging
 import logging.handlers
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from steamcleaner.utils.config import config_dir, get_value, save_value
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-_LOG_FORMAT = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
-_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-DEFAULT_MAX_LOG_BYTES = 2_000_000
-_BACKUP_COUNT = 3
-_ROOT_LOGGER_NAME = "steamcleaner"
+_LOG_FORMAT: Final = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
+_LOG_DATE_FORMAT: Final = "%Y-%m-%d %H:%M:%S"
+DEFAULT_MAX_LOG_BYTES: Final = 2_000_000
+_BACKUP_COUNT: Final = 3
+_ROOT_LOGGER_NAME: Final = "steamcleaner"
 
 
 def log_file_path() -> Path:

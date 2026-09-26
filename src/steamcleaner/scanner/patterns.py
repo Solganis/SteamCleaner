@@ -1,10 +1,11 @@
 import re
 from dataclasses import dataclass
+from typing import Final
 
 from steamcleaner.models.junk import JunkCategory
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class JunkPattern:
     dir_regex: re.Pattern[str]
     file_extensions: frozenset[str]
@@ -12,7 +13,7 @@ class JunkPattern:
     description: str
 
 
-COMMON_PATTERNS: tuple[JunkPattern, ...] = (
+COMMON_PATTERNS: Final[tuple[JunkPattern, ...]] = (
     JunkPattern(
         dir_regex=re.compile(r"(directx|redist|_commonredist)", re.IGNORECASE),
         file_extensions=frozenset({".cab", ".exe", ".msi"}),

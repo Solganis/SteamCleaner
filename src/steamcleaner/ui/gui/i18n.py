@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
+from types import MappingProxyType
+from typing import Final
 
 from steamcleaner.utils.config import get_value, save_value
 
-_LOCALES_DIR = Path(__file__).parent / "locales"
+_LOCALES_DIR: Final = Path(__file__).parent / "locales"
 
 _cache: dict[str, dict[str, str]] = {}
 
@@ -30,7 +32,9 @@ def available_languages() -> list[str]:
     return [path.stem for path in sorted(_LOCALES_DIR.glob("*.json"))]
 
 
-LANGUAGES = {"en": "English", "ru": "Русский", "zh": "中文", "es": "Español", "pt-BR": "Português (Brasil)"}
+LANGUAGES: Final = MappingProxyType(
+    {"en": "English", "ru": "Русский", "zh": "中文", "es": "Español", "pt-BR": "Português (Brasil)"}
+)
 
 _current_lang = "en"
 
@@ -38,7 +42,7 @@ _current_lang = "en"
 def init_lang() -> None:
     global _current_lang
     saved = get_value("ui", "language")
-    _current_lang = saved if saved in LANGUAGES else "en"
+    _current_lang = saved if saved is not None and saved in LANGUAGES else "en"
 
 
 def set_lang(lang: str) -> None:

@@ -12,7 +12,7 @@ class JunkCategory(enum.StrEnum):
     INSTALLER = "installer"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class JunkEntry:
     path: Path
     category: JunkCategory

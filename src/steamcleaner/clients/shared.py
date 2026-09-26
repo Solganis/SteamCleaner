@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, walk_files
@@ -8,10 +8,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from pathlib import Path
 
-REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
-JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
-DUMP_EXTENSIONS = frozenset({".dmp", ".mdmp"})
-DEFAULT_LOG_MIN_SIZE = 1024 * 1024
+REDIST_DIR_RE: Final = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
+JUNK_EXTENSIONS: Final = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})
+DUMP_EXTENSIONS: Final = frozenset({".dmp", ".mdmp"})
+DEFAULT_LOG_MIN_SIZE: Final = 1024 * 1024
 
 
 def has_redist_ancestor(file_path: Path, root: Path, pattern: re.Pattern[str] = REDIST_DIR_RE) -> bool:

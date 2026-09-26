@@ -23,20 +23,21 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Final
 
-ROOT = Path(__file__).resolve().parent.parent
-BUILD_FLUTTER = ROOT / "build" / "flutter"
-BUILD_OUTPUT = ROOT / "build" / "windows"
+ROOT: Final = Path(__file__).resolve().parent.parent
+BUILD_FLUTTER: Final = ROOT / "build" / "flutter"
+BUILD_OUTPUT: Final = ROOT / "build" / "windows"
 
-FLET_GENERATED_DART = BUILD_FLUTTER / "lib" / "flet_generated.dart"
-FLUTTER_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "flutter_window.cpp"
-WIN32_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "win32_window.cpp"
-FLUTTER_RELEASE = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Release"
-FLUTTER_APP_ICON = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_icon.ico"
-CUSTOM_ICON = ROOT / "assets" / "icon.ico"
+FLET_GENERATED_DART: Final = BUILD_FLUTTER / "lib" / "flet_generated.dart"
+FLUTTER_WINDOW_CPP: Final = BUILD_FLUTTER / "windows" / "runner" / "flutter_window.cpp"
+WIN32_WINDOW_CPP: Final = BUILD_FLUTTER / "windows" / "runner" / "win32_window.cpp"
+FLUTTER_RELEASE: Final = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Release"
+FLUTTER_APP_ICON: Final = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_icon.ico"
+CUSTOM_ICON: Final = ROOT / "assets" / "icon.ico"
 
-HIDDEN_START_DART = 'bool.tryParse("True".toLowerCase())'
-HIDDEN_START_CPP = (
+HIDDEN_START_DART: Final = 'bool.tryParse("True".toLowerCase())'
+HIDDEN_START_CPP: Final = (
     '  const bool hide_window_on_start =\n      true ||\n      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
 )
 

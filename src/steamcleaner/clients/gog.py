@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-_REGISTRY_GAMES_PATH = r"SOFTWARE\WOW6432Node\GOG.com\Games"
+_REGISTRY_GAMES_PATH: Final = r"SOFTWARE\WOW6432Node\GOG.com\Games"
 
 
 @ClientRegistry.register

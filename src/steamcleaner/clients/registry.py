@@ -1,7 +1,7 @@
 import importlib
 import logging
 import pkgutil
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from steamcleaner.clients.base import GameClient
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-_SKIP_MODULES = frozenset({"base", "registry"})
+_SKIP_MODULES: Final = frozenset({"base", "registry"})
 
 
 class ClientRegistry:

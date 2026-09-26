@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-_REGISTRY_LAUNCHER_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher"
-_REGISTRY_INSTALLS_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"
+_REGISTRY_LAUNCHER_PATH: Final = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher"
+_REGISTRY_INSTALLS_PATH: Final = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"
 
 
 @ClientRegistry.register
