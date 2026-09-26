@@ -57,7 +57,7 @@ jobs:
             ~/.flet
             ~/.pub-cache
             ~/AppData/Local/Pub/Cache
-          key: flet-build-${{ matrix.os }}-flet0.85
+          key: flet-build-${{ matrix.os }}-flet1.0
           restore-keys: flet-build-${{ matrix.os }}-
       - name: Build
         if: matrix.os != 'windows-latest'
