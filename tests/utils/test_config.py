@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -115,3 +116,15 @@ class TestConfig:
         with patch("steamcleaner.utils.config._config_path", return_value=path):
             save_value("ui", "theme", "dark")
             assert_that(get_list("ui", "theme")).is_equal_to([])
+
+    def test_save_value_logs_error_when_write_fails(self, tmp_path: Path, caplog):
+        path = tmp_path / "config.toml"
+        with (
+            patch("steamcleaner.utils.config._config_path", return_value=path),
+            patch.object(Path, "write_text", side_effect=PermissionError("read-only volume")),
+            caplog.at_level(logging.ERROR, logger="steamcleaner.utils.config"),
+        ):
+            save_value("ui", "theme", "dark")
+        assert_that(str(path)).does_not_exist()
+        assert_that([record.levelno for record in caplog.records]).is_equal_to([logging.ERROR])
+        assert_that(caplog.text).contains("Failed to write config")

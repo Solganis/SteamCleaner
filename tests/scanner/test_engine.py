@@ -1,5 +1,6 @@
 import threading
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
@@ -8,7 +9,7 @@ from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from pathlib import Path, PurePath
 
     from steamcleaner.models.junk import JunkEntry
 
@@ -72,6 +73,21 @@ class TestScanEngineCallbacks:
         result = engine.scan(on_found=on_found, cancel=cancel)
         assert_that(len(result.entries)).is_less_than(10)
 
+    def test_cancel_while_entry_in_flight_discards_it(self, tmp_path: Path):
+        platform = _make_steam_tree(tmp_path)
+        engine = ScanEngine(platform, ExclusionRegistry())
+        cancel = threading.Event()
+        found: list[JunkEntry] = []
+
+        def cancel_during_exclusion_check(path: PurePath) -> bool:
+            cancel.set()
+            return False
+
+        with patch.object(ExclusionRegistry, "is_excluded", side_effect=cancel_during_exclusion_check):
+            result = engine.scan(on_found=found.append, cancel=cancel)
+        assert_that(result.entries).is_empty()
+        assert_that(found).is_empty()
+
 
 class TestCustomPaths:
     def test_scans_custom_directory(self, tmp_path: Path):
@@ -131,6 +147,21 @@ class TestCustomPaths:
         result = engine.scan(custom_paths=[custom], cancel=cancel)
         custom_entries = [entry for entry in result.entries if entry.client_name == "Custom"]
         assert_that(custom_entries).is_equal_to([])
+
+    def test_custom_path_cancel_after_first_entry_skips_rest(self, tmp_path: Path):
+        custom = tmp_path / "Library"
+        for game_name in ("GameA", "GameB"):
+            redist = custom / game_name / "_CommonRedist"
+            redist.mkdir(parents=True)
+            (redist / "setup.exe").write_bytes(b"\x00" * 256)
+            (redist / "vcredist.exe").write_bytes(b"\x00" * 256)
+
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        engine = ScanEngine(platform, ExclusionRegistry())
+        cancel = threading.Event()
+        result = engine.scan(on_found=lambda entry: cancel.set(), custom_paths=[custom], cancel=cancel)
+        custom_entries = [entry for entry in result.entries if entry.client_name == "Custom"]
+        assert_that(custom_entries).is_length(1)
 
     def test_custom_path_respects_exclusions(self, tmp_path: Path):
         custom = tmp_path / "Library"

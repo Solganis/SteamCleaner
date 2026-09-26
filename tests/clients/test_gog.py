@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
 from steamcleaner.clients.gog import GogClient
 from steamcleaner.models.junk import JunkCategory
@@ -265,6 +265,33 @@ class TestGogEdgeCases:
         client_with_excl = GogClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
         assert_that(safe_entries).is_length(0)
+
+
+def _write_crashdump_and_webcache(tmp_path: Path) -> None:
+    galaxy = tmp_path / "ProgramData" / "GOG.com" / "Galaxy"
+    crashdumps = galaxy / "crashdumps"
+    crashdumps.mkdir(parents=True)
+    (crashdumps / "dump.dmp").write_bytes(b"\x00" * 4096)
+    webcache = galaxy / "webcache"
+    webcache.mkdir()
+    (webcache / "cache.bin").write_bytes(b"\x00" * 4096)
+
+
+class TestGogCancel:
+    def test_cancel_already_set_skips_games(self, tmp_path: Path):
+        _platform, client = _make_gog_env(tmp_path, games={"Witcher 3": {"_CommonRedist": ["vcredist.exe"]}})
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_already_set_skips_launcher_files(self, tmp_path: Path):
+        _platform, client = _make_gog_env(tmp_path)
+        _write_crashdump_and_webcache(tmp_path)
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_after_crashdumps_skips_webcache(self, tmp_path: Path):
+        _platform, client = _make_gog_env(tmp_path)
+        _write_crashdump_and_webcache(tmp_path)
+        entries = scan_cancelling_after(client, lambda entry: entry.category == JunkCategory.CRASH_DUMP)
+        assert_that([entry.category for entry in entries]).is_equal_to([JunkCategory.CRASH_DUMP])
 
 
 class TestGogWinePrefix:

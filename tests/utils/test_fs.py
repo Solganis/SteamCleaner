@@ -1,11 +1,43 @@
+import os
 import stat
 from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, Self
 from unittest.mock import patch
 
 from assertpy2 import assert_that
 
 from steamcleaner.utils.fs import dir_size, format_size, is_reparse_point, list_subdirs, safe_rmtree, walk_files
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+
+class _InaccessibleDirEntry:
+    def __init__(self, path: Path) -> None:
+        self.path = str(path)
+
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool:
+        raise PermissionError(f"Access is denied: {self.path}")
+
+
+class _FakeScandirIterator:
+    def __init__(self, entries: Iterable[object]) -> None:
+        self._entries = list(entries)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        pass
+
+    def __iter__(self) -> Iterator[object]:
+        return iter(self._entries)
+
+
+def _scandir_with_inaccessible_entry(directory: Path) -> _FakeScandirIterator:
+    with os.scandir(directory) as scanner:
+        return _FakeScandirIterator([_InaccessibleDirEntry(directory / "locked"), *scanner])
 
 
 class TestFormatSize:
@@ -98,6 +130,13 @@ class TestWalkFiles:
         results = list(walk_files(empty))
         assert_that(results).is_equal_to([])
 
+    def test_skips_entry_raising_os_error(self, tmp_path: Path):
+        (tmp_path / "kept.bin").write_bytes(b"\x00" * 100)
+        scanner = _scandir_with_inaccessible_entry(tmp_path)
+        with patch.object(os, "scandir", return_value=scanner):
+            results = list(walk_files(tmp_path))
+        assert_that(results).is_equal_to([(tmp_path / "kept.bin", 100)])
+
 
 class TestDirSize:
     def test_calculates_total(self, tmp_path: Path):
@@ -146,6 +185,13 @@ class TestListSubdirs:
         with patch("steamcleaner.utils.fs.is_reparse_point", side_effect=lambda path: path.name == "junction"):
             result = list_subdirs(tmp_path)
         assert_that({path.name for path in result}).is_equal_to({"real"})
+
+    def test_skips_entry_raising_os_error(self, tmp_path: Path):
+        (tmp_path / "visible").mkdir()
+        scanner = _scandir_with_inaccessible_entry(tmp_path)
+        with patch.object(os, "scandir", return_value=scanner):
+            result = list_subdirs(tmp_path)
+        assert_that(result).is_equal_to([tmp_path / "visible"])
 
 
 class TestSafeRmtree:

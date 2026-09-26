@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, scan_with_cancel_already_set
 
 from steamcleaner.clients.ubisoft import UbisoftClient
 from steamcleaner.models.junk import JunkCategory
@@ -312,6 +312,19 @@ class TestUbisoftEdgeCases:
         client_with_excl = UbisoftClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
         assert_that(safe_entries).is_length(0)
+
+
+class TestUbisoftCancel:
+    def test_cancel_already_set_skips_games(self, tmp_path: Path):
+        _platform, client = _make_ubisoft_env(tmp_path, games={"FarCry6": {"_CommonRedist": ["vcredist.exe"]}})
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_already_set_skips_launcher_files(self, tmp_path: Path):
+        _platform, client = _make_ubisoft_env(tmp_path)
+        cache_dir = tmp_path / "ProgramFiles" / "Ubisoft" / "Ubisoft Game Launcher" / "cache"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "assets.bin").write_bytes(b"\x00" * 4096)
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
 
 
 class TestUbisoftWinePrefix:

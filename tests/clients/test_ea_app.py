@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
 from steamcleaner.clients.ea_app import EaAppClient
 from steamcleaner.models.junk import JunkCategory
@@ -343,6 +343,45 @@ class TestEaEdgeCases:
         entries = list(client.scan_junk())
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]
         assert_that(redist_entries).is_length(2)
+
+
+def _write_launcher_log_and_cache(tmp_path: Path) -> None:
+    appdata = tmp_path / "home" / ".local" / "share"
+    logs_dir = appdata / "Electronic Arts" / "EA Desktop" / "Logs"
+    logs_dir.mkdir(parents=True)
+    (logs_dir / "EADesktop.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+    cache_dir = appdata / "EADesktop" / "cache"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "data.bin").write_bytes(b"\x00" * 1024)
+
+
+class TestEaCancel:
+    def test_cancel_already_set_skips_games(self, tmp_path: Path):
+        _platform, client = _make_ea_env(tmp_path, games={"Battlefield 2042": {"_CommonRedist": ["vcredist.exe"]}})
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_already_set_skips_launcher_files(self, tmp_path: Path):
+        _platform, client = _make_ea_env(tmp_path)
+        _write_launcher_log_and_cache(tmp_path)
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_after_launcher_log_skips_launcher_caches(self, tmp_path: Path):
+        _platform, client = _make_ea_env(tmp_path)
+        _write_launcher_log_and_cache(tmp_path)
+        entries = scan_cancelling_after(client, lambda entry: entry.category == JunkCategory.OLD_LOG)
+        assert_that([entry.category for entry in entries]).is_equal_to([JunkCategory.OLD_LOG])
+
+    def test_cancel_after_launch_helper_cache_skips_macos_caches(self, tmp_path: Path):
+        _platform, client = _make_ea_env(tmp_path)
+        home = tmp_path / "home"
+        launch_helper_cache = home / ".local" / "share" / "EALaunchHelper" / "cache"
+        launch_helper_cache.mkdir(parents=True)
+        (launch_helper_cache / "qml.cache").write_bytes(b"\x00" * 2048)
+        macos_cache = home / "Library" / "Caches" / "com.ea.Origin"
+        macos_cache.mkdir(parents=True)
+        (macos_cache / "data.bin").write_bytes(b"\x00" * 1024)
+        entries = scan_cancelling_after(client, lambda entry: entry.description == "EALaunchHelper cache")
+        assert_that([entry.description for entry in entries]).is_equal_to(["EALaunchHelper cache"])
 
 
 class TestEaWinePrefix:

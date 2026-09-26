@@ -2,15 +2,35 @@ import threading
 from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
+from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.steam import SteamClient
-from steamcleaner.models.junk import JunkCategory
+from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+    from steamcleaner.platform.base import PlatformAdapter
+
+
+class _CancelUnawareClient(GameClient):
+    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry, entries: list[JunkEntry]) -> None:
+        super().__init__(platform, exclusions)
+        self._entries = entries
+
+    @property
+    def name(self) -> str:
+        return "Cancel-unaware"
+
+    def is_installed(self) -> bool:
+        return True
+
+    def scan_junk(self) -> Iterator[JunkEntry]:
+        yield from self._entries
 
 
 def _make_steam_with_games(tmp_path: Path, game_count: int) -> FakePlatformAdapter:
@@ -43,6 +63,11 @@ class TestCancelBeforeScan:
         result = engine.scan(cancel=cancel)
         assert_that(result.entries).is_length(0)
 
+    def test_cancel_already_set_skips_steam_libraries(self, tmp_path: Path):
+        platform = _make_steam_with_games(tmp_path, 3)
+        client = SteamClient(platform, ExclusionRegistry())
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
 
 class TestCancelMidScan:
     def test_cancel_stops_between_games(self, tmp_path: Path):
@@ -70,6 +95,17 @@ class TestCancelMidScan:
         assert_that(categories).contains(JunkCategory.REDISTRIBUTABLE)
         assert_that(categories).does_not_contain(JunkCategory.SHADER_CACHE)
         assert_that(categories).does_not_contain(JunkCategory.OLD_LOG)
+
+    def test_cancel_during_shader_cache_skips_remaining_caches_and_dumps(self, tmp_path: Path):
+        platform = _make_steam_with_games(tmp_path, 1)
+        second_shader = tmp_path / ".local" / "share" / "Steam" / "steamapps" / "shadercache" / "456"
+        second_shader.mkdir()
+        (second_shader / "cache.bin").write_bytes(b"\x00" * 1024)
+        client = SteamClient(platform, ExclusionRegistry())
+        entries = scan_cancelling_after(client, lambda entry: entry.category == JunkCategory.SHADER_CACHE)
+        categories = [entry.category for entry in entries]
+        assert_that(categories.count(JunkCategory.SHADER_CACHE)).is_equal_to(1)
+        assert_that(categories).does_not_contain(JunkCategory.CRASH_DUMP)
 
     def test_partial_results_returned_via_engine(self, tmp_path: Path):
         platform = _make_steam_with_games(tmp_path, 5)
@@ -112,3 +148,17 @@ class TestCancelClientProperty:
         for _ in client.scan_safe(cancel=cancel):
             pass
         assert_that(client._cancel).is_none()
+
+    def test_scan_safe_stops_client_that_ignores_cancel(self, tmp_path: Path):
+        entries = [
+            JunkEntry(
+                path=tmp_path / f"redist_{index}",
+                category=JunkCategory.REDISTRIBUTABLE,
+                size_bytes=1024,
+                client_name="Cancel-unaware",
+            )
+            for index in range(3)
+        ]
+        client = _CancelUnawareClient(FakePlatformAdapter(home_dir=tmp_path), ExclusionRegistry(), entries)
+        collected = scan_cancelling_after(client, lambda entry: entry == entries[0])
+        assert_that(collected).is_equal_to(entries[:1])

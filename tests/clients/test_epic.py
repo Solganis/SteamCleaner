@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory
@@ -357,6 +357,33 @@ class TestEpicEdgeCases:
         client_with_excl = EpicClient(platform, exclusions)
         safe_entries = list(client_with_excl.scan_safe())
         assert_that(safe_entries).is_length(0)
+
+
+def _write_launcher_log_and_webcache(tmp_path: Path) -> None:
+    saved = tmp_path / "home" / ".local" / "share" / "EpicGamesLauncher" / "Saved"
+    logs_dir = saved / "Logs"
+    logs_dir.mkdir(parents=True)
+    (logs_dir / "EpicGamesLauncher.log").write_bytes(b"\x00" * (1024 * 1024 + 1))
+    webcache = saved / "webcache"
+    webcache.mkdir()
+    (webcache / "cache_data.bin").write_bytes(b"\x00" * 4096)
+
+
+class TestEpicCancel:
+    def test_cancel_already_set_skips_games(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path, games={"Fortnite": {"_CommonRedist": ["vcredist.exe"]}})
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_already_set_skips_launcher_files(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path)
+        _write_launcher_log_and_webcache(tmp_path)
+        assert_that(scan_with_cancel_already_set(client)).is_empty()
+
+    def test_cancel_after_launcher_log_skips_webcache(self, tmp_path: Path):
+        _platform, client = _make_epic_env(tmp_path)
+        _write_launcher_log_and_webcache(tmp_path)
+        entries = scan_cancelling_after(client, lambda entry: entry.category == JunkCategory.OLD_LOG)
+        assert_that([entry.category for entry in entries]).is_equal_to([JunkCategory.OLD_LOG])
 
 
 class TestEpicWinePrefix:

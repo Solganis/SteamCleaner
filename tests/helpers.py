@@ -1,6 +1,14 @@
+import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.platform.base import PlatformAdapter
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from steamcleaner.clients.base import GameClient
+    from steamcleaner.models.junk import JunkEntry
 
 
 class FakePlatformAdapter(PlatformAdapter):
@@ -81,3 +89,21 @@ def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) ->
                 file_path = subdir / filename
                 file_path.write_bytes(b"\x00" * 1024)
     return steam
+
+
+def scan_with_cancel_already_set(client: GameClient) -> list[JunkEntry]:
+    """Run ``scan_safe`` with a cancel event that is set before the scan starts."""
+    cancel = threading.Event()
+    cancel.set()
+    return list(client.scan_safe(cancel=cancel))
+
+
+def scan_cancelling_after(client: GameClient, should_cancel: Callable[[JunkEntry], bool]) -> list[JunkEntry]:
+    """Run ``scan_safe`` and set its cancel event as soon as a received entry matches ``should_cancel``."""
+    cancel = threading.Event()
+    collected: list[JunkEntry] = []
+    for entry in client.scan_safe(cancel=cancel):
+        collected.append(entry)
+        if should_cancel(entry):
+            cancel.set()
+    return collected
