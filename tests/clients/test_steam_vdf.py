@@ -62,6 +62,11 @@ class TestParseLibraryFoldersVdf:
         vdf.write_text('"libraryfolders"\n{\n  "0"\n  {\n    "label"\t\t"foo"\n  }\n}')
         assert_that(parse_library_folders_vdf(vdf)).is_equal_to([])
 
+    def test_skips_entry_with_section_as_path(self, tmp_path: Path):
+        vdf = tmp_path / "libraryfolders.vdf"
+        vdf.write_text('"libraryfolders"\n{\n  "0"\n  {\n    "path"\n    {\n      "x"\t\t"y"\n    }\n  }\n}')
+        assert_that(parse_library_folders_vdf(vdf)).is_equal_to([])
+
     def test_skips_entry_neither_dict_nor_str(self, tmp_path: Path, monkeypatch):
         # The VDF parser only yields str or nested dict; inject an int to exercise the
         # defensive branch that skips any other entry type.
