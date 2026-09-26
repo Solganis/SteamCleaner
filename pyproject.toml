@@ -1,20 +1,37 @@
 [project]
 name = "steamcleaner"
 version = "1.1.1"
-description = "Cross-platform tool for reclaiming disk space from game clients"
-requires-python = ">=3.14"  # modern syntax only: match/case, PEP 758 except, | unions, generics in builtins
+description = "Cross-platform GUI tool (Windows, macOS, Linux) for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect"
+readme = "README.md"
 license = "MIT"
-authors = [{name = "Solganis"}]
+requires-python = ">=3.14"  # also the Python that `flet build` bundles into the binary
+authors = [
+    { name = "Solganis", email = "solganis.dev@gmail.com" },
+]
 keywords = ["steam", "epic", "gog", "ubisoft", "ea", "disk-cleanup", "cache-cleaner"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications",
+    "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: English",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Natural Language :: Russian",
+    "Natural Language :: Spanish",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
 ]
-# Runtime deps, kept deliberately small: darkdetect = OS light/dark theme detection; flet = GUI framework
-# and `flet build` toolchain; send2trash = recoverable deletion to the system trash, the core
-# "nothing is permanently removed by default" safety guarantee.
+
 dependencies = [
     "darkdetect>=0.8.0",
     "flet>=1.0.1",
@@ -22,20 +39,17 @@ dependencies = [
 ]
 
 [project.urls]
+Homepage = "https://github.com/Solganis/SteamCleaner"
 Repository = "https://github.com/Solganis/SteamCleaner"
 Issues = "https://github.com/Solganis/SteamCleaner/issues"
 
-# Console entry point: `steamcleaner` launches the GUI.
 [project.scripts]
 steamcleaner = "steamcleaner.app:main"
 
-# `flet build` release-binary config. org = reverse-DNS bundle identifier baked into the native app;
-# product = the display name of the built binary.
 [tool.flet]
 org = "dev.steamcleaner"
 product = "SteamCleaner"
 
-# Where `flet build` finds the app package (src-layout root).
 [tool.flet.app]
 path = "src"
 
@@ -46,9 +60,30 @@ hide_window_on_start = true  # the app shows the window itself once Python is re
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# src-layout: the importable package lives under src/, not the repo root.
 [tool.hatch.build.targets.wheel]
 packages = ["src/steamcleaner"]
+
+# Listed rather than filtered: hatchling reads only `.gitignore`, so anything kept out of git through
+# `.git/info/exclude` would ship in an sdist built from a working tree.
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+]
+
+[dependency-groups]
+dev = [
+    "assertpy2>=2.27.1",
+    "hypothesis>=6.168.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.9",
+    "ty>=0.0.84",
+]
 
 [tool.ruff]
 # 120 feeds both `ruff format` and the E501 lint; line length is a hard rule, not just a formatter hint.
@@ -133,15 +168,4 @@ exclude_lines = [
     "pragma: no cover",
     "if self\\.cancelled",  # thread-driven cancellation branches
     "if cancel and cancel\\.is_set",
-]
-
-# Dev/test/build tooling (not shipped): linter, type checker, test stack, assertion and property libs.
-[dependency-groups]
-dev = [
-    "ruff>=0.16.9",
-    "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
-    "ty>=0.0.84",
-    "assertpy2>=2.27.1",
-    "hypothesis>=6.168.1",
 ]
