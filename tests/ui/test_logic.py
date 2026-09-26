@@ -419,7 +419,7 @@ class TestUpdateEmptyState:
         gui_with_ui._visible_entries = []
         gui_with_ui._update_empty_state()
         assert_that(gui_with_ui._empty_state.visible).is_true()
-        assert_that(gui_with_ui._empty_state.controls[1].name).is_equal_to(ft.Icons.FILTER_LIST_OFF)
+        assert_that(gui_with_ui._empty_state.controls[1].icon).is_equal_to(ft.Icons.FILTER_LIST_OFF)
         assert_that(gui_with_ui._empty_state.controls[2].value).is_equal_to(t("empty_filter"))
 
     def test_no_results_shows_search_icon(self, gui_with_ui: SteamCleanerGUI):
@@ -427,7 +427,7 @@ class TestUpdateEmptyState:
         gui_with_ui._visible_entries = []
         gui_with_ui._update_empty_state()
         assert_that(gui_with_ui._empty_state.visible).is_true()
-        assert_that(gui_with_ui._empty_state.controls[1].name).is_equal_to(ft.Icons.SEARCH_OFF)
+        assert_that(gui_with_ui._empty_state.controls[1].icon).is_equal_to(ft.Icons.SEARCH_OFF)
         assert_that(gui_with_ui._empty_state.controls[2].value).is_equal_to(t("empty_scan"))
 
 

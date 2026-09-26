@@ -68,7 +68,7 @@ class TestScanTask:
         mock_engine = self._mock_scan_with_entries(ENTRY_SMALL)
         TestScanTask._run_scan(gui_with_ui, mock_engine)
         assert_that(gui_with_ui._cancel_event).is_none()
-        assert_that(gui_with_ui._scan_button.text).is_equal_to(t("scan"))
+        assert_that(gui_with_ui._scan_button.content).is_equal_to(t("scan"))
         assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
 
     def test_scan_cancelled(self, gui_with_ui: SteamCleanerGUI):

@@ -273,7 +273,7 @@ class SteamCleanerGUI:
                 self._cancel_event.set()
             elif self._selected:
                 self._selected.clear()
-                self._select_all_button.text = t("select_all")
+                self._select_all_button.content = t("select_all")
                 self._refresh_list()
             elif self._text_input_focused:
                 self._search_field.value = ""
@@ -656,11 +656,11 @@ class SteamCleanerGUI:
         if has_visible:
             self._empty_state.visible = False
         elif has_results:
-            icon_control.name = ft.Icons.FILTER_LIST_OFF
+            icon_control.icon = ft.Icons.FILTER_LIST_OFF
             text_control.value = t("empty_filter")
             self._empty_state.visible = True
         else:
-            icon_control.name = ft.Icons.SEARCH_OFF
+            icon_control.icon = ft.Icons.SEARCH_OFF
             text_control.value = t("empty_scan")
             self._empty_state.visible = True
 
@@ -752,11 +752,11 @@ class SteamCleanerGUI:
         visible_paths = {entry.path for entry in self._visible_entries}
         if visible_paths.issubset(self._selected):
             self._selected -= visible_paths
-            self._select_all_button.text = t("select_all")
+            self._select_all_button.content = t("select_all")
             new_state = False
         else:
             self._selected |= visible_paths
-            self._select_all_button.text = t("deselect_all")
+            self._select_all_button.content = t("deselect_all")
             new_state = True
         for index, container in enumerate(self._results_list.controls):
             # flet control / ctypes attribute resolved at runtime; no type stubs
@@ -808,7 +808,7 @@ class SteamCleanerGUI:
         self._page.update()
 
     def _reset_scan_ui(self) -> None:
-        self._scan_button.text = t("scan")
+        self._scan_button.content = t("scan")
         self._scan_button.icon = ft.Icons.SEARCH
         self._progress.opacity = 0
         self._cancel_event = None
@@ -828,7 +828,7 @@ class SteamCleanerGUI:
             return
 
         self._cancel_event = threading.Event()
-        self._scan_button.text = t("stop")
+        self._scan_button.content = t("stop")
         self._scan_button.icon = ft.Icons.STOP
         self._progress.opacity = 1
         self._status.value = t("scanning")
@@ -1230,14 +1230,14 @@ class SteamCleanerGUI:
         async def do_copy() -> None:
             clipboard = ft.Clipboard()
             await clipboard.set(address)
-            button.text = t("copied")
+            button.content = t("copied")
             button.icon = ft.Icons.CHECK
             try:
                 button.update()
             except RuntimeError:
                 return
             await asyncio.sleep(1.5)
-            button.text = label
+            button.content = label
             button.icon = ft.Icons.CURRENCY_BITCOIN
             with contextlib.suppress(RuntimeError):
                 button.update()

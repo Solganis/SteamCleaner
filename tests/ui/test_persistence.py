@@ -130,7 +130,7 @@ class TestScanCancelCycles:
     def test_scan_sets_stop_state(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
         assert_that(gui._cancel_event).is_not_none()
-        assert_that(gui._scan_button.text).is_equal_to(t("stop"))
+        assert_that(gui._scan_button.content).is_equal_to(t("stop"))
 
     def test_second_click_cancels(self, gui: SteamCleanerGUI):
         self._start_scan(gui)
@@ -143,7 +143,7 @@ class TestScanCancelCycles:
         gui._reset_scan_ui()
 
         assert_that(gui._cancel_event).is_none()
-        assert_that(gui._scan_button.text).is_equal_to(t("scan"))
+        assert_that(gui._scan_button.content).is_equal_to(t("scan"))
         assert_that(gui._progress.opacity).is_equal_to(0)
 
     def test_multiple_cancel_cycles_keep_working(self, gui: SteamCleanerGUI):
@@ -167,4 +167,4 @@ class TestScanCancelCycles:
         self._start_scan(gui)
         assert isinstance(gui._cancel_event, Event)
         assert_that(gui._cancel_event.is_set()).is_false()
-        assert_that(gui._scan_button.text).is_equal_to(t("stop"))
+        assert_that(gui._scan_button.content).is_equal_to(t("stop"))

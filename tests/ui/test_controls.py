@@ -72,9 +72,9 @@ class TestOnSelectAll:
     def test_button_text_toggles(self, gui_with_ui: SteamCleanerGUI):
         _populate_list(gui_with_ui, [ENTRY_SMALL])
         gui_with_ui._on_select_all(None)
-        assert_that(gui_with_ui._select_all_button.text).is_equal_to(t("deselect_all"))
+        assert_that(gui_with_ui._select_all_button.content).is_equal_to(t("deselect_all"))
         gui_with_ui._on_select_all(None)
-        assert_that(gui_with_ui._select_all_button.text).is_equal_to(t("select_all"))
+        assert_that(gui_with_ui._select_all_button.content).is_equal_to(t("select_all"))
 
 
 # test deliberately accesses a protected member
