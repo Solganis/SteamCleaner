@@ -160,14 +160,14 @@ def main() -> None:
     parser.add_argument("--skip-flet-build", action="store_true", help="Skip flet build, patch and rebuild only")
     args = parser.parse_args()
 
-    sdk = find_flutter_sdk(args.flutter_sdk)
-    print(f"Flutter SDK: {sdk}\n")
-
     if not args.skip_flet_build:
         flet_build()
     elif not BUILD_FLUTTER.exists():
         print("ERROR: build/flutter not found. Run without --skip-flet-build first.", file=sys.stderr)
         sys.exit(1)
+
+    sdk = find_flutter_sdk(args.flutter_sdk)
+    print(f"Flutter SDK: {sdk}\n")
 
     patch_sources()
     flutter_rebuild(sdk)
