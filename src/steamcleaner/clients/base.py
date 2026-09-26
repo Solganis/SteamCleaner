@@ -1,12 +1,15 @@
 import abc
 import logging
-import threading
-from collections.abc import Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from steamcleaner.models.junk import JunkEntry
-from steamcleaner.platform.base import PlatformAdapter
-from steamcleaner.scanner.exclusions import ExclusionRegistry
+if TYPE_CHECKING:
+    import threading
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from steamcleaner.models.junk import JunkEntry
+    from steamcleaner.platform.base import PlatformAdapter
+    from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 _logger = logging.getLogger(__name__)
 

@@ -1,9 +1,12 @@
 import re
-from collections.abc import Callable, Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, walk_files
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+    from pathlib import Path
 
 REDIST_DIR_RE = re.compile(r"(directx|redist|_commonredist|miles|support|installer)", re.IGNORECASE)
 JUNK_EXTENSIONS = frozenset({".cab", ".exe", ".msi", ".so", ".dll"})

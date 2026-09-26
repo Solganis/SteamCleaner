@@ -1,5 +1,5 @@
-from pathlib import Path
 from threading import Event, Timer
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import flet as ft
@@ -8,6 +8,9 @@ from assertpy2 import assert_that
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 from steamcleaner.ui.gui.i18n import t
 from steamcleaner.utils.config import get_value, save_value
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_event(event_type: ft.WindowEventType) -> MagicMock:

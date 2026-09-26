@@ -1,15 +1,19 @@
 import logging
-import threading
 from collections.abc import Callable, Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
-from steamcleaner.platform.base import PlatformAdapter
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.scanner.patterns import COMMON_PATTERNS
 from steamcleaner.utils.fs import list_subdirs, walk_files
+
+if TYPE_CHECKING:
+    import threading
+    from pathlib import Path
+
+    from steamcleaner.platform.base import PlatformAdapter
 
 _logger = logging.getLogger(__name__)
 

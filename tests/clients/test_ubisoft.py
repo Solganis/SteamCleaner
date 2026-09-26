@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
@@ -6,6 +6,9 @@ from helpers import FakePlatformAdapter
 from steamcleaner.clients.ubisoft import UbisoftClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _REGISTRY_LAUNCHER_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher"
 _REGISTRY_INSTALLS_PATH = r"SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs"

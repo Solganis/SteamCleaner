@@ -1,8 +1,11 @@
 import logging
 import logging.handlers
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.utils.config import config_dir, get_value, save_value
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

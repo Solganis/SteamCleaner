@@ -2,14 +2,18 @@ import logging
 import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from send2trash import send2trash
 
 from steamcleaner.models.junk import JunkEntry
-from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import is_reparse_point
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from steamcleaner.models.scan_result import ScanResult
 
 _logger = logging.getLogger(__name__)
 

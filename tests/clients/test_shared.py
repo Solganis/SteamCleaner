@@ -1,6 +1,6 @@
 import re
 import threading
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
 
@@ -13,6 +13,9 @@ from steamcleaner.clients.shared import (
     scan_launcher_logs,
 )
 from steamcleaner.models.junk import JunkCategory
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestHasRedistAncestor:

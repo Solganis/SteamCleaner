@@ -6,13 +6,12 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import darkdetect
 import flet as ft
 
 from steamcleaner.cleaner.engine import CleanEngine, CleanStats
-from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
@@ -20,6 +19,11 @@ from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t
 from steamcleaner.utils.config import get_value, save_many, save_value
 from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from steamcleaner.models.junk import JunkEntry
 
 _logger = logging.getLogger(__name__)
 
@@ -72,7 +76,7 @@ class WindowHider:
         self._stop = threading.Event()
 
     @classmethod
-    def from_hwnd(cls, hwnd: int | None) -> "WindowHider":
+    def from_hwnd(cls, hwnd: int | None) -> WindowHider:
         instance = cls()
         instance._stop.set()
         instance._hwnd = hwnd
@@ -673,8 +677,7 @@ class SteamCleanerGUI:
     def _rebuild_filter_options(self) -> None:
         categories = sorted({entry.category.value for entry in self._result.entries})
         options: list[ft.dropdown.Option] = [ft.dropdown.Option("all", t("all_categories"))]
-        for category in categories:
-            options.append(ft.dropdown.Option(category, t_category(category)))
+        options.extend(ft.dropdown.Option(category, t_category(category)) for category in categories)
         self._filter_dropdown.options = options
         if self._category_filter not in categories:
             self._category_filter = None

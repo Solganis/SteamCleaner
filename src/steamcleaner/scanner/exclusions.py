@@ -1,6 +1,9 @@
 import logging
 from dataclasses import dataclass, field
-from pathlib import PurePath
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import PurePath
 
 _logger = logging.getLogger(__name__)
 

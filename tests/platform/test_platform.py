@@ -1,5 +1,5 @@
 import sys
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -8,6 +8,9 @@ from assertpy2 import assert_that
 from steamcleaner.platform import create_adapter
 from steamcleaner.platform.linux import LinuxAdapter
 from steamcleaner.platform.macos import MacOSAdapter
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestCreateAdapter:

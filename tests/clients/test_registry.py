@@ -1,5 +1,4 @@
-from collections.abc import Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -8,8 +7,13 @@ from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
-from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from steamcleaner.models.junk import JunkEntry
 
 
 # test deliberately accesses a protected member

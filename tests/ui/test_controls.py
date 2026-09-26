@@ -1,12 +1,16 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import flet as ft
 from assertpy2 import assert_that
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
-from steamcleaner.ui.gui.app import SteamCleanerGUI, _row_checkbox
+from steamcleaner.ui.gui.app import _row_checkbox
 from steamcleaner.ui.gui.i18n import t
+
+if TYPE_CHECKING:
+    from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 
 def _make_entry(

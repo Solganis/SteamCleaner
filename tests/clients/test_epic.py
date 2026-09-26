@@ -1,5 +1,5 @@
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 from assertpy2 import assert_that
@@ -8,6 +8,9 @@ from helpers import FakePlatformAdapter
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_epic_env(

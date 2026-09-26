@@ -1,14 +1,17 @@
 import json
 import logging
 import re
-from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.clients.shared import REDIST_DIR_RE, scan_game, scan_launcher_logs
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _logger = logging.getLogger(__name__)
 

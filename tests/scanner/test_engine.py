@@ -1,12 +1,16 @@
 import threading
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
-from steamcleaner.models.junk import JunkEntry
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from steamcleaner.models.junk import JunkEntry
 
 
 def _make_steam_tree(tmp_path: Path) -> FakePlatformAdapter:

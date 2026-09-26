@@ -1,9 +1,12 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture

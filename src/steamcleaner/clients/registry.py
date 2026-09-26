@@ -1,12 +1,15 @@
 import importlib
 import logging
 import pkgutil
-from collections.abc import Iterator
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from steamcleaner.clients.base import GameClient
-from steamcleaner.platform.base import PlatformAdapter
-from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from steamcleaner.platform.base import PlatformAdapter
+    from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 _logger = logging.getLogger(__name__)
 

@@ -1,6 +1,8 @@
 import sys
+from typing import TYPE_CHECKING
 
-from steamcleaner.platform.base import PlatformAdapter
+if TYPE_CHECKING:
+    from steamcleaner.platform.base import PlatformAdapter
 
 
 def create_adapter() -> PlatformAdapter:

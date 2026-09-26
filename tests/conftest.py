@@ -1,9 +1,12 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from helpers import FakePlatformAdapter
 
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture

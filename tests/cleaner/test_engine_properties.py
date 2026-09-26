@@ -6,7 +6,7 @@ plain ones, never touches a reparse point, and keeps its deleted/skipped/bytes c
 """
 
 import uuid
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
 from hypothesis import HealthCheck, given, settings
@@ -16,6 +16,9 @@ from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.exclusions import BUILTIN_EXCLUSIONS
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _ENTRY_SIZE = 64
 _BUILTIN_PATTERNS = [exclusion.pattern for exclusion in BUILTIN_EXCLUSIONS]

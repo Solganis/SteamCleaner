@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 from assertpy2 import assert_that
@@ -7,6 +7,9 @@ from steamcleaner.cleaner.engine import CleanEngine
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_entry(path: Path, size: int = 1024, category: JunkCategory = JunkCategory.REDISTRIBUTABLE) -> JunkEntry:

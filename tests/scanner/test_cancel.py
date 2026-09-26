@@ -1,5 +1,5 @@
 import threading
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
@@ -8,6 +8,9 @@ from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_steam_with_games(tmp_path: Path, game_count: int) -> FakePlatformAdapter:

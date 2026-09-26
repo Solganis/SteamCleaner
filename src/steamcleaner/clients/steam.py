@@ -1,15 +1,19 @@
 import logging
-from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.clients.shared import scan_cache_dir, scan_game
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.platform.base import PlatformAdapter
-from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import dir_size, list_subdirs
 from steamcleaner.utils.vdf import load_vdf
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from steamcleaner.platform.base import PlatformAdapter
+    from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 _logger = logging.getLogger(__name__)
 
