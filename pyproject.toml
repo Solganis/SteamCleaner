@@ -39,6 +39,9 @@ product = "SteamCleaner"
 [tool.flet.app]
 path = "src"
 
+[tool.flet.windows.app]
+hide_window_on_start = true  # the app shows the window itself once Python is ready, so no empty frame flashes
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

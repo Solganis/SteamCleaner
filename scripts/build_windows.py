@@ -1,19 +1,20 @@
 """Two-step Windows build: flet build -> patch -> flutter rebuild.
 
 Flet's Flutter runner shows the window before Python gets control, causing a
-visible flash on startup. This script patches three files after flet build:
+visible flash on startup. `hide_window_on_start` under `[tool.flet.windows.app]`
+in pyproject.toml stops both the Dart side and the native runner from showing
+it (the app shows it when ready). This script checks that the setting reached
+the generated sources, then patches what flet does not expose:
 
-1. lib/main.dart: sets hideWindowOnStart = true so Dart skips windowManager.show()
-2. windows/runner/flutter_window.cpp: forces hide_window_on_start = true so the native
-   runner does not Show() the window on the first frame (the app shows it when ready)
-3. windows/runner/win32_window.cpp: sets BLACK_BRUSH background to prevent white flash
+1. windows/runner/win32_window.cpp: sets BLACK_BRUSH background to prevent white flash
+2. windows/runner/resources/app_icon.ico: replaced with assets/icon.ico
 
 Then rebuilds via flutter build to compile the patches into the final binary.
 
 Usage:
     uv run python scripts/build_windows.py
     uv run python scripts/build_windows.py --skip-flet-build
-    uv run python scripts/build_windows.py --flutter-sdk C:\\flutter\\3.41.7
+    uv run python scripts/build_windows.py --flutter-sdk C:\\flutter\\3.44.8
 """
 
 import argparse
@@ -27,17 +28,15 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD_FLUTTER = ROOT / "build" / "flutter"
 BUILD_OUTPUT = ROOT / "build" / "windows"
 
-MAIN_DART = BUILD_FLUTTER / "lib" / "main.dart"
+FLET_GENERATED_DART = BUILD_FLUTTER / "lib" / "flet_generated.dart"
 FLUTTER_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "flutter_window.cpp"
 WIN32_WINDOW_CPP = BUILD_FLUTTER / "windows" / "runner" / "win32_window.cpp"
 FLUTTER_RELEASE = BUILD_FLUTTER / "build" / "windows" / "x64" / "runner" / "Release"
 FLUTTER_APP_ICON = BUILD_FLUTTER / "windows" / "runner" / "resources" / "app_icon.ico"
 CUSTOM_ICON = ROOT / "assets" / "icon.ico"
 
-HIDE_WINDOW_DEFAULT = (
-    '  const bool hide_window_on_start =\n      false ||\n      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
-)
-HIDE_WINDOW_FORCED = (
+HIDDEN_START_DART = 'bool.tryParse("True".toLowerCase())'
+HIDDEN_START_CPP = (
     '  const bool hide_window_on_start =\n      true ||\n      HasEnvironmentVariable(L"FLET_HIDE_WINDOW_ON_START");'
 )
 
@@ -94,32 +93,13 @@ def patch_sources() -> None:
     print("=== Step 2/4: Patching build sources ===")
     patched = False
 
-    dart_text = MAIN_DART.read_text(encoding="utf-8")
-    if '"None".toLowerCase()' in dart_text:
-        dart_text = dart_text.replace(
-            'bool.tryParse("None".toLowerCase()) ?? false;',
-            'bool.tryParse("True".toLowerCase()) ?? false;',
-        )
-        MAIN_DART.write_text(dart_text, encoding="utf-8")
-        print("  main.dart: hideWindowOnStart -> true")
-        patched = True
-    elif '"True".toLowerCase()' in dart_text:
-        print("  main.dart: already patched")
-    else:
-        print("  ERROR: main.dart hideWindowOnStart pattern not found", file=sys.stderr)
+    dart_hidden = HIDDEN_START_DART in FLET_GENERATED_DART.read_text(encoding="utf-8")
+    cpp_hidden = HIDDEN_START_CPP in FLUTTER_WINDOW_CPP.read_text(encoding="utf-8")
+    if not (dart_hidden and cpp_hidden):
+        print("  ERROR: hide_window_on_start is not set in the generated sources", file=sys.stderr)
+        print("  Check [tool.flet.windows.app] in pyproject.toml and rerun flet build.", file=sys.stderr)
         sys.exit(1)
-
-    cpp_text = FLUTTER_WINDOW_CPP.read_text(encoding="utf-8")
-    if HIDE_WINDOW_DEFAULT in cpp_text:
-        cpp_text = cpp_text.replace(HIDE_WINDOW_DEFAULT, HIDE_WINDOW_FORCED)
-        FLUTTER_WINDOW_CPP.write_text(cpp_text, encoding="utf-8")
-        print("  flutter_window.cpp: forced hide_window_on_start = true")
-        patched = True
-    elif HIDE_WINDOW_FORCED in cpp_text:
-        print("  flutter_window.cpp: already patched")
-    else:
-        print("  ERROR: flutter_window.cpp hide_window_on_start pattern not found", file=sys.stderr)
-        sys.exit(1)
+    print("  hide_window_on_start: set in flet_generated.dart and flutter_window.cpp")
 
     win32_text = WIN32_WINDOW_CPP.read_text(encoding="utf-8")
     if "window_class.hbrBackground = 0;" in win32_text:
