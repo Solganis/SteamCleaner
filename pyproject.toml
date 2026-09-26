@@ -85,72 +85,21 @@ dev = [
     "ty>=0.0.84",
 ]
 
-[tool.ruff]
-# 120 feeds both `ruff format` and the E501 lint; line length is a hard rule, not just a formatter hint.
-line-length = 120
-target-version = "py314"  # our minimum Python; UP rewrites target this floor
-
-[tool.ruff.lint]
-# Opt into preview rules only when named explicitly in `select`, never the whole unstable set.
-preview = true
-explicit-preview-rules = true
-
-# Curated set, not "ALL": each prefix is here on purpose. Plugin name + why we keep it.
-select = [
-    "E",    # pycodestyle errors
-    "F",    # Pyflakes - unused imports/names, undefined names
-    "W",    # pycodestyle warnings
-    "I",    # isort - import ordering
-    "N",    # pep8-naming - naming conventions
-    "UP",   # pyupgrade - modernize syntax to the py314 floor
-    "B",    # flake8-bugbear - likely bugs and footguns
-    "A",    # flake8-builtins - don't shadow builtins
-    "SIM",  # flake8-simplify - collapse redundant constructs
-    "RUF",  # Ruff-specific rules
-    "ANN",  # flake8-annotations - require type hints on everything (project rule)
-]
-# UP037: flet bundles Python 3.12, so forward-ref annotation strings must stay quoted; ANN401: Any is
-# needed for the free-form TOML config dicts loaded from ~/.config/steamcleaner/config.toml.
-ignore = ["UP037", "ANN401"]
-
-[tool.ruff.lint.per-file-ignores]
-"src/steamcleaner/ui/*" = ["ANN001"]  # flet event-handler params are dynamically typed (no flet stubs)
-"tests/*" = ["ANN"]  # tests omit -> None and fixture-param annotations by convention
-
-[tool.ty.environment]
-python-version = "3.14"
-# "all", not a single OS: SteamCleaner ships a per-OS PlatformAdapter (windows/linux/macos), so ty must
-# type-check every platform's code path, not just the CI runner's view (contrast Seekbar, pinned to win32).
-python-platform = "all"
-
-[tool.ty.rules]
-# Downgrade to warn (not error) globally: flet controls and winreg expose dynamic attributes with no
-# stubs, so this rule fires pervasively; the two overrides below silence the files where it is pure noise.
-unresolved-attribute = "warn"
-
-# winreg module has no type stubs; all registry access triggers false positives
-[[tool.ty.overrides]]
-include = ["src/steamcleaner/platform/windows.py"]
-[tool.ty.overrides.rules]
-unresolved-attribute = "ignore"
-
-# flet controls use dynamic attributes (__init_subclass__, kwargs) with no type stubs
-[[tool.ty.overrides]]
-include = ["src/steamcleaner/ui/gui/app.py", "src/main.py", "tests/ui/test_persistence.py", "tests/ui/test_logic.py", "tests/ui/test_controls.py", "tests/ui/test_async.py"]
-[tool.ty.overrides.rules]
-unresolved-attribute = "ignore"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "tests"]  # import the package from src/ and shared test helpers from tests/
-addopts = "--import-mode=importlib"  # modern import mode: no sys.path insertion, plays well with src-layout
+pythonpath = ["src", "tests"]  # the package from src/ and shared test helpers from tests/
+# --strict-markers: an unknown @pytest.mark.* is an error, not a silent typo
+addopts = ["--import-mode=importlib", "--strict-markers"]
+xfail_strict = true  # an xfail that unexpectedly passes fails the run
+# A deprecation or runtime warning fails the run instead of scrolling past. Add a targeted
+# `"ignore::<Category>"` here only if a third-party warning forces it.
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 branch = true
 source = ["steamcleaner"]
-# Kept out of the 100% target because they cannot be unit-tested on the runner: ui/* is flet GUI paint;
-# windows.py/macos.py call OS-native APIs (winreg, ~/Library) not exercisable on every platform;
-# __main__.py and app.py are entry-point wiring. linux.py stays in - pure XDG path logic, DI-testable anywhere.
+# Out of the 100% target because the runner cannot exercise them: ui/* is flet GUI paint, windows.py and
+# macos.py call OS-native APIs, __main__.py and app.py are entry-point wiring.
 omit = [
     "src/steamcleaner/ui/*",
     "src/steamcleaner/platform/windows.py",
@@ -160,12 +109,73 @@ omit = [
 ]
 
 [tool.coverage.report]
-# Non-executable or unreachable-by-design lines that should not count against coverage.
+# Only what never runs under test by construction. A line that can be tested is tested, and a single line
+# that cannot is marked `# pragma: no cover` with its reason beside it.
 exclude_lines = [
     "if __name__ == .__main__.",
     "if TYPE_CHECKING:",
-    "except OSError",  # defensive IO guards, hard to trigger deterministically
     "pragma: no cover",
-    "if self\\.cancelled",  # thread-driven cancellation branches
-    "if cancel and cancel\\.is_set",
 ]
+
+[tool.ruff]
+# 120 feeds both `ruff format` and the E501 lint: line length is a hard rule, not just a formatter hint.
+line-length = 120
+target-version = "py314"
+# Under preview ruff prints rule names instead of codes. Keep the codes: they are what a `# noqa` needs.
+output-prefer-rule-codes = true
+
+[tool.ruff.lint]
+# Preview rules only when named in `select` (E301), never the whole unstable set.
+preview = true
+explicit-preview-rules = true
+
+# Curated set, not "ALL": each prefix is here on purpose.
+select = [
+    "E",      # pycodestyle errors
+    "E301",   # pycodestyle, preview-gated: a blank line between methods (not in stable "E")
+    "F",      # Pyflakes: unused imports and names, undefined names
+    "W",      # pycodestyle warnings
+    "N",      # pep8-naming
+    "I",      # isort
+    "UP",     # pyupgrade: modernize syntax to the py314 floor
+    "B",      # flake8-bugbear: likely bugs and footguns
+    "A",      # flake8-builtins: don't shadow builtins
+    "ANN",    # flake8-annotations: type hints on everything
+    "ASYNC",  # flake8-async: blocking calls inside the flet async handlers
+    "C4",     # flake8-comprehensions: drop redundant list()/dict()/set() wrappers
+    "FURB",   # refurb: idiom simplifications
+    "PIE",    # flake8-pie: small idiom simplifications
+    "RSE",    # flake8-raise: no empty parens on a bare `raise SomeError`
+    "PGH",    # pygrep-hooks: a suppression must name its rule code
+    "PLE",    # Pylint errors: the real-error subset, not style
+    "SIM",    # flake8-simplify: collapse redundant constructs
+    "T10",    # flake8-debugger: no committed breakpoint()/pdb calls
+    "RUF",    # Ruff-specific rules
+    "ERA",    # eradicate: no commented-out code
+    "PERF",   # Perflint: performance anti-patterns
+    "TC",     # flake8-type-checking: typing-only imports under TYPE_CHECKING
+    "C901",   # mccabe: a ratchet rather than a bar, see the threshold below
+]
+
+# Intentionally empty: nothing is ignored globally. Relaxations go in per-file-ignores.
+ignore = []
+
+[tool.ruff.lint.mccabe]
+# A ratchet, not a bar: the worst function sits at 22, so this stops a new worst without forcing a rewrite.
+max-complexity = 22
+
+[tool.ruff.lint.flake8-type-checking]
+# Dataclass annotations are read at run time (hypothesis `st.builds`), so their imports must stay real.
+runtime-evaluated-decorators = ["dataclasses.dataclass"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN"]  # tests omit `-> None` and fixture-parameter annotations by convention
+
+[tool.ty.environment]
+python-version = "3.14"
+# Every platform, not the runner's: each OS has its own PlatformAdapter and all of them must type-check.
+python-platform = "all"
+
+[tool.ty.analysis]
+# Suppressions must be ty-native `# ty: ignore[rule]`, so a stray mypy `# type: ignore` cannot mask a ty error.
+respect-type-ignore-comments = false
