@@ -61,7 +61,7 @@ class EpicClient(GameClient):
                             if candidate.is_dir() and candidate not in paths:
                                 _logger.debug("Epic manifest %s -> %s", item_file.name, candidate)
                                 paths.append(candidate)
-                    except json.JSONDecodeError, OSError:
+                    except (json.JSONDecodeError, OSError):  # fmt: skip  # cosmic-ray (parso) lacks PEP 758
                         _logger.debug("Failed to parse Epic manifest: %s", item_file)
                         continue
 
