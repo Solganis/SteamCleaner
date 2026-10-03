@@ -68,6 +68,10 @@ def test_record_keeps_no_instance_dict(build_record: Callable[[], DataclassInsta
     assert_that(hasattr(build_record(), "__dict__")).is_false()
 
 
+def test_clean_stats_start_empty():
+    assert_that(CleanStats()).is_equal_to(CleanStats(deleted=0, skipped=0, errors=[], bytes_freed=0, bytes_trashed=0))
+
+
 @pytest.mark.parametrize("container_type", CONTAINERS)
 def test_container_keeps_no_instance_dict(container_type: Callable[[], object]):
     assert_that(hasattr(container_type(), "__dict__")).is_false()
