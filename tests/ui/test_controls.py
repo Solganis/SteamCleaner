@@ -10,6 +10,8 @@ from steamcleaner.ui.gui.app import _row_checkbox
 from steamcleaner.ui.gui.i18n import t
 
 if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
     from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 
@@ -144,3 +146,47 @@ class TestOnRowClick:
         assert_that(gui_with_ui._clean_button.disabled).is_true()
         gui_with_ui._on_row_click(ENTRY_SMALL.path)
         assert_that(gui_with_ui._clean_button.disabled).is_false()
+
+
+# test deliberately accesses a protected member
+# noinspection PyProtectedMember
+class TestToolbar:
+    def test_inputs_are_filled_blocks_as_tall_as_the_buttons(self, gui_with_ui: SteamCleanerGUI):
+        inputs = (gui_with_ui._sort_dropdown, gui_with_ui._filter_dropdown, gui_with_ui._search_field)
+        buttons = (gui_with_ui._scan_button, gui_with_ui._select_all_button, gui_with_ui._clean_button)
+
+        assert_that({(control.filled, control.height) for control in inputs}).is_equal_to({(True, 44)})
+        assert_that({button.height for button in buttons}).is_equal_to({44})
+
+    def test_inputs_keep_their_borderless_look_while_a_scan_locks_them(self, gui_with_ui: SteamCleanerGUI):
+        inputs = (gui_with_ui._sort_dropdown, gui_with_ui._filter_dropdown, gui_with_ui._search_field)
+        borderless = ft.OutlineInputBorder(side=ft.BorderSide(width=0, style=ft.BorderStyle.NONE), border_radius=8)
+
+        gui_with_ui._set_controls_locked(locked=True)
+
+        for control in inputs:
+            assert isinstance(control.border, dict)
+            assert_that(control.disabled).is_true()
+            assert_that(control.border[ft.ControlState.DISABLED]).is_equal_to(borderless)
+            assert_that(control.border[ft.ControlState.DEFAULT]).is_equal_to(borderless)
+
+    def test_dropdowns_are_named_by_a_tooltip_instead_of_a_label(self, gui_with_ui: SteamCleanerGUI):
+        dropdowns = (gui_with_ui._sort_dropdown, gui_with_ui._filter_dropdown)
+
+        assert_that([(dropdown.tooltip, dropdown.label) for dropdown in dropdowns]).is_equal_to(
+            [("Sort by", None), ("Filter", None)]
+        )
+
+    def test_dropdowns_sit_in_blocks_that_clip_them_to_the_toolbar_height(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        toolbar_row = fake_page.add.call_args.args[2].content
+        blocks = [control for control in toolbar_row.controls if isinstance(control, ft.Container)]
+
+        assert_that([(block.content, block.height, block.clip_behavior) for block in blocks]).is_equal_to(
+            [
+                (gui_with_ui._sort_dropdown, 44, ft.ClipBehavior.ANTI_ALIAS),
+                (gui_with_ui._filter_dropdown, 44, ft.ClipBehavior.ANTI_ALIAS),
+            ]
+        )
+        assert_that([block.content.offset for block in blocks]).is_equal_to([ft.Offset(0, -2 / 44)] * 2)

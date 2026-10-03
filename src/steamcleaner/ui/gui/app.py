@@ -38,6 +38,9 @@ _TON_ADDRESS: Final = "UQAZDskr7UZE9Hn8Q8asCfmYIsicgL0KS9YNvRJ5NF53OPPo"
 _USDT_TRC20_ADDRESS: Final = "TG32fyLCxPcTCmtFXayDkvAvAF9goci9st"
 
 _PADDING_H: Final = 16
+_TOOLBAR_HEIGHT: Final = 44
+_TOOLBAR_RADIUS: Final = 8
+_DROPDOWN_HEIGHT: Final = 48
 _CATEGORY_COLORS: Final = MappingProxyType(
     {
         "redistributable": ft.Colors.ORANGE_700,
@@ -56,6 +59,44 @@ def _row_background(index: int, *, selected: bool) -> str | None:
     if selected:
         return ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
     return ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+
+
+def _style_toolbar_field(field: ft.Dropdown | ft.TextField) -> None:
+    """Give a toolbar input the look of the buttons beside it: a filled block of their height and corners.
+
+    The border is named for the disabled state too: left out, Flutter draws its own dark outline around an
+    input for as long as a scan or a clean keeps it locked.
+    """
+    no_side = ft.BorderSide(width=0, style=ft.BorderStyle.NONE)
+    plain = ft.OutlineInputBorder(side=no_side, border_radius=_TOOLBAR_RADIUS)
+    focused = ft.OutlineInputBorder(side=ft.BorderSide(width=2, color=ft.Colors.PRIMARY), border_radius=_TOOLBAR_RADIUS)
+    borders: dict[ft.ControlState, ft.InputBorder] = {
+        ft.ControlState.DEFAULT: plain,
+        ft.ControlState.DISABLED: plain,
+        ft.ControlState.FOCUSED: focused,
+    }
+    field.filled = True
+    field.fill_color = ft.Colors.SURFACE_CONTAINER_HIGHEST
+    field.border = borders
+    field.height = _TOOLBAR_HEIGHT
+    field.dense = True
+    field.text_size = 13
+
+
+def _fit_toolbar_dropdown(dropdown: ft.Dropdown) -> ft.Container:
+    """Return the dropdown inside a block that clips it to the toolbar height.
+
+    Flutter draws a dropdown 48 high whatever height it is given: its arrow button is 40 with 4 around it,
+    and the field sits at the top of its box. The field is moved up by half the excess, and the block cuts
+    off what sticks out above and below.
+    """
+    dropdown.offset = ft.Offset(0, (_TOOLBAR_HEIGHT - _DROPDOWN_HEIGHT) / 2 / _TOOLBAR_HEIGHT)
+    return ft.Container(
+        content=dropdown,
+        height=_TOOLBAR_HEIGHT,
+        border_radius=_TOOLBAR_RADIUS,
+        clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+    )
 
 
 def _clean_summary(stats: CleanStats) -> str:
@@ -352,18 +393,20 @@ class SteamCleanerGUI:
             t("scan"),
             icon=ft.Icons.SEARCH,
             on_click=self.on_scan,
-            height=44,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), text_style=ft.TextStyle(size=15)),
+            height=_TOOLBAR_HEIGHT,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=_TOOLBAR_RADIUS), text_style=ft.TextStyle(size=15)
+            ),
         )
         self._clean_button = ft.Button(
             t("clean_selected"),
             icon=ft.Icons.DELETE_SWEEP,
             on_click=self._on_clean,
             disabled=True,
-            height=44,
+            height=_TOOLBAR_HEIGHT,
             tooltip=t("select_items_first"),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=8),
+                shape=ft.RoundedRectangleBorder(radius=_TOOLBAR_RADIUS),
                 text_style=ft.TextStyle(size=15),
                 color={
                     ft.ControlState.DEFAULT: ft.Colors.WHITE,
@@ -380,13 +423,14 @@ class SteamCleanerGUI:
             t("select_all"),
             on_click=self._on_select_all,
             disabled=True,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            height=_TOOLBAR_HEIGHT,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=_TOOLBAR_RADIUS)),
         )
 
         self._sort_dropdown = ft.Dropdown(
             width=180,
             value="size_desc",
-            label=t("sort_by"),
+            tooltip=t("sort_by"),
             options=[
                 ft.dropdown.Option("size_desc", t("size_largest")),
                 ft.dropdown.Option("size_asc", t("size_smallest")),
@@ -394,33 +438,26 @@ class SteamCleanerGUI:
                 ft.dropdown.Option("path", t("path")),
             ],
             on_select=self._on_sort_changed,
-            dense=True,
-            text_size=13,
-            border_color=ft.Colors.OUTLINE,
         )
 
         self._filter_dropdown = ft.Dropdown(
             width=180,
             value="all",
-            label=t("filter"),
+            tooltip=t("filter"),
             options=[ft.dropdown.Option("all", t("all_categories"))],
             on_select=self._on_filter_changed,
-            dense=True,
-            text_size=13,
-            border_color=ft.Colors.OUTLINE,
         )
 
         self._search_field = ft.TextField(
             hint_text=t("search"),
             prefix_icon=ft.Icons.SEARCH,
             expand=True,
-            dense=True,
-            text_size=13,
-            border_color=ft.Colors.OUTLINE,
             on_change=self._on_search_changed,
             on_focus=lambda _: self._set_text_input_focus(True),
             on_blur=lambda _: self._set_text_input_focus(False),
         )
+        for toolbar_field in (self._sort_dropdown, self._filter_dropdown, self._search_field):
+            _style_toolbar_field(toolbar_field)
 
         self._progress = ft.ProgressBar(opacity=0)
         self._results_list = ft.ListView(
@@ -495,8 +532,8 @@ class SteamCleanerGUI:
                     self._scan_button,
                     self._select_all_button,
                     ft.VerticalDivider(width=1),
-                    self._sort_dropdown,
-                    self._filter_dropdown,
+                    _fit_toolbar_dropdown(self._sort_dropdown),
+                    _fit_toolbar_dropdown(self._filter_dropdown),
                     self._search_field,
                     ft.VerticalDivider(width=1),
                     self._clean_button,
