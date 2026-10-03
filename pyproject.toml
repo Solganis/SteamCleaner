@@ -70,6 +70,7 @@ include = [
     "src",
     "tests",
     "scripts/drop_exempt_survivors.py",
+    "scripts/prune_bundle.py",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
