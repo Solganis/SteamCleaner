@@ -45,7 +45,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libglib2.0-dev ninja-build pkg-config cmake clang
-      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
       - run: uv sync
@@ -126,7 +126,7 @@ jobs:
         run: |
           jq -c '.dsseEnvelope' "$BUNDLE_PATH" > artifacts/provenance.intoto.jsonl
           test -s artifacts/provenance.intoto.jsonl
-      - uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
       - name: Generate SBOMs (CycloneDX)
         run: |
           for platform in windows linux macos; do
