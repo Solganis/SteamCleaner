@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 VdfDict = dict[str, "str | VdfDict"]
+VdfPairs = list[tuple[str, "str | VdfPairs"]]
 
 
 class VdfParseError(ValueError):
@@ -19,15 +20,15 @@ class _VdfParser:
         self._pos = 0
         self._length = len(text)
 
-    def parse(self) -> VdfDict:
+    def parse(self) -> VdfPairs:
         result = self._parse_pairs()
         self._skip_whitespace_and_comments()
         if self._pos < self._length:
             raise VdfParseError(f"Unexpected content at position {self._pos}")
         return result
 
-    def _parse_pairs(self) -> VdfDict:
-        result: VdfDict = {}
+    def _parse_pairs(self) -> VdfPairs:
+        result: VdfPairs = []
         while True:
             self._skip_whitespace_and_comments()
             if self._pos >= self._length:
@@ -38,14 +39,14 @@ class _VdfParser:
             self._skip_whitespace_and_comments()
             if self._pos < self._length and self._peek() == "{":
                 self._advance()
-                value: str | VdfDict = self._parse_pairs()
+                value: str | VdfPairs = self._parse_pairs()
                 self._skip_whitespace_and_comments()
                 if self._pos >= self._length or self._peek() != "}":
                     raise VdfParseError(f"Expected '}}' at position {self._pos}")
                 self._advance()
             else:
                 value = self._parse_string()
-            result[key] = value
+            result.append((key, value))
         return result
 
     def _parse_string(self) -> str:
@@ -115,9 +116,18 @@ class _VdfParser:
         self._pos += 1
 
 
-def parse_vdf(text: str) -> VdfDict:
-    """Parse a Valve VDF (KeyValues1) string into a nested dict."""
+def _as_dict(pairs: VdfPairs) -> VdfDict:
+    return {key: value if isinstance(value, str) else _as_dict(value) for key, value in pairs}
+
+
+def parse_vdf_pairs(text: str) -> VdfPairs:
+    """Parse a Valve VDF (KeyValues1) string into nested (key, value) pairs, keeping repeated keys in order."""
     return _VdfParser(text).parse()
+
+
+def parse_vdf(text: str) -> VdfDict:
+    """Parse a Valve VDF (KeyValues1) string into a nested dict. A key that repeats keeps its last value."""
+    return _as_dict(parse_vdf_pairs(text))
 
 
 def load_vdf(path: Path) -> VdfDict:

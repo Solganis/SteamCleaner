@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import pytest
 from assertpy2 import assert_that
 
-from steamcleaner.utils.vdf import VdfParseError, load_vdf, parse_vdf
+from steamcleaner.utils.vdf import VdfParseError, load_vdf, parse_vdf, parse_vdf_pairs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -228,6 +228,29 @@ class TestParseVdfRealisticSteam:
                 }
             }
         )
+
+
+class TestRepeatedKeys:
+    REPEATED = '"Firewall" { "Game" "a.exe" "Game" "b.exe" } "Firewall" { "GAME" "c.exe" } "tail" "x"'
+
+    def test_pairs_keep_every_repeated_key_in_order(self):
+        assert_that(parse_vdf_pairs(self.REPEATED)).is_equal_to(
+            [
+                ("Firewall", [("Game", "a.exe"), ("Game", "b.exe")]),
+                ("Firewall", [("GAME", "c.exe")]),
+                ("tail", "x"),
+            ]
+        )
+
+    def test_dict_keeps_the_last_value_of_a_repeated_key(self):
+        assert_that(parse_vdf(self.REPEATED)).is_equal_to({"Firewall": {"GAME": "c.exe"}, "tail": "x"})
+
+    def test_pairs_of_an_empty_text_and_an_empty_section(self):
+        assert_that(parse_vdf_pairs("")).is_equal_to([])
+        assert_that(parse_vdf_pairs('"section" { }')).is_equal_to([("section", [])])
+
+    def test_pairs_reject_what_the_dict_parser_rejects(self):
+        assert_that(parse_vdf_pairs).raises(VdfParseError).when_called_with('"key" {')
 
 
 class TestLoadVdf:
