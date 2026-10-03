@@ -1,4 +1,5 @@
 import logging
+import shutil
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -566,6 +567,54 @@ class TestConfirmClean:
     def test_triggers_clean_task(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._confirm_clean([ENTRY_SMALL], use_trash=False, for_good=frozenset({ENTRY_SMALL.path}))
         fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL], False, frozenset({ENTRY_SMALL.path}))
+
+
+# test reads protected GUI members
+# noinspection PyProtectedMember
+class TestCleanTaskKeepsWhatItDidNotRemove:
+    def test_entry_the_clean_left_where_it_was_stays_listed_and_selected(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock, tmp_path: Path
+    ):
+        entries = []
+        for name in ("refused", "removed", "untouched"):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "setup.exe").write_bytes(b"x" * 2048)
+            entries.append(
+                JunkEntry(
+                    path=tmp_path / name, category=JunkCategory.REDISTRIBUTABLE, size_bytes=2048, client_name="Custom"
+                )
+            )
+        refused, removed, untouched = entries
+        gui_with_ui._result = ScanResult(entries=list(entries))
+        gui_with_ui._selected = {refused.path, removed.path}
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        platform.lose_trash_under(refused.path)
+        with (
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+            patch("steamcleaner.platform.base.send2trash", side_effect=shutil.rmtree),
+            patch.object(gui_with_ui, "_refresh_list"),
+        ):
+            run_bounded(gui_with_ui._clean_task([refused, removed], True, frozenset()))
+
+        assert_that(gui_with_ui._result.entries).is_equal_to([refused, untouched])
+        assert_that(gui_with_ui._selected).is_equal_to({refused.path})
+        assert_that(gui_with_ui._status.value).is_equal_to("2 items remaining, 1 failed")
+        assert_that([refused.path.exists(), removed.path.exists()]).is_equal_to([True, False])
+
+    def test_entry_that_was_already_gone_leaves_the_list(self, gui_with_ui: SteamCleanerGUI, tmp_path: Path):
+        gone = JunkEntry(
+            path=tmp_path / "gone", category=JunkCategory.REDISTRIBUTABLE, size_bytes=2048, client_name="Custom"
+        )
+        gui_with_ui._result = ScanResult(entries=[gone])
+        gui_with_ui._selected = {gone.path}
+        with (
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=FakePlatformAdapter(home_dir=tmp_path)),
+            patch.object(gui_with_ui, "_refresh_list"),
+        ):
+            run_bounded(gui_with_ui._clean_task([gone], False, frozenset()))
+
+        assert_that(gui_with_ui._result.entries).is_empty()
+        assert_that(gui_with_ui._selected).is_empty()
 
 
 # test reads protected GUI members

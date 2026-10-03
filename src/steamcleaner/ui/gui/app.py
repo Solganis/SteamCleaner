@@ -1041,12 +1041,15 @@ class SteamCleanerGUI:
 
     async def _clean_task(self, entries: list[JunkEntry], use_trash: bool, for_good: frozenset[Path]) -> None:
         deleted_ids = {id(entry) for entry in entries}
+        left_ids: set[int] = set()
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
         total = len(entries)
         progress_state: list[str | int] = [0, ""]
 
         def on_entry_cleaned(entry: JunkEntry, success: bool) -> None:
+            if not success:
+                left_ids.add(id(entry))
             progress_state[0] = int(progress_state[0]) + 1
             name = entry.path.name
             status = t("deleted") if success else t("failed")
@@ -1103,9 +1106,9 @@ class SteamCleanerGUI:
         for error in stats.errors:
             _logger.warning("Clean error: %s", error)
 
-        deleted_paths = {entry.path for entry in entries}
-        self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_ids]
-        self._selected -= deleted_paths
+        removed_ids = deleted_ids - left_ids
+        self._result.entries = [entry for entry in self._result.entries if id(entry) not in removed_ids]
+        self._selected.intersection_update(entry.path for entry in self._result.entries)
 
         entry_count = len(self._result.entries)
         if stats.errors:
