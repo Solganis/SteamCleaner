@@ -38,19 +38,15 @@
 <h2 align="center">Features</h2>
 
 - **Cross-platform** &middot; Desktop app for Windows, macOS, and Linux with automatic dark/light theme
-- **Safe by default** &middot; Files go to system trash; symlinks and junctions are never followed
 - **Scans** &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
 - **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, unused cross-platform binaries, and folders left by uninstalled Steam games
-- **5 languages** &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
-- **Shortcuts** &middot; Keyboard shortcuts for scan, select, clean, and cancel
-
-<h2 align="center">Safety</h2>
-
+- **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Game files** &middot; Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
-- **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
 - **Leftovers** &middot; Folders of uninstalled games may hold saves, so the confirmation says in red how many of them are selected. Each is checked against Steam's manifests again right before it is deleted
+- **5 languages** &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
+- **Shortcuts** &middot; Keyboard shortcuts for scan, select, clean, and cancel
 
 <h2 align="center">What it finds</h2>
 
