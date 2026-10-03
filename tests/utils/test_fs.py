@@ -1,5 +1,7 @@
 import os
 import stat
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Self
@@ -20,6 +22,57 @@ class _InaccessibleDirEntry:
 
     def is_dir(self, *, follow_symlinks: bool = True) -> bool:
         raise PermissionError(f"Access is denied: {self.path}")
+
+
+class _AliasDirEntry:
+    """A file as Windows lists an app execution alias: regular, not a symlink, carrying the reparse flag."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = str(path)
+
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool:
+        return False
+
+    def is_file(self, *, follow_symlinks: bool = True) -> bool:
+        return True
+
+    def is_symlink(self) -> bool:
+        return False
+
+    def stat(self, *, follow_symlinks: bool = True) -> SimpleNamespace:
+        return SimpleNamespace(st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT, st_size=7)
+
+
+class _JunctionDirEntry:
+    """A directory as Windows lists a junction: a directory carrying the reparse flag."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = str(path)
+
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool:
+        return True
+
+    def stat(self, *, follow_symlinks: bool = True) -> SimpleNamespace:
+        attributes = stat.FILE_ATTRIBUTE_DIRECTORY | stat.FILE_ATTRIBUTE_REPARSE_POINT
+        return SimpleNamespace(st_file_attributes=attributes)
+
+
+class _UnreadableAttributesDirEntry:
+    """A directory that lists as one but whose attributes cannot be read."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = str(path)
+
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool:
+        return True
+
+    def stat(self, *, follow_symlinks: bool = True) -> SimpleNamespace:
+        raise PermissionError(f"Access is denied: {self.path}")
+
+
+def _scandir_with(directory: Path, extra_entry: object) -> _FakeScandirIterator:
+    with os.scandir(directory) as scanner:
+        return _FakeScandirIterator([extra_entry, *scanner])
 
 
 class _FakeScandirIterator:
@@ -120,17 +173,16 @@ class TestWalkFiles:
         assert_that(result_names).does_not_contain("symdir")
         assert_that(results).is_length(1)
 
-    def test_skips_reparse_point_subdir(self, tmp_path: Path):
-        real = tmp_path / "real"
-        real.mkdir()
-        (real / "file.txt").write_bytes(b"data")
-        reparse = tmp_path / "junction"
-        reparse.mkdir()
-        with patch("steamcleaner.utils.fs.is_reparse_point", side_effect=lambda path: path == reparse):
+    @pytest.mark.parametrize("entry_type", [_JunctionDirEntry, _UnreadableAttributesDirEntry])
+    def test_does_not_enter_a_subdir_that_is_a_reparse_point_or_cannot_be_told(self, tmp_path: Path, entry_type: type):
+        (tmp_path / "kept.bin").write_bytes(b"\x00" * 100)
+        elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
+        elsewhere.mkdir()
+        (elsewhere / "file.txt").write_bytes(b"data")
+        scanner = _scandir_with(tmp_path, entry_type(elsewhere))
+        with patch.object(os, "scandir", return_value=scanner):
             results = list(walk_files(tmp_path))
-        result_paths = [path for path, _ in results]
-        assert_that(any(path.name == "file.txt" for path in result_paths)).is_true()
-        assert_that(any("junction" in str(path) for path in result_paths)).is_false()
+        assert_that(results).is_equal_to([(tmp_path / "kept.bin", 100)])
 
     def test_nonexistent_dir(self, tmp_path: Path):
         results = list(walk_files(tmp_path / "nope"))
@@ -145,6 +197,14 @@ class TestWalkFiles:
     def test_skips_entry_raising_os_error(self, tmp_path: Path):
         (tmp_path / "kept.bin").write_bytes(b"\x00" * 100)
         scanner = _scandir_with_inaccessible_entry(tmp_path)
+        with patch.object(os, "scandir", return_value=scanner):
+            results = list(walk_files(tmp_path))
+        assert_that(results).is_equal_to([(tmp_path / "kept.bin", 100)])
+
+    def test_skips_a_file_that_is_a_reparse_point_without_being_a_symlink(self, tmp_path: Path):
+        (tmp_path / "kept.bin").write_bytes(b"\x00" * 100)
+        with os.scandir(tmp_path) as real_entries:
+            scanner = _FakeScandirIterator([_AliasDirEntry(tmp_path / "alias.exe"), *real_entries])
         with patch.object(os, "scandir", return_value=scanner):
             results = list(walk_files(tmp_path))
         assert_that(results).is_equal_to([(tmp_path / "kept.bin", 100)])
@@ -189,14 +249,24 @@ class TestListSubdirs:
     def test_nonexistent_dir(self, tmp_path: Path):
         assert_that(list_subdirs(tmp_path / "nope")).is_equal_to([])
 
-    def test_skips_reparse_point_subdir(self, tmp_path: Path):
+    @pytest.mark.parametrize("entry_type", [_JunctionDirEntry, _UnreadableAttributesDirEntry])
+    def test_skips_a_subdir_that_is_a_reparse_point_or_cannot_be_told(self, tmp_path: Path, entry_type: type):
+        (tmp_path / "real").mkdir()
+        scanner = _scandir_with(tmp_path, entry_type(tmp_path / "junction"))
+        with patch.object(os, "scandir", return_value=scanner):
+            result = list_subdirs(tmp_path)
+        assert_that(result).is_equal_to([tmp_path / "real"])
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="junctions are an NTFS reparse point")
+    def test_skips_a_real_junction(self, tmp_path: Path):
         real = tmp_path / "real"
         real.mkdir()
+        (real / "file.txt").write_bytes(b"data")
         junction = tmp_path / "junction"
-        junction.mkdir()
-        with patch("steamcleaner.utils.fs.is_reparse_point", side_effect=lambda path: path.name == "junction"):
-            result = list_subdirs(tmp_path)
-        assert_that({path.name for path in result}).is_equal_to({"real"})
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(junction), str(real)], check=True, capture_output=True)
+
+        assert_that(list_subdirs(tmp_path)).is_equal_to([real])
+        assert_that(list(walk_files(tmp_path))).is_equal_to([(real / "file.txt", 4)])
 
     def test_skips_entry_raising_os_error(self, tmp_path: Path):
         (tmp_path / "visible").mkdir()

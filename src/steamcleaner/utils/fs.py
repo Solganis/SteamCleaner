@@ -41,7 +41,8 @@ def safe_rmtree(path: Path) -> bool:
 def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
     """Walk directory tree via os.scandir, yielding (path, size) for each file.
 
-    Uses DirEntry.stat() to avoid extra syscalls. Skips reparse points.
+    Uses DirEntry.stat() to avoid extra syscalls. Skips reparse points, and an entry that cannot be told
+    to be one or not.
     """
     try:
         scanner = os.scandir(root)
@@ -52,13 +53,14 @@ def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
         for entry in scanner:
             try:
                 if entry.is_dir(follow_symlinks=False):
-                    entry_path = Path(entry.path)
-                    if not is_reparse_point(entry_path):
-                        yield from walk_files(entry_path)
+                    if not is_reparse_stat(entry.stat(follow_symlinks=False)):
+                        yield from walk_files(Path(entry.path))
                     else:
-                        _logger.debug("Skipping reparse point: %s", entry_path)
+                        _logger.debug("Skipping reparse point: %s", entry.path)
                 elif entry.is_file(follow_symlinks=False) and not entry.is_symlink():
-                    yield Path(entry.path), entry.stat(follow_symlinks=False).st_size
+                    entry_stat = entry.stat(follow_symlinks=False)
+                    if not is_reparse_stat(entry_stat):
+                        yield Path(entry.path), entry_stat.st_size
             except OSError as file_error:
                 _logger.debug("Error accessing %s: %s", entry.path, file_error)
                 continue
@@ -114,7 +116,7 @@ def disk_usage(path: Path, platform: PlatformAdapter) -> int:
 
 
 def list_subdirs(path: Path) -> list[Path]:
-    """List immediate subdirectories via os.scandir, skipping reparse points."""
+    """List immediate subdirectories via os.scandir, skipping reparse points and what cannot be told to be one."""
     result: list[Path] = []
     try:
         scanner = os.scandir(path)
@@ -124,10 +126,8 @@ def list_subdirs(path: Path) -> list[Path]:
     with scanner:
         for entry in scanner:
             try:
-                if entry.is_dir(follow_symlinks=False):
-                    entry_path = Path(entry.path)
-                    if not is_reparse_point(entry_path):
-                        result.append(entry_path)
+                if entry.is_dir(follow_symlinks=False) and not is_reparse_stat(entry.stat(follow_symlinks=False)):
+                    result.append(Path(entry.path))
             except OSError as dir_error:
                 _logger.debug("Error accessing %s: %s", entry.path, dir_error)
                 continue
