@@ -42,6 +42,7 @@
     "delete": "Excluir",
     "cleaning": "Limpando...",
     "cleaning_progress": "Limpando 0/{total}...",
+    "clean_failed": "Falha na limpeza",
     "deleted": "Excluído",
     "failed": "Falha",
     "items_remaining": "{count} itens restantes",

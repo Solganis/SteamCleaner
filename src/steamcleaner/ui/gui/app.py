@@ -22,7 +22,7 @@ from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t, t_category
 from steamcleaner.utils.config import get_value, save_many, save_value
-from steamcleaner.utils.fs import format_size
+from steamcleaner.utils.fs import format_size, is_gone
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
 if TYPE_CHECKING:
@@ -1053,19 +1053,23 @@ class SteamCleanerGUI:
             progress_state[1] = f"{status}: {name} ({progress_state[0]}/{total})"
 
         def run_clean() -> None:
-            selected_result = ScanResult(entries=entries)
-            platform = create_adapter()
-            exclusions = ExclusionRegistry()
-            cleaner = CleanEngine(
-                use_trash=use_trash,
-                dry_run=False,
-                exclusions=exclusions,
-                platform=platform,
-                still_offered=ScanEngine(platform, exclusions).still_offers,
-                delete_for_good=for_good,
-            )
-            stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
-            clean_done.set()
+            try:
+                selected_result = ScanResult(entries=entries)
+                platform = create_adapter()
+                exclusions = ExclusionRegistry()
+                cleaner = CleanEngine(
+                    use_trash=use_trash,
+                    dry_run=False,
+                    exclusions=exclusions,
+                    platform=platform,
+                    still_offered=ScanEngine(platform, exclusions).still_offers,
+                    delete_for_good=for_good,
+                )
+                stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
+            except Exception:
+                _logger.exception("Clean failed")
+            finally:
+                clean_done.set()
 
         threading.Thread(target=run_clean, daemon=True).start()
 
@@ -1077,6 +1081,15 @@ class SteamCleanerGUI:
             self._status.value = str(progress_state[1]) or t("cleaning_progress", total=total)
             self._page.update()
             await asyncio.sleep(0.1)
+
+        if not stats_holder:
+            self._result.entries = [
+                entry for entry in self._result.entries if id(entry) not in deleted_ids or not is_gone(entry.path)
+            ]
+            self._selected.intersection_update(entry.path for entry in self._result.entries)
+            self._status.value = t("clean_failed")
+            self._finish_clean()
+            return
 
         stats = stats_holder[0]
         _logger.info(
@@ -1093,9 +1106,6 @@ class SteamCleanerGUI:
         deleted_paths = {entry.path for entry in entries}
         self._result.entries = [entry for entry in self._result.entries if id(entry) not in deleted_ids]
         self._selected -= deleted_paths
-        self._scan_button.disabled = False
-        self._progress.opacity = 0
-        self._progress.value = None
 
         entry_count = len(self._result.entries)
         if stats.errors:
@@ -1104,7 +1114,12 @@ class SteamCleanerGUI:
         else:
             self._status.value = t("items_remaining", count=entry_count)
             self._show_snackbar(_clean_summary(stats))
+        self._finish_clean()
 
+    def _finish_clean(self) -> None:
+        self._scan_button.disabled = False
+        self._progress.opacity = 0
+        self._progress.value = None
         self._cleaning = False
         self._set_controls_locked(locked=False)
         self._rebuild_filter_options()

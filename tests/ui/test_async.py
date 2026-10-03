@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +16,8 @@ from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.ui.gui.i18n import t
 
 if TYPE_CHECKING:
+    import os
+
     from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 
@@ -131,6 +134,15 @@ class TestCleanTask:
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
         assert_that(gui_with_ui._selected).does_not_contain(ENTRY_SMALL.path)
 
+    def test_filter_stops_offering_a_category_whose_entries_are_gone(self, gui_with_ui: SteamCleanerGUI):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL, ENTRY_LARGE])
+        gui_with_ui._rebuild_filter_options()
+
+        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(deleted=1, bytes_freed=100))
+
+        keys = [option.key for option in gui_with_ui._filter_dropdown.options]
+        assert_that(keys).is_equal_to(["all", "crash_dump"])
+
     def test_clean_success_snackbar(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
         gui_with_ui._selected = {ENTRY_SMALL.path}
@@ -186,6 +198,102 @@ class TestCleanTask:
         assert_that(gui_with_ui._cleaning).is_false()
         assert_that(gui_with_ui._scan_button.disabled).is_false()
         assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
+
+
+# test reads protected GUI members
+# noinspection PyProtectedMember
+class TestCleanTaskWhoseWorkerFails:
+    @staticmethod
+    def _run(gui: SteamCleanerGUI, entries: list[JunkEntry], failure: Exception, removed: Path | None = None):
+        def fail(_result: ScanResult, callback: object) -> CleanStats:
+            if removed is not None:
+                removed.unlink()
+            raise failure
+
+        cleaner = MagicMock()
+        cleaner.clean.side_effect = fail
+        with (
+            patch("steamcleaner.ui.gui.app.CleanEngine", return_value=cleaner),
+            patch.object(gui, "_refresh_list") as refresh,
+        ):
+            run_bounded(gui._clean_task(entries, False, frozenset()))
+        return refresh
+
+    @staticmethod
+    def _make_entries(tmp_path: Path) -> list[JunkEntry]:
+        entries = []
+        for name in ("first.dmp", "second.dmp", "untouched.dmp"):
+            (tmp_path / name).write_bytes(b"x" * 10)
+            entries.append(
+                JunkEntry(path=tmp_path / name, category=JunkCategory.CRASH_DUMP, size_bytes=10, client_name="Steam")
+            )
+        return entries
+
+    @pytest.mark.parametrize(
+        "failure",
+        [OSError("the device is not ready"), RuntimeError("no adapter"), TypeError("a bug")],
+        ids=["OSError", "RuntimeError", "a-bug"],
+    )
+    def test_task_ends_and_says_the_clean_failed(
+        self, gui_with_ui: SteamCleanerGUI, tmp_path: Path, caplog, failure: Exception
+    ):
+        entries = self._make_entries(tmp_path)
+        gui_with_ui._result = ScanResult(entries=list(entries))
+        gui_with_ui._confirm_clean(entries[:2], use_trash=False, for_good=frozenset())
+
+        with caplog.at_level(logging.ERROR, logger="steamcleaner.ui.gui.app"):
+            refresh = self._run(gui_with_ui, entries[:2], failure)
+
+        assert_that(gui_with_ui._status.value).is_equal_to("Cleaning failed")
+        assert_that(gui_with_ui._cleaning).is_false()
+        assert_that(gui_with_ui._scan_button.disabled).is_false()
+        assert_that(gui_with_ui._sort_dropdown.disabled).is_false()
+        assert_that(gui_with_ui._progress.opacity).is_equal_to(0)
+        assert_that(gui_with_ui._progress.value).is_none()
+        refresh.assert_called_once_with()
+        assert_that(caplog.messages).is_equal_to(["Clean failed"])
+        assert_that(caplog.records[0].exc_info[1]).is_same_as(failure)
+
+    def test_list_keeps_what_is_still_there_and_drops_what_went_before_the_failure(
+        self, gui_with_ui: SteamCleanerGUI, tmp_path: Path
+    ):
+        first, second, untouched = self._make_entries(tmp_path)
+        gui_with_ui._result = ScanResult(entries=[first, second, untouched])
+        gui_with_ui._selected = {first.path, second.path}
+
+        self._run(gui_with_ui, [first, second], OSError("the device is not ready"), removed=first.path)
+
+        assert_that(gui_with_ui._result.entries).is_equal_to([second, untouched])
+        assert_that(gui_with_ui._selected).is_equal_to({second.path})
+
+    def test_entry_that_was_not_being_cleaned_stays_listed_even_when_its_path_is_gone(
+        self, gui_with_ui: SteamCleanerGUI, tmp_path: Path
+    ):
+        first, second, untouched = self._make_entries(tmp_path)
+        gui_with_ui._result = ScanResult(entries=[first, second, untouched])
+
+        self._run(gui_with_ui, [first], OSError("the device is not ready"), removed=untouched.path)
+
+        assert_that(gui_with_ui._result.entries).is_equal_to([first, second, untouched])
+
+    def test_entry_whose_path_cannot_be_inspected_after_the_failure_stays_listed(
+        self, gui_with_ui: SteamCleanerGUI, tmp_path: Path, monkeypatch
+    ):
+        first, second, untouched = self._make_entries(tmp_path)
+        gui_with_ui._result = ScanResult(entries=[first, second, untouched])
+        real_lstat = Path.lstat
+
+        def deny_the_first(path: Path) -> os.stat_result:
+            if path == first.path:
+                raise PermissionError(f"Access is denied: {path}")
+            return real_lstat(path)
+
+        monkeypatch.setattr(Path, "lstat", deny_the_first)
+        monkeypatch.setattr(Path, "exists", lambda path: path != first.path)
+
+        self._run(gui_with_ui, [first, second], OSError("the device is not ready"))
+
+        assert_that(gui_with_ui._result.entries).is_equal_to([first, second, untouched])
 
 
 # test reads protected GUI members and mock attributes that PyCharm does not resolve

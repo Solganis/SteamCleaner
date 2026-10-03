@@ -42,6 +42,7 @@
     "delete": "Удалить",
     "cleaning": "Удаление...",
     "cleaning_progress": "Удаление 0/{total}...",
+    "clean_failed": "Ошибка удаления",
     "deleted": "Удалено",
     "failed": "Ошибка",
     "items_remaining": "Осталось {count}",

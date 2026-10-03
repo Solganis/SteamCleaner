@@ -42,6 +42,7 @@
     "delete": "Delete",
     "cleaning": "Cleaning...",
     "cleaning_progress": "Cleaning 0/{total}...",
+    "clean_failed": "Cleaning failed",
     "deleted": "Deleted",
     "failed": "Failed",
     "items_remaining": "{count} items remaining",
