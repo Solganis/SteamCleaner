@@ -40,7 +40,7 @@
 - **Cross-platform** &middot; Desktop app for Windows, macOS, and Linux with automatic dark/light theme
 - **Safe by default** &middot; Files go to system trash; symlinks and junctions are never followed
 - **Scans** &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
-- **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, and unused cross-platform binaries
+- **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, unused cross-platform binaries, and folders left by uninstalled Steam games
 - **5 languages** &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
 - **Shortcuts** &middot; Keyboard shortcuts for scan, select, clean, and cancel
 
@@ -50,6 +50,7 @@
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
 - **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
+- **Leftovers** &middot; Folders of uninstalled games may hold saves, so the confirmation says in red how many of them are selected. Each is checked against Steam's manifests again right before it is deleted
 
 <h2 align="center">What it finds</h2>
 
@@ -62,6 +63,7 @@
 <tr><td>Old logs</td><td>Log files over 1 MB in game directories and launcher logs</td></tr>
 <tr><td>Cross-platform binaries</td><td>Ren'Py <code>lib/darwin-*</code>, <code>lib/linux-*</code> on Windows (and vice versa)</td></tr>
 <tr><td>Bundled installers</td><td>Setup/installer executables inside game folders</td></tr>
+<tr><td>Leftovers of uninstalled games</td><td>Folders in a Steam library that no installed game owns, each shown with the date it was last written</td></tr>
 </table>
 </div>
 
