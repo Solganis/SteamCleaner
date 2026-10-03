@@ -39,14 +39,15 @@ uv run pytest --cov=steamcleaner --cov-report=term-missing --cov-fail-under=100
 
 ### Windows release build
 
-The Windows binary is built in two steps, so the window stays hidden until Python is ready to show it:
+The Windows binary is built in two steps, so the window stays hidden until Python is ready to show it. A third step removes the parts of the bundled Python runtime the app does not use:
 
 ```bash
 uv run flet build windows --yes
 uv run python scripts/build_windows.py --skip-flet-build
+uv run python scripts/prune_bundle.py build/windows
 ```
 
-The script stops if `hide_window_on_start` from `[tool.flet.windows.app]` did not reach the generated sources.
+The second script stops if `hide_window_on_start` from `[tool.flet.windows.app]` did not reach the generated sources. The third removes debug builds of extension modules, Tcl/Tk, SQLite and the standard-library modules listed in it. A module goes on that list only after the bundled app was launched, scanned and ran a dry-run clean without it.
 
 ## Commit style
 
