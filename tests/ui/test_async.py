@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import threading
 from pathlib import Path
@@ -65,7 +64,7 @@ class TestScanTask:
             patch("steamcleaner.ui.gui.app.create_adapter"),
             patch.object(gui, "_refresh_list"),
         ):
-            asyncio.run(gui._scan_task())
+            run_bounded(gui._scan_task())
 
     def test_scan_finds_entries(self, gui_with_ui: SteamCleanerGUI):
         mock_engine = self._mock_scan_with_entries(ENTRY_SMALL, ENTRY_LARGE)
