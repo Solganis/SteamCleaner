@@ -9,9 +9,8 @@
 # a single module locally, edit module-path below, then from the repo root:
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray baseline cosmic-ray.toml
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray init cosmic-ray.toml mutation.sqlite
-#   uvx --from cosmic-ray==8.4.6 cr-filter-operators mutation.sqlite cosmic-ray.toml
 #   uvx --from cosmic-ray==8.4.6 cosmic-ray exec cosmic-ray.toml mutation.sqlite
-#   uv run python scripts/drop_type_checking_survivors.py mutation.sqlite
+#   uv run python scripts/drop_exempt_survivors.py mutation.sqlite
 #   uvx --from cosmic-ray==8.4.6 cr-rate mutation.sqlite   # survival rate, lower is better
 #
 # For a whole-package run instead, set module-path = "src/steamcleaner" and list the GUI, platform
@@ -27,12 +26,3 @@ test-command = "uv run --no-sync python -m pytest tests --ignore=tests/ui -x -q 
 
 [cosmic-ray.distributor]
 name = "local"
-
-# The `|` in `X | None` type unions is never a runtime bitwise-or in this codebase, and PEP 649
-# defers annotation evaluation on 3.14, so these mutants are unkillable equivalents that only depress
-# the score. Drop them so the result reflects real assertion quality.
-# Apply after init with: cr-filter-operators <session> cosmic-ray.toml
-[cosmic-ray.filters.operators-filter]
-exclude-operators = [
-    "core/ReplaceBinaryOperator_BitOr_.*",
-]

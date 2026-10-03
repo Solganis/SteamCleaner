@@ -19,28 +19,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # max = per-module survival ceiling (%), set from the baseline run plus headroom for
-        # run-to-run noise. The gate fails the job if survival exceeds it. Tighten as tests improve.
+        # max = per-module survival ceiling (%): halfway between the survivors measured on this code and one
+        # more, so a single new survivor fails the job. The trailing note is that measurement: survivors out
+        # of the mutants left after scripts/drop_exempt_survivors.py. After a deliberate change to a
+        # module or its tests, measure again and move its ceiling. Keep it above 0: cr-rate ignores
+        # --fail-over 0. A module with nothing left to mutate has no midpoint and is set to 0.01 by hand.
         include:
-          - { module: cleaner/engine.py, max: 24 }
-          - { module: scanner/exclusions.py, max: 38 }
-          - { module: scanner/engine.py, max: 18 }
-          - { module: scanner/patterns.py, max: 78 } # pure data (pattern table), mutants mostly equivalent
-          - { module: utils/fs.py, max: 48 }
-          - { module: utils/vdf.py, max: 32 }
-          - { module: utils/config.py, max: 20 }
-          - { module: models/scan_result.py, max: 8 }
-          - { module: clients/registry.py, max: 35 }
-          - { module: clients/base.py, max: 28 }
-          - { module: clients/shared.py, max: 25 }
-          - { module: clients/steam.py, max: 8 }
-          - { module: clients/epic.py, max: 8 }
-          - { module: clients/ea_app.py, max: 5 }
-          - { module: clients/gog.py, max: 5 }
-          - { module: clients/ubisoft.py, max: 5 }
-          - { module: platform/__init__.py, max: 5 } # no mutable statements after filtering
-          - { module: platform/linux.py, max: 5 }
-          - { module: platform/base.py, max: 48 }
+          - { module: cleaner/engine.py, max: 3.85 } # 3 of 91
+          - { module: scanner/exclusions.py, max: 4.55 } # 0 of 11
+          - { module: scanner/engine.py, max: 27.05 } # 16 of 61
+          - { module: scanner/patterns.py, max: 12.5 } # 0 of 4
+          - { module: utils/fs.py, max: 13.84 } # 15 of 112
+          - { module: utils/vdf.py, max: 20.86 } # 41 of 199
+          - { module: utils/config.py, max: 17.37 } # 12 of 72
+          - { module: models/scan_result.py, max: 1 } # 0 of 50
+          - { module: clients/registry.py, max: 3.34 } # 0 of 15
+          - { module: clients/base.py, max: 28.95 } # 5 of 19
+          - { module: clients/shared.py, max: 20.99 } # 23 of 112
+          - { module: clients/steam.py, max: 3.68 } # 12 of 340
+          - { module: clients/steam_scripts.py, max: 3 } # 8 of 284
+          - { module: clients/epic.py, max: 3.35 } # 13 of 404
+          - { module: clients/ea_app.py, max: 0.21 } # 0 of 242
+          - { module: clients/gog.py, max: 0.14 } # 0 of 364
+          - { module: clients/ubisoft.py, max: 0.28 } # 0 of 179
+          - { module: platform/__init__.py, max: 0.01 } # 0 of 0: dormant, nothing to mutate until the file grows
+          - { module: platform/linux.py, max: 0.12 } # 0 of 450
+          - { module: platform/base.py, max: 36.54 } # 9 of 26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,15 +61,14 @@ jobs:
           MODULE: ${{ matrix.module }}
           MAX_SURVIVAL: ${{ matrix.max }}
         run: |
-          # Reuse the committed config (test-command, timeout, operators-filter) and only swap the
+          # Reuse the committed config (test-command, timeout) and only swap the
           # target module, so CI and local runs stay in sync from a single source of truth.
           sed "s#^module-path = .*#module-path = \"src/steamcleaner/${MODULE}\"#" cosmic-ray.toml > run.toml
 
           uvx --from cosmic-ray==8.4.6 cosmic-ray baseline run.toml
           uvx --from cosmic-ray==8.4.6 cosmic-ray init run.toml session.sqlite
-          uvx --from cosmic-ray==8.4.6 cr-filter-operators session.sqlite run.toml
           uvx --from cosmic-ray==8.4.6 cosmic-ray exec run.toml session.sqlite
-          uv run python scripts/drop_type_checking_survivors.py session.sqlite
+          uv run python scripts/drop_exempt_survivors.py session.sqlite
 
           {
             echo "### Mutation: ${MODULE}"
