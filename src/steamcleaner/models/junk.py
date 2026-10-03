@@ -1,5 +1,6 @@
 import enum
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Final
 
@@ -26,6 +27,7 @@ class JunkEntry:
     description: str = ""
     game_root: Path | None = None
     display_name: str | None = None
+    last_written: date | None = None
 
     @property
     def size_mb(self) -> float:

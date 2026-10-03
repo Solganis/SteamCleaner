@@ -1,9 +1,11 @@
 import queue
+from datetime import date
 from pathlib import Path
 from threading import Event
 from unittest.mock import MagicMock, patch
 
 import flet as ft
+import pytest
 from assertpy2 import assert_that
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
@@ -18,6 +20,7 @@ def _make_entry(
     size: int = 1024,
     game_root: Path | None = None,
     display_name: str | None = None,
+    last_written: date | None = None,
 ) -> JunkEntry:
     return JunkEntry(
         path=Path(f"C:/Games/{name}"),
@@ -26,6 +29,7 @@ def _make_entry(
         client_name="Steam",
         game_root=game_root,
         display_name=display_name,
+        last_written=last_written,
     )
 
 
@@ -70,6 +74,41 @@ class TestDisplayPath:
             display_name="Override",
         )
         assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to("Override")
+
+    @pytest.mark.parametrize(
+        ("language", "shown"),
+        [
+            ("en", "Old Game (left by an uninstalled game, last written on 2021-01-02)"),
+            ("ru", "Old Game (осталось от удалённой игры, последняя запись 2021-01-02)"),
+        ],
+    )
+    def test_leftover_is_worded_in_the_language_of_the_interface(self, monkeypatch, language: str, shown: str):
+        monkeypatch.setattr("steamcleaner.ui.gui.i18n._current_lang", language)
+        entry = _make_entry("Old Game", JunkCategory.LEFTOVER, display_name="Old Game", last_written=date(2021, 1, 2))
+
+        assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to(shown)
+
+    def test_leftover_whose_last_write_is_past_any_calendar_says_so(self, monkeypatch):
+        monkeypatch.setattr("steamcleaner.ui.gui.i18n._current_lang", "en")
+        entry = _make_entry("Old Game", JunkCategory.LEFTOVER, display_name="Old Game")
+
+        assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to(
+            "Old Game (left by an uninstalled game, last written on an unknown date)"
+        )
+
+    @pytest.mark.parametrize(
+        ("language", "shown"), [("en", "Counter-Strike 2 (shader cache)"), ("ru", "Counter-Strike 2 (кэш шейдеров)")]
+    )
+    def test_shader_cache_is_worded_in_the_language_of_the_interface(self, monkeypatch, language: str, shown: str):
+        monkeypatch.setattr("steamcleaner.ui.gui.i18n._current_lang", language)
+        entry = _make_entry("730", JunkCategory.SHADER_CACHE, display_name="Counter-Strike 2")
+
+        assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to(shown)
+
+    def test_leftover_without_a_name_of_its_own_is_shown_by_its_path(self):
+        entry = _make_entry("Old Game", JunkCategory.LEFTOVER, last_written=date(2021, 1, 2))
+
+        assert_that(SteamCleanerGUI._display_path(entry)).is_equal_to(str(entry.path))
 
 
 # test deliberately accesses a protected member

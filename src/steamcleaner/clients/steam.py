@@ -16,6 +16,7 @@ from steamcleaner.utils.vdf import load_vdf
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from datetime import date
 
     from steamcleaner.platform.base import PlatformAdapter
     from steamcleaner.scanner.exclusions import ExclusionRegistry
@@ -34,12 +35,12 @@ def _identify(directory: Path) -> tuple[int, int] | None:
     return directory_stat.st_dev, directory_stat.st_ino
 
 
-def _format_day(file_time: float) -> str:
-    """Return the UTC day of a file time, or a placeholder when it lies past what a calendar holds."""
+def _read_day(file_time: float) -> date | None:
+    """Return the UTC day of a file time, or None when it lies past what a calendar holds."""
     try:
-        return (_EPOCH + timedelta(seconds=math.floor(file_time))).date().isoformat()
+        return (_EPOCH + timedelta(seconds=math.floor(file_time))).date()
     except OverflowError:
-        return "an unknown date"
+        return None
 
 
 def parse_library_folders_vdf(path: Path) -> list[Path]:
@@ -250,15 +251,17 @@ class SteamClient(GameClient):
             last_written = max(last_written, file_stat.st_mtime)
         if size == 0:
             return
-        display = f"{game_dir.name} (left by an uninstalled game, last written on {_format_day(last_written)})"
+        day = _read_day(last_written)
+        written = "an unknown date" if day is None else day.isoformat()
         yield JunkEntry(
             path=game_dir,
             category=JunkCategory.LEFTOVER,
             size_bytes=size,
             client_name=self.name,
-            description=display,
+            description=f"Left by an uninstalled game, last written on {written}",
             game_root=game_dir,
-            display_name=display,
+            display_name=game_dir.name,
+            last_written=day,
         )
 
     def _scan_finished_installers(
@@ -311,15 +314,15 @@ class SteamClient(GameClient):
             size = dir_size(app_dir)
             if size > 0:
                 app_name = appid_map.get(app_dir.name)
-                display = f"{app_name} (shader cache)" if app_name else f"Steam shader cache (appid {app_dir.name})"
+                appid = f"appid {app_dir.name}"
                 yield JunkEntry(
                     path=app_dir,
                     category=JunkCategory.SHADER_CACHE,
                     size_bytes=size,
                     client_name=self.name,
-                    description=display,
+                    description=f"Steam shader cache of {app_name or appid}",
                     game_root=library,
-                    display_name=display,
+                    display_name=app_name or appid,
                 )
 
     def _scan_steam_dumps(self, install: Path) -> Iterator[JunkEntry]:

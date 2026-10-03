@@ -3,7 +3,7 @@ import os
 import subprocess
 import sys
 import threading
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -81,16 +81,16 @@ def _scan(library: Path) -> list[JunkEntry]:
     return list(_make_client(library).scan_safe())
 
 
-def _leftover(game_dir: Path, size: int, last_written_on: str) -> JunkEntry:
-    label = f"{game_dir.name} (left by an uninstalled game, last written on {last_written_on})"
+def _leftover(game_dir: Path, size: int, last_written_on: str | None) -> JunkEntry:
     return JunkEntry(
         path=game_dir,
         category=JunkCategory.LEFTOVER,
         size_bytes=size,
         client_name="Steam",
-        description=label,
+        description=f"Left by an uninstalled game, last written on {last_written_on or 'an unknown date'}",
         game_root=game_dir,
-        display_name=label,
+        display_name=game_dir.name,
+        last_written=date.fromisoformat(last_written_on) if last_written_on else None,
     )
 
 
@@ -362,11 +362,11 @@ class TestLeftoverGames:
 
     @pytest.mark.parametrize(
         ("written", "shown"),
-        [(-1.0, "1969-12-31"), (-1e-7, "1969-12-31"), (1e11, "5138-11-16"), (9e11, "an unknown date")],
+        [(-1.0, "1969-12-31"), (-1e-7, "1969-12-31"), (1e11, "5138-11-16"), (9e11, None)],
         ids=["before-1970", "a-moment-before-1970", "past-the-year-3000", "past-any-calendar"],
     )
     def test_newest_write_is_shown_whatever_time_the_file_carries(
-        self, tmp_path: Path, monkeypatch, written: float, shown: str
+        self, tmp_path: Path, monkeypatch, written: float, shown: str | None
     ):
         library = _make_library(tmp_path)
         _install(library, 10, "Installed Game")

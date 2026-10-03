@@ -1,6 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import flet as ft
 import pytest
@@ -71,3 +72,26 @@ class TestLanguageSwitch:
         checkbox = self._cells_of_the_row(gui_with_ui)[0]
         assert isinstance(checkbox, ft.Checkbox)
         assert_that(checkbox.value).is_true()
+
+
+# test reads protected GUI members and mock attributes that PyCharm does not resolve
+# noinspection PyProtectedMember,PyUnresolvedReferences
+class TestConfirmationLanguage:
+    @pytest.mark.parametrize(
+        ("use_trash", "shown"),
+        [("true", "Переместить в корзину: 1 (10 B)?"), ("false", "Будет удалено безвозвратно: 1 (10 B).")],
+        ids=["trash", "permanent"],
+    )
+    def test_confirmation_counts_the_items_in_the_language_of_the_interface(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock, monkeypatch, use_trash: str, shown: str
+    ):
+        monkeypatch.setattr("steamcleaner.ui.gui.i18n._current_lang", "ru")
+        gui._result = ScanResult(entries=[DUMP])
+        gui._selected = {DUMP.path}
+
+        with patch("steamcleaner.ui.gui.app.get_value", return_value=use_trash):
+            gui._on_clean(None)
+
+        content = fake_page.show_dialog.call_args[0][0].content
+        text = content if isinstance(content, ft.Text) else content.controls[1]
+        assert_that(text.value).is_equal_to(shown)

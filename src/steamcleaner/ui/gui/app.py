@@ -13,7 +13,7 @@ import darkdetect
 import flet as ft
 
 from steamcleaner.cleaner.engine import CleanEngine, CleanStats
-from steamcleaner.models.junk import GUARDED_CATEGORIES
+from steamcleaner.models.junk import GUARDED_CATEGORIES, JunkCategory
 from steamcleaner.models.scan_result import ScanResult, reclaimable_bytes
 from steamcleaner.platform import create_adapter
 from steamcleaner.scanner.engine import ScanEngine
@@ -597,8 +597,16 @@ class SteamCleanerGUI:
 
     @staticmethod
     def _display_path(entry: JunkEntry) -> str:
-        if entry.display_name is not None:
-            return entry.display_name
+        name = entry.display_name
+        if name is not None:
+            match entry.category:
+                case JunkCategory.LEFTOVER if entry.last_written is not None:
+                    return t("row_leftover", name=name, day=entry.last_written.isoformat())
+                case JunkCategory.LEFTOVER:
+                    return t("row_leftover_undated", name=name)
+                case JunkCategory.SHADER_CACHE:
+                    return t("row_shader_cache", name=name)
+            return name
         if entry.game_root is not None:
             try:
                 return str(entry.path.relative_to(entry.game_root.parent))
@@ -951,13 +959,12 @@ class SteamCleanerGUI:
             return
 
         entries = [entry for entry in self._result.entries if entry.path in self._selected]
-        selected_bytes = reclaimable_bytes(entries)
+        counted: dict[str, str | int] = {"count": len(entries), "size": format_size(reclaimable_bytes(entries))}
 
         use_trash = get_value("clean", "use_trash", "true") == "true"
-        item_summary = f"{len(entries)} items ({format_size(selected_bytes)})"
 
         if use_trash:
-            content = ft.Text(t("move_to_trash", summary=item_summary))
+            content = ft.Text(t("move_to_trash", **counted))
         else:
             content = ft.Column(
                 [
@@ -968,7 +975,7 @@ class SteamCleanerGUI:
                         ],
                         spacing=8,
                     ),
-                    ft.Text(t("permanent_warning", summary=item_summary)),
+                    ft.Text(t("permanent_warning", **counted)),
                 ],
                 tight=True,
                 spacing=12,

@@ -207,7 +207,24 @@ class TestSteamShaderCache:
         shader_entries = [entry for entry in entries if entry.category.value == "shader_cache"]
         assert_that(shader_entries).is_length(1)
         assert_that(shader_entries[0].size_bytes).is_equal_to(4096)
-        assert_that(shader_entries[0].description).contains("730")
+        assert_that(shader_entries[0].description).is_equal_to("Steam shader cache of appid 730")
+        assert_that(shader_entries[0].display_name).is_equal_to("appid 730")
+
+    def test_shader_cache_of_an_installed_game_carries_its_name(self, tmp_path: Path):
+        steam = tmp_path / "Steam"
+        (steam / "steamapps" / "common").mkdir(parents=True)
+        shader = steam / "steamapps" / "shadercache" / "730"
+        shader.mkdir(parents=True)
+        (shader / "cache.bin").write_bytes(b"\x00" * 4096)
+        (steam / "steamapps" / "appmanifest_730.acf").write_text(
+            '"AppState"\n{\n  "appid"\t\t"730"\n  "name"\t\t"Counter-Strike 2"\n}', encoding="utf-8"
+        )
+        client = SteamClient(FakePlatformAdapter(install_path=steam), ExclusionRegistry())
+
+        shader_entries = [entry for entry in client.scan_junk() if entry.category.value == "shader_cache"]
+
+        assert_that([entry.display_name for entry in shader_entries]).is_equal_to(["Counter-Strike 2"])
+        assert_that(shader_entries[0].description).is_equal_to("Steam shader cache of Counter-Strike 2")
 
     def test_finds_multiple_shader_caches(self, tmp_path: Path):
         steam = tmp_path / "Steam"
