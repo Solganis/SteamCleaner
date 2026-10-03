@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Reclaim disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.</b><br>
-  Spiritual successor to <a href="https://github.com/Codeusa/SteamCleaner">Codeusa/SteamCleaner</a> (archived, C#/.NET), rewritten from scratch in Python.
+  Spiritual successor to <a href="https://github.com/Codeusa/SteamCleaner">Codeusa/SteamCleaner</a>.
 </p>
 
 <p align="center">
