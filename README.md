@@ -18,7 +18,7 @@
   <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv"></a>
   <a href="https://github.com/astral-sh/ty"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json" alt="ty"></a>
   <br>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/Solganis/SteamCleaner"><img src="https://api.scorecard.dev/projects/github.com/Solganis/SteamCleaner/badge" alt="OpenSSF Scorecard"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Solganis/SteamCleaner"><img src="https://img.shields.io/ossf-scorecard/github.com/Solganis/SteamCleaner?label=OpenSSF%20Scorecard&style=flat" alt="OpenSSF Scorecard"></a>
   <img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR">
 </p>
 
