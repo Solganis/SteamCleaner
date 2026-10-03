@@ -1,6 +1,9 @@
 import abc
 import logging
+from dataclasses import replace
 from typing import TYPE_CHECKING
+
+from steamcleaner.utils.fs import disk_usage
 
 if TYPE_CHECKING:
     import threading
@@ -43,7 +46,7 @@ class GameClient(abc.ABC):
         """Yield all junk entries without exclusion filtering."""
 
     def scan_safe(self, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
-        """Yield junk entries that are not excluded."""
+        """Yield junk entries that are not excluded, each sized by what deleting it gives back to the disk."""
         self._cancel = cancel
         try:
             for entry in self.scan_junk():
@@ -52,7 +55,11 @@ class GameClient(abc.ABC):
                     return
                 if self._exclusions.is_excluded(entry.path):
                     _logger.info("Excluded by safety filter: %s", entry.path)
+                    continue
+                reclaimable_bytes = disk_usage(entry.path, self._platform)
+                if reclaimable_bytes > 0:
+                    yield replace(entry, size_bytes=reclaimable_bytes)
                 else:
-                    yield entry
+                    _logger.info("Nothing to reclaim: %s", entry.path)
         finally:
             self._cancel = None

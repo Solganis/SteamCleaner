@@ -7,7 +7,7 @@ from steamcleaner.models.junk import JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.scanner.patterns import COMMON_PATTERNS
-from steamcleaner.utils.fs import list_subdirs, walk_files
+from steamcleaner.utils.fs import disk_usage, list_subdirs, walk_files
 
 if TYPE_CHECKING:
     import threading
@@ -89,7 +89,7 @@ class ScanEngine:
             yield from self._scan_game_dir(game_dir, cancel)
 
     def _scan_game_dir(self, game_dir: Path, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
-        for file_path, size in walk_files(game_dir):
+        for file_path, _ in walk_files(game_dir):
             if cancel and cancel.is_set():
                 return
 
@@ -100,12 +100,13 @@ class ScanEngine:
                 matches_dir = pattern.dir_regex.search(parent_str)
                 matches_ext = not pattern.file_extensions or extension in pattern.file_extensions
                 if matches_dir and matches_ext:
-                    if self._exclusions.is_excluded(file_path):
+                    reclaimable_bytes = disk_usage(file_path, self._platform)
+                    if self._exclusions.is_excluded(file_path) or reclaimable_bytes == 0:
                         continue
                     yield JunkEntry(
                         path=file_path,
                         category=pattern.category,
-                        size_bytes=size,
+                        size_bytes=reclaimable_bytes,
                         client_name="Custom",
                         description=pattern.description,
                         game_root=game_dir,

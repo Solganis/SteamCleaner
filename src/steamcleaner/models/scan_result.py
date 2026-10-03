@@ -4,7 +4,19 @@ from typing import TYPE_CHECKING
 from steamcleaner.models.junk import JunkEntry
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from steamcleaner.models.junk import JunkCategory
+
+
+def reclaimable_bytes(entries: Iterable[JunkEntry]) -> int:
+    """Sum what deleting the entries gives back, counting each path once.
+
+    An entry nested under another one is already part of that one's size, and two entries for the same
+    path are one deletion.
+    """
+    by_path = {entry.path: entry for entry in entries}
+    return sum(entry.size_bytes for path, entry in by_path.items() if by_path.keys().isdisjoint(path.parents))
 
 
 @dataclass(slots=True)
@@ -15,7 +27,7 @@ class ScanResult:
 
     @property
     def total_bytes(self) -> int:
-        return sum(entry.size_bytes for entry in self.entries)
+        return reclaimable_bytes(self.entries)
 
     @property
     def total_mb(self) -> float:

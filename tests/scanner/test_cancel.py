@@ -2,35 +2,15 @@ import threading
 from typing import TYPE_CHECKING
 
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
+from helpers import FakePlatformAdapter, ListedEntriesClient, scan_cancelling_after, scan_with_cancel_already_set
 
-from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.steam import SteamClient
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from pathlib import Path
-
-    from steamcleaner.platform.base import PlatformAdapter
-
-
-class _CancelUnawareClient(GameClient):
-    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry, entries: list[JunkEntry]) -> None:
-        super().__init__(platform, exclusions)
-        self._entries = entries
-
-    @property
-    def name(self) -> str:
-        return "Cancel-unaware"
-
-    def is_installed(self) -> bool:
-        return True
-
-    def scan_junk(self) -> Iterator[JunkEntry]:
-        yield from self._entries
 
 
 def _make_steam_with_games(tmp_path: Path, game_count: int) -> FakePlatformAdapter:
@@ -155,10 +135,12 @@ class TestCancelClientProperty:
                 path=tmp_path / f"redist_{index}",
                 category=JunkCategory.REDISTRIBUTABLE,
                 size_bytes=1024,
-                client_name="Cancel-unaware",
+                client_name="Listed entries",
             )
             for index in range(3)
         ]
-        client = _CancelUnawareClient(FakePlatformAdapter(home_dir=tmp_path), ExclusionRegistry(), entries)
+        for entry in entries:
+            entry.path.write_bytes(b"\x00" * entry.size_bytes)
+        client = ListedEntriesClient(FakePlatformAdapter(home_dir=tmp_path), ExclusionRegistry(), entries)
         collected = scan_cancelling_after(client, lambda entry: entry == entries[0])
         assert_that(collected).is_equal_to(entries[:1])

@@ -1,6 +1,6 @@
 """Property-based tests for ScanResult, the contract between ScanEngine and CleanEngine.
 
-These guard the aggregation laws against future refactors: totals stay additive,
+These guard the aggregation laws against future refactors: totals count each path once,
 grouping is a true partition (every entry lands in exactly one bucket), filtering
 only ever drops entries below the threshold, and merge concatenates without loss.
 """
@@ -22,13 +22,46 @@ _junk_entry = st.builds(
     client_name=st.sampled_from(["Steam", "Epic", "GOG", "EA App", "Ubisoft Connect"]),
 )
 _entry_list = st.lists(_junk_entry, max_size=30)
+_sibling_entry = st.builds(
+    JunkEntry,
+    path=st.builds(Path, st.text(alphabet="abcdefghijklmnop_-", min_size=1, max_size=12)),
+    category=st.sampled_from(list(JunkCategory)),
+    size_bytes=st.integers(min_value=0, max_value=10**12),
+    client_name=st.just("Steam"),
+)
+_sibling_list = st.lists(_sibling_entry, max_size=30, unique_by=lambda entry: entry.path)
 
 
 class TestScanResultAggregation:
-    @given(_entry_list)
-    def test_total_bytes_equals_sum_of_sizes(self, entries):
+    @given(_sibling_list)
+    def test_total_bytes_of_unrelated_paths_is_the_sum_of_sizes(self, entries):
         result = ScanResult(entries=entries)
         assert_that(result.total_bytes).is_equal_to(sum(entry.size_bytes for entry in entries))
+
+    @given(_sibling_list.filter(bool), st.integers(min_value=0, max_value=10**12), st.data())
+    def test_entry_nested_under_another_adds_nothing(self, entries, nested_size, data):
+        parent = data.draw(st.sampled_from(entries))
+        nested = JunkEntry(
+            path=parent.path / "nested" / "dump.dmp",
+            category=JunkCategory.CRASH_DUMP,
+            size_bytes=nested_size,
+            client_name="Steam",
+        )
+        assert_that(ScanResult(entries=[nested, *entries]).total_bytes).is_equal_to(
+            ScanResult(entries=entries).total_bytes
+        )
+
+    @given(_sibling_list.filter(bool), st.data())
+    def test_same_path_listed_twice_counts_once(self, entries, data):
+        repeated = data.draw(st.sampled_from(entries))
+        assert_that(ScanResult(entries=[*entries, repeated]).total_bytes).is_equal_to(
+            ScanResult(entries=entries).total_bytes
+        )
+
+    @given(_entry_list)
+    def test_total_bytes_never_exceeds_the_sum_of_sizes(self, entries):
+        result = ScanResult(entries=entries)
+        assert_that(result.total_bytes).is_less_than_or_equal_to(sum(entry.size_bytes for entry in entries))
 
     @given(_entry_list)
     def test_total_mb_tracks_total_bytes(self, entries):
@@ -61,9 +94,9 @@ class TestScanResultAggregation:
         assert_that(filtered.total_bytes).is_less_than_or_equal_to(sum(entry.size_bytes for entry in entries))
 
     @given(_entry_list, _entry_list)
-    def test_merge_is_additive(self, left_entries, right_entries):
+    def test_merge_keeps_every_entry_and_never_inflates_the_total(self, left_entries, right_entries):
         left = ScanResult(entries=left_entries)
         right = ScanResult(entries=right_entries)
         merged = left.merge(right)
         assert_that(len(merged.entries)).is_equal_to(len(left_entries) + len(right_entries))
-        assert_that(merged.total_bytes).is_equal_to(left.total_bytes + right.total_bytes)
+        assert_that(merged.total_bytes).is_less_than_or_equal_to(left.total_bytes + right.total_bytes)

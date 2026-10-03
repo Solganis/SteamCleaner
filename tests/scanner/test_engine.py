@@ -1,3 +1,4 @@
+import os
 import threading
 from typing import TYPE_CHECKING
 from unittest.mock import patch
@@ -101,6 +102,34 @@ class TestCustomPaths:
         result = engine.scan(custom_paths=[custom])
         assert_that(any(entry.client_name == "Custom" for entry in result.entries)).is_true()
         assert_that(any("setup.exe" in str(entry.path) for entry in result.entries)).is_true()
+
+    def test_custom_entry_is_sized_by_allocation(self, tmp_path: Path):
+        redist = tmp_path / "CustomGames" / "MyGame" / "_CommonRedist"
+        redist.mkdir(parents=True)
+        installer = redist / "setup.exe"
+        installer.write_bytes(b"\x00" * 100_000)
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        platform.set_allocated_bytes(installer, 8192)
+
+        result = ScanEngine(platform, ExclusionRegistry()).scan(custom_paths=[tmp_path / "CustomGames"])
+
+        custom_sizes = {entry.path: entry.size_bytes for entry in result.entries if entry.client_name == "Custom"}
+        assert_that(custom_sizes).is_equal_to({installer: 8192})
+
+    def test_custom_entry_that_frees_nothing_is_dropped(self, tmp_path: Path):
+        redist = tmp_path / "CustomGames" / "MyGame" / "_CommonRedist"
+        redist.mkdir(parents=True)
+        installer = redist / "setup.exe"
+        installer.write_bytes(b"\x00" * 512)
+        os.link(installer, tmp_path / "kept_elsewhere.exe")
+        kept = redist / "vc_redist.exe"
+        kept.write_bytes(b"\x00" * 64)
+
+        engine = ScanEngine(FakePlatformAdapter(home_dir=tmp_path), ExclusionRegistry())
+        result = engine.scan(custom_paths=[tmp_path / "CustomGames"])
+
+        custom_paths = [entry.path for entry in result.entries if entry.client_name == "Custom"]
+        assert_that(custom_paths).is_equal_to([kept])
 
     def test_skips_nonexistent_custom_path(self, tmp_path: Path):
         platform = FakePlatformAdapter(home_dir=tmp_path)
