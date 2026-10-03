@@ -1134,6 +1134,7 @@ class SteamCleanerGUI:
                 self._page.controls.clear()
                 self._page.update()
                 self._build_ui()
+                self._row_cache.clear()
                 self._rebuild_filter_options()
                 self._refresh_list()
 
