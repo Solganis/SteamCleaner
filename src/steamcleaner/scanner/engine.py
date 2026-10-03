@@ -82,6 +82,14 @@ class ScanEngine:
         _logger.info("Scan complete: %d total entries", len(all_entries))
         return ScanResult(entries=all_entries)
 
+    def still_offers(self, entry: JunkEntry) -> bool:
+        """Return whether the client an entry came from still stands by it. An entry of no client always stands.
+
+        What is read again is the client's choice, not the whole scan: see `GameClient.still_offers`.
+        """
+        clients = ClientRegistry.create_all(self._platform, self._exclusions)
+        return all(client.still_offers(entry) for client in clients if client.name == entry.client_name)
+
     def _scan_custom_path(self, root: Path, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
         for game_dir in list_subdirs(root):
             if cancel and cancel.is_set():

@@ -16,6 +16,7 @@ class Exclusion:
 
 BUILTIN_EXCLUSIONS: Final[tuple[Exclusion, ...]] = (
     Exclusion(pattern="Steamworks Shared", reason="Shared redistributable pool, removing breaks games (issue #74)"),
+    Exclusion(pattern="Steam Controller Configs", reason="Steam's own controller layouts, kept beside the games"),
     Exclusion(pattern="Heroes of the Storm", reason="Game files stored in support/ directory"),
     Exclusion(pattern="StarCraft", reason="Game files stored in support/ directory"),
     Exclusion(pattern="Penumbra Overture/redist", reason="Contains actual game data, not redistributables"),

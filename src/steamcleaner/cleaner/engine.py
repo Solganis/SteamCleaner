@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from send2trash import send2trash
 
-from steamcleaner.models.junk import JunkEntry
+from steamcleaner.models.junk import GUARDED_CATEGORIES, JunkEntry
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.utils.fs import is_reparse_point, measure_files, reclaimable_allocation
 
@@ -19,6 +19,11 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 CleanCallback = Callable[[JunkEntry, bool], None]
+
+
+def _stands_unchecked(entry: JunkEntry) -> bool:
+    """Whether an entry may be deleted on the word of the scan alone: all but the guarded categories."""
+    return entry.category not in GUARDED_CATEGORIES
 
 
 def _is_gone(path: Path) -> bool:
@@ -60,9 +65,11 @@ class CleanEngine:
         dry_run: bool = False,
         exclusions: ExclusionRegistry | None = None,
         platform: PlatformAdapter | None = None,
+        still_offered: Callable[[JunkEntry], bool] | None = None,
     ) -> None:
         self._use_trash = use_trash
         self._dry_run = dry_run
+        self._still_offered = _stands_unchecked if still_offered is None else still_offered
         # Enforce the never-delete list at delete time, not only during scan_safe(). Default to the
         # builtins so the guarantee holds even when a caller wires no registry; this is the last-line
         # guard against a protected path reaching deletion via custom_paths, a bug, or a future path.
@@ -74,10 +81,12 @@ class CleanEngine:
 
         Respects the engine's dry_run and use_trash settings, refuses to delete a path that is on the
         exclusion list or is itself a reparse point, and invokes callback(entry, deleted) per entry
-        when provided.
+        when provided. A result can be minutes old by the time it is cleaned, so the engine asks
+        still_offered about each entry it is about to remove and leaves alone one that is not confirmed.
+        Without still_offered it confirms every entry except those of the guarded categories.
 
         Entries are handled parents first. One nested under an entry that was just removed, or listed a
-        second time, went with it: it counts as deleted and adds no bytes of its own.
+        second time, went with it: it counts as deleted, adds no bytes of its own and is not asked about.
 
         With a platform the engine measures each entry right before removing it, and when a removal fails
         part-way it counts the files that are verifiably gone. Without one it trusts the size the scan
@@ -130,6 +139,14 @@ class CleanEngine:
 
             measured = None if self._platform is None else measure_files(entry.path, self._platform)
             size_bytes = entry.size_bytes if measured is None else reclaimable_allocation(measured.values())
+            if not self._still_offered(entry):
+                _logger.warning("Refusing to delete what is no longer confirmed as junk: %s", entry.path)
+                skipped += 1
+                errors.append(f"Skipped, no longer confirmed as junk: {entry.path}")
+                if callback:
+                    callback(entry, False)
+                continue
+
             failure = None if self._dry_run else self._try_delete(entry.path)
             if failure is None:
                 _logger.info(

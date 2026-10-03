@@ -254,17 +254,26 @@ def _resolve_game_dir(name: str | VdfPairs, common: Path) -> Path | None:
     """Return the game directory an `installdir` names, or None unless it is one plain directory name."""
     if not isinstance(name, str) or not name or PureWindowsPath(name).name != name or name.endswith((".", " ")):
         return None
-    return common / name
+    return None if ":" in name or any(ord(character) < 32 for character in name) else common / name
+
+
+def _find_install_dir(app_states: list[VdfPairs], library: Path) -> Path | None:
+    common = library / "steamapps" / "common"
+    install_dirs = [
+        _resolve_game_dir(name, common) for app_state in app_states for name in _values(app_state, "installdir")
+    ]
+    return install_dirs[0] if len({str(install_dir) for install_dir in install_dirs}) == 1 else None
+
+
+def read_install_dir(manifest_path: Path, library: Path) -> Path | None:
+    """Return the game directory an app manifest describes, or None when it names no one game."""
+    return _find_install_dir(_read_app_states(manifest_path), library)
 
 
 def read_game_scripts(manifest_path: Path, library: Path) -> GameScripts | None:
     """Return the install steps of the game an app manifest describes, or None when it names no one game."""
     app_states = _read_app_states(manifest_path)
-    common = library / "steamapps" / "common"
-    install_dirs = {
-        _resolve_game_dir(name, common) for app_state in app_states for name in _values(app_state, "installdir")
-    }
-    install_dir = install_dirs.pop() if len(install_dirs) == 1 else None
+    install_dir = _find_install_dir(app_states, library)
     if install_dir is None:
         return None
     steps: list[InstallStep] = []

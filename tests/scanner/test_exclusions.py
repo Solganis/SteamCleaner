@@ -10,6 +10,10 @@ class TestBuiltinExclusions:
         path = PureWindowsPath(r"D:\Steam\steamapps\common\Steamworks Shared\redist")
         assert_that(exclusion_registry.is_excluded(path)).is_true()
 
+    def test_steam_controller_configs(self, exclusion_registry: ExclusionRegistry):
+        path = PureWindowsPath(r"D:\Steam\steamapps\common\Steam Controller Configs\1234\config")
+        assert_that(exclusion_registry.is_excluded(path)).is_true()
+
     def test_heroes_of_the_storm(self, exclusion_registry: ExclusionRegistry):
         path = PureWindowsPath(r"C:\Games\Heroes of the Storm\support\directx.cab")
         assert_that(exclusion_registry.is_excluded(path)).is_true()

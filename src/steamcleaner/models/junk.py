@@ -1,6 +1,7 @@
 import enum
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Final
 
 
 class JunkCategory(enum.StrEnum):
@@ -10,6 +11,10 @@ class JunkCategory(enum.StrEnum):
     OLD_LOG = "old_log"
     CROSS_PLATFORM = "cross_platform"
     INSTALLER = "installer"
+    LEFTOVER = "leftover"
+
+
+GUARDED_CATEGORIES: Final = frozenset({JunkCategory.LEFTOVER})
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

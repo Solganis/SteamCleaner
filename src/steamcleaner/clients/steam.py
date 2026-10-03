@@ -1,14 +1,17 @@
 import logging
+import math
 import stat
+from collections import Counter
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.clients.shared import scan_cache_dir, scan_game
-from steamcleaner.clients.steam_scripts import InstallerEvidence, collect_installer_evidence
+from steamcleaner.clients.steam_scripts import InstallerEvidence, collect_installer_evidence, read_install_dir
 from steamcleaner.models.junk import JunkCategory, JunkEntry
-from steamcleaner.utils.fs import dir_size, list_subdirs
+from steamcleaner.utils.fs import dir_size, list_subdirs, walk_files
 from steamcleaner.utils.vdf import load_vdf
 
 if TYPE_CHECKING:
@@ -18,6 +21,25 @@ if TYPE_CHECKING:
     from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 _logger = logging.getLogger(__name__)
+
+_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def _identify(directory: Path) -> tuple[int, int] | None:
+    """Return what a directory is on disk with links followed, or None when nothing is there."""
+    try:
+        directory_stat = directory.stat()
+    except FileNotFoundError:
+        return None
+    return directory_stat.st_dev, directory_stat.st_ino
+
+
+def _format_day(file_time: float) -> str:
+    """Return the UTC day of a file time, or a placeholder when it lies past what a calendar holds."""
+    try:
+        return (_EPOCH + timedelta(seconds=math.floor(file_time))).date().isoformat()
+    except OverflowError:
+        return "an unknown date"
 
 
 def parse_library_folders_vdf(path: Path) -> list[Path]:
@@ -152,6 +174,7 @@ class SteamClient(GameClient):
         if not common.is_dir():
             return
         evidence = collect_installer_evidence(library, self._platform)
+        leftovers = self._find_leftover_games(library)
         for game_dir in list_subdirs(common):
             if self.cancelled:
                 return
@@ -163,6 +186,80 @@ class SteamClient(GameClient):
                 found.append(entry.path)
                 yield entry
             yield from self._scan_finished_installers(game_dir, evidence, found)
+            if game_dir.name in leftovers:
+                yield from self._scan_leftover(game_dir)
+
+    @staticmethod
+    def _find_leftover_games(library: Path) -> set[str]:
+        """Return the names of the game directories of a library that no app manifest describes.
+
+        None at all when the library has no manifest, has one that names no one game, or what a directory
+        is on disk cannot be read: what is installed there cannot be told then. A directory is matched by
+        what it is on disk, so a manifest describes it under another spelling of its name or through a
+        link. A directory the listing itself cannot read is passed over alone, and so are directories
+        whose paths compare equal, as two names differing in letter case do on Windows: nothing past this
+        point could tell them apart. Names are returned for the same reason.
+        """
+        described: list[Path] = []
+        for manifest_path in (library / "steamapps").glob("appmanifest_*.acf"):
+            install_dir = read_install_dir(manifest_path, library)
+            if install_dir is None:
+                return set()
+            described.append(install_dir)
+        if not described:
+            return set()
+        try:
+            listed = Counter(list_subdirs(library / "steamapps" / "common"))
+            owned = {_identify(install_dir) for install_dir in described}
+            return {
+                game_dir.name for game_dir, count in listed.items() if count == 1 and _identify(game_dir) not in owned
+            }
+        except OSError:
+            return set()
+
+    def still_offers(self, entry: JunkEntry) -> bool:
+        """Return whether a leftover is still one: the leftovers of its library are worked out again.
+
+        That reads the manifests, the listing of the library and what its directories are on disk. What the
+        folder holds is not read again, and an entry of another category stands.
+        """
+        if entry.category is not JunkCategory.LEFTOVER:
+            return True
+        return entry.path.name in self._find_leftover_games(entry.path.parents[2])
+
+    def _scan_leftover(self, game_dir: Path) -> Iterator[JunkEntry]:
+        """Yield the directory of an uninstalled game with what it still holds and when that was last written.
+
+        Nothing is yielded for a directory that holds no bytes, or one in which the walk meets an app manifest
+        of a Steam library. The walk enters no link and no directory it cannot read, so a library behind one
+        is not seen.
+        """
+        size = 0
+        last_written = -math.inf
+        for file_path, _ in walk_files(game_dir):
+            if self.cancelled:
+                return
+            if file_path.match("steamapps/appmanifest_*.acf"):
+                _logger.info("Kept, it holds a Steam library of its own: %s", game_dir)
+                return
+            try:
+                file_stat = file_path.lstat()
+            except OSError:
+                continue
+            size += file_stat.st_size
+            last_written = max(last_written, file_stat.st_mtime)
+        if size == 0:
+            return
+        display = f"{game_dir.name} (left by an uninstalled game, last written on {_format_day(last_written)})"
+        yield JunkEntry(
+            path=game_dir,
+            category=JunkCategory.LEFTOVER,
+            size_bytes=size,
+            client_name=self.name,
+            description=display,
+            game_root=game_dir,
+            display_name=display,
+        )
 
     def _scan_finished_installers(
         self, game_dir: Path, evidence: InstallerEvidence, found: list[Path]

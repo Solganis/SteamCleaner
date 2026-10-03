@@ -1,11 +1,14 @@
 import os
 import threading
+from dataclasses import replace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
+import pytest
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter
+from helpers import FakePlatformAdapter, write_app_manifest
 
+from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
@@ -231,3 +234,37 @@ class TestCustomPaths:
         result = engine.scan(custom_paths=[custom])
         custom_entries = [entry for entry in result.entries if entry.client_name == "Custom"]
         assert_that(custom_entries).is_equal_to([])
+
+
+class TestScanEngineChecksAnEntryAgain:
+    @staticmethod
+    def _make_library_with_a_leftover(tmp_path: Path) -> tuple[ScanEngine, JunkEntry]:
+        library = tmp_path / "Steam"
+        for directory_name in ("Installed Game", "Old Game"):
+            game_dir = library / "steamapps" / "common" / directory_name
+            game_dir.mkdir(parents=True)
+            (game_dir / "data.bin").write_bytes(b"\x00" * 3000)
+        write_app_manifest(library, 10, "Installed Game")
+        engine = ScanEngine(FakePlatformAdapter(install_path=library, home_dir=tmp_path), ExclusionRegistry())
+        (leftover,) = (entry for entry in engine.scan().entries if entry.category is JunkCategory.LEFTOVER)
+        return engine, leftover
+
+    def test_entry_stands_while_its_client_would_still_offer_it(self, tmp_path: Path):
+        engine, leftover = self._make_library_with_a_leftover(tmp_path)
+
+        assert_that(engine.still_offers(leftover)).is_true()
+
+    def test_entry_falls_once_its_client_would_not_offer_it(self, tmp_path: Path):
+        engine, leftover = self._make_library_with_a_leftover(tmp_path)
+
+        write_app_manifest(tmp_path / "Steam", 20, "Old Game")
+
+        assert_that(engine.still_offers(leftover)).is_false()
+
+    @pytest.mark.parametrize("client_name", ["Custom", "Epic Games"], ids=["no-client", "another-client"])
+    def test_entry_is_put_only_to_the_client_it_came_from(self, tmp_path: Path, client_name: str):
+        engine, leftover = self._make_library_with_a_leftover(tmp_path)
+
+        write_app_manifest(tmp_path / "Steam", 20, "Old Game")
+
+        assert_that(engine.still_offers(replace(leftover, client_name=client_name))).is_true()

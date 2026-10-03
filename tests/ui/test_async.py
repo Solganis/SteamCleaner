@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import flet as ft
+import pytest
 from assertpy2 import assert_that
+from helpers import FakePlatformAdapter, write_app_manifest
 
 from steamcleaner.cleaner.engine import CleanStats
 from steamcleaner.models.junk import JunkCategory, JunkEntry
@@ -191,6 +193,22 @@ class TestOnClean:
         dialog = fake_page.show_dialog.call_args[0][0]
         assert_that(dialog.content).is_instance_of(ft.Column)
 
+    @pytest.mark.parametrize("use_trash", ["true", "false"], ids=["trash", "permanent"])
+    def test_dialog_warns_about_saves_when_leftovers_are_selected(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock, use_trash: str
+    ):
+        leftovers = [_make_entry(name, JunkCategory.LEFTOVER, 700000) for name in ("Old Game", "Older Game")]
+        gui._result = ScanResult(entries=[ENTRY_SMALL, *leftovers])
+        gui._selected = {entry.path for entry in gui._result.entries}
+        with patch("steamcleaner.ui.gui.app.get_value", return_value=use_trash):
+            gui._on_clean(None)
+
+        usual_content, warning = fake_page.show_dialog.call_args[0][0].content.controls
+        assert_that(warning.value).is_equal_to(
+            "2 of them are folders left by uninstalled games. They may hold saves and settings."
+        )
+        assert_that(usual_content).is_instance_of(ft.Text if use_trash == "true" else ft.Column)
+
     def test_dialog_has_two_actions(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected = {ENTRY_SMALL.path}
@@ -215,3 +233,50 @@ class TestConfirmClean:
     def test_triggers_clean_task(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._confirm_clean([ENTRY_SMALL])
         fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL])
+
+
+# test reads protected GUI members
+# noinspection PyProtectedMember
+class TestCleanTaskChecksLeftoversAgain:
+    @staticmethod
+    def _make_leftover(tmp_path: Path) -> tuple[Path, JunkEntry]:
+        library = tmp_path / "Steam"
+        for directory_name in ("Installed Game", "Old Game"):
+            game_dir = library / "steamapps" / "common" / directory_name
+            game_dir.mkdir(parents=True)
+            (game_dir / "data.bin").write_bytes(b"\x00" * 3000)
+        write_app_manifest(library, 10, "Installed Game")
+        old_game = library / "steamapps" / "common" / "Old Game"
+        return library, JunkEntry(path=old_game, category=JunkCategory.LEFTOVER, size_bytes=3000, client_name="Steam")
+
+    @staticmethod
+    def _clean_for_real(gui: SteamCleanerGUI, library: Path, entry: JunkEntry):
+        gui._result = ScanResult(entries=[entry])
+        platform = FakePlatformAdapter(install_path=library, home_dir=library.parent)
+        with (
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+            patch("steamcleaner.ui.gui.app.get_value", return_value="false"),
+            patch.object(gui, "_refresh_list"),
+        ):
+            asyncio.run(gui._clean_task([entry]))
+
+    def test_leftover_nothing_has_claimed_since_the_scan_is_removed(self, gui_with_ui: SteamCleanerGUI, tmp_path: Path):
+        library, leftover = self._make_leftover(tmp_path)
+
+        self._clean_for_real(gui_with_ui, library, leftover)
+
+        assert_that(str(leftover.path)).does_not_exist()
+
+    def test_leftover_a_game_was_installed_into_after_the_scan_is_kept(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock, tmp_path: Path
+    ):
+        library, leftover = self._make_leftover(tmp_path)
+        write_app_manifest(library, 20, "Old Game")
+
+        self._clean_for_real(gui_with_ui, library, leftover)
+
+        assert_that(str(leftover.path / "data.bin")).exists()
+        dialog = fake_page.show_dialog.call_args[0][0]
+        assert_that([line.value for line in dialog.content.controls]).is_equal_to(
+            [f"Skipped, no longer confirmed as junk: {leftover.path}"]
+        )

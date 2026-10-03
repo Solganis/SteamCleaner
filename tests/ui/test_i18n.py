@@ -1,12 +1,18 @@
 import json
 from pathlib import Path
+from string import Formatter
 
+import pytest
 from assertpy2 import assert_that
 
 from steamcleaner.ui.gui import i18n
 from steamcleaner.ui.gui.i18n import LANGUAGES, t
 
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "src" / "steamcleaner" / "ui" / "gui" / "locales"
+
+
+def _placeholders(text: str) -> set[str]:
+    return {field_name for _, field_name, _, _ in Formatter().parse(text) if field_name is not None}
 
 
 # test deliberately accesses a protected member
@@ -41,6 +47,21 @@ class TestLocaleFiles:
             extra = lang_keys - english_keys
             assert_that(missing).described_as(f"{lang_code} missing keys: {missing}").is_empty()
             assert_that(extra).described_as(f"{lang_code} has extra keys: {extra}").is_empty()
+
+    @pytest.mark.parametrize("lang_code", sorted(LANGUAGES))
+    def test_every_text_takes_the_values_its_english_text_takes(self, lang_code: str):
+        english = i18n._load_translations("en")
+        translations = i18n._load_translations(lang_code)
+
+        taken = {key: _placeholders(translations[key]) for key in english}
+
+        assert_that(taken).is_equal_to({key: _placeholders(text) for key, text in english.items()})
+
+    @pytest.mark.parametrize("lang_code", sorted(LANGUAGES))
+    def test_leftover_warning_carries_its_count_in_every_language(self, lang_code: str):
+        warning = i18n._load_translations(lang_code)["leftover_warning"]
+
+        assert_that(warning.format(count=27)).contains("27").does_not_contain("{")
 
 
 # test deliberately accesses a protected member

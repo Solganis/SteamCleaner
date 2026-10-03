@@ -29,6 +29,7 @@ def _make_entry(
 ENTRY_SMALL = _make_entry("small_redist", JunkCategory.REDISTRIBUTABLE, 100)
 ENTRY_MEDIUM = _make_entry("medium_shader", JunkCategory.SHADER_CACHE, 5000)
 ENTRY_LARGE = _make_entry("large_dump", JunkCategory.CRASH_DUMP, 90000)
+ENTRY_LEFTOVER = _make_entry("Old Game", JunkCategory.LEFTOVER, 700000)
 
 
 # test deliberately accesses a protected member
@@ -72,6 +73,26 @@ class TestOnSelectAll:
         for container in gui_with_ui._results_list.controls:
             checkbox = _row_checkbox(container)
             assert_that(checkbox.value).is_false()
+
+    def test_select_all_picks_a_leftover_like_any_other_row(self, gui_with_ui: SteamCleanerGUI):
+        _populate_list(gui_with_ui, [ENTRY_SMALL, ENTRY_LEFTOVER, ENTRY_LARGE])
+
+        gui_with_ui._on_select_all(None)
+
+        assert_that(gui_with_ui._selected).is_equal_to({ENTRY_SMALL.path, ENTRY_LEFTOVER.path, ENTRY_LARGE.path})
+        checked = [_row_checkbox(container).value for container in gui_with_ui._results_list.controls]
+        assert_that(checked).is_equal_to([True, True, True])
+
+    def test_leftover_row_shows_its_own_category_label(self, gui_with_ui: SteamCleanerGUI):
+        row = gui_with_ui._make_row(ENTRY_LEFTOVER, 0).content
+        assert isinstance(row, ft.Row)
+        badge = row.controls[2]
+        assert isinstance(badge, ft.Container)
+        label = badge.content
+        assert isinstance(label, ft.Text)
+
+        assert_that(label.value).is_equal_to("leftover")
+        assert_that(badge.bgcolor).is_equal_to(ft.Colors.BROWN_700)
 
     def test_button_text_toggles(self, gui_with_ui: SteamCleanerGUI):
         _populate_list(gui_with_ui, [ENTRY_SMALL])

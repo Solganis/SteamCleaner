@@ -7,13 +7,15 @@ import pytest
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter
 
-from steamcleaner.cleaner.engine import CleanEngine
+from steamcleaner.cleaner.engine import CleanEngine, CleanStats
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 if TYPE_CHECKING:
     import os
+
+    from steamcleaner.platform.base import FileAllocation
 
 
 def _make_entry(path: Path, size: int = 1024, category: JunkCategory = JunkCategory.REDISTRIBUTABLE) -> JunkEntry:
@@ -324,6 +326,120 @@ class TestCleanEngineExclusionGate:
 
         assert_that(stats.deleted).is_equal_to(1)
         assert_that(str(junk)).does_not_exist()
+
+
+class TestCleanEngineAsksAgainBeforeDeleting:
+    @staticmethod
+    def _make_tree(tmp_path: Path) -> tuple[JunkEntry, JunkEntry]:
+        old_game = tmp_path / "Old Game"
+        old_game.mkdir()
+        (old_game / "save.dat").write_bytes(b"\x00" * 3000)
+        redist = tmp_path / "redist"
+        redist.mkdir()
+        (redist / "setup.exe").write_bytes(b"\x00" * 64)
+        return _make_entry(old_game, size=3000, category=JunkCategory.LEFTOVER), _make_entry(redist, size=64)
+
+    def test_entry_the_scan_would_not_offer_any_more_is_kept(self, tmp_path: Path):
+        leftover, junk = self._make_tree(tmp_path)
+        callback_log: list[tuple[JunkEntry, bool]] = []
+        engine = CleanEngine(use_trash=False, dry_run=False, still_offered=lambda entry: entry is not leftover)
+
+        stats = engine.clean(
+            ScanResult(entries=[leftover, junk]), callback=lambda entry, success: callback_log.append((entry, success))
+        )
+
+        assert_that(str(leftover.path / "save.dat")).exists()
+        assert_that(str(junk.path)).does_not_exist()
+        assert_that(stats).is_equal_to(
+            CleanStats(
+                deleted=1, skipped=1, errors=[f"Skipped, no longer confirmed as junk: {leftover.path}"], bytes_freed=64
+            )
+        )
+        assert_that(callback_log).is_equal_to([(leftover, False), (junk, True)])
+
+    def test_dry_run_does_not_count_what_the_scan_would_not_offer_any_more(self, tmp_path: Path):
+        leftover, junk = self._make_tree(tmp_path)
+        engine = CleanEngine(dry_run=True, still_offered=lambda entry: entry is not leftover)
+
+        stats = engine.clean(ScanResult(entries=[leftover, junk]))
+
+        assert_that(stats).is_equal_to(
+            CleanStats(
+                deleted=1,
+                skipped=1,
+                errors=[f"Skipped, no longer confirmed as junk: {leftover.path}"],
+                bytes_trashed=64,
+            )
+        )
+
+    def test_entry_still_offered_is_removed(self, tmp_path: Path):
+        leftover, _ = self._make_tree(tmp_path)
+        asked: list[JunkEntry] = []
+
+        def offer_everything(entry: JunkEntry) -> bool:
+            asked.append(entry)
+            return True
+
+        engine = CleanEngine(use_trash=False, dry_run=False, still_offered=offer_everything)
+
+        stats = engine.clean(ScanResult(entries=[leftover]))
+
+        assert_that(str(leftover.path)).does_not_exist()
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, bytes_freed=3000))
+        assert_that(asked).is_equal_to([leftover])
+
+    @pytest.mark.parametrize("dry_run", [False, True], ids=["real", "dry-run"])
+    def test_engine_given_no_way_to_ask_refuses_the_guarded_categories(self, tmp_path: Path, dry_run: bool):
+        leftover, junk = self._make_tree(tmp_path)
+
+        stats = CleanEngine(use_trash=False, dry_run=dry_run).clean(ScanResult(entries=[leftover, junk]))
+
+        assert_that(str(leftover.path / "save.dat")).exists()
+        assert_that(junk.path.exists()).is_equal_to(dry_run)
+        assert_that(stats).is_equal_to(
+            CleanStats(
+                deleted=1,
+                skipped=1,
+                errors=[f"Skipped, no longer confirmed as junk: {leftover.path}"],
+                bytes_freed=64,
+            )
+        )
+
+    def test_check_that_is_falsy_as_an_object_is_still_asked(self, tmp_path: Path):
+        _, junk = self._make_tree(tmp_path)
+
+        class _RefuseEverything:
+            def __bool__(self) -> bool:
+                return False
+
+            def __call__(self, entry: JunkEntry) -> bool:
+                return False
+
+        engine = CleanEngine(use_trash=False, dry_run=False, still_offered=_RefuseEverything())
+
+        stats = engine.clean(ScanResult(entries=[junk]))
+
+        assert_that(str(junk.path / "setup.exe")).exists()
+        assert_that(stats.errors).is_equal_to([f"Skipped, no longer confirmed as junk: {junk.path}"])
+
+    def test_entry_is_asked_about_after_it_was_measured_not_before(self, tmp_path: Path):
+        leftover, _ = self._make_tree(tmp_path)
+        measured: list[Path] = []
+
+        class _PlatformThatNotes(FakePlatformAdapter):
+            def file_allocation(self, path: Path) -> FileAllocation:
+                measured.append(path)
+                return super().file_allocation(path)
+
+        engine = CleanEngine(
+            use_trash=False, dry_run=False, platform=_PlatformThatNotes(), still_offered=lambda _entry: not measured
+        )
+
+        stats = engine.clean(ScanResult(entries=[leftover]))
+
+        assert_that(measured).is_equal_to([leftover.path / "save.dat"])
+        assert_that(str(leftover.path / "save.dat")).exists()
+        assert_that(stats.errors).is_equal_to([f"Skipped, no longer confirmed as junk: {leftover.path}"])
 
 
 class TestCleanEngineMultipleEntries:

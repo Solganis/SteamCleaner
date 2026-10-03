@@ -139,6 +139,14 @@ def serialize_vdf(data: VdfDict, indent: int = 0) -> str:
     return "\n".join(lines)
 
 
+def write_app_manifest(library: Path, app_id: int, install_dir: str) -> Path:
+    """Write the app manifest Steam keeps for a game installed in a library, and return its path."""
+    manifest: VdfDict = {"AppState": {"appid": str(app_id), "name": install_dir, "installdir": install_dir}}
+    manifest_path = library / "steamapps" / f"appmanifest_{app_id}.acf"
+    manifest_path.write_text(serialize_vdf(manifest), encoding="utf-8")
+    return manifest_path
+
+
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:
     """Build a fake Steam directory tree.
 

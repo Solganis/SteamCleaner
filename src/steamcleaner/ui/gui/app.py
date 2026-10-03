@@ -13,6 +13,7 @@ import darkdetect
 import flet as ft
 
 from steamcleaner.cleaner.engine import CleanEngine, CleanStats
+from steamcleaner.models.junk import GUARDED_CATEGORIES
 from steamcleaner.models.scan_result import ScanResult, reclaimable_bytes
 from steamcleaner.platform import create_adapter
 from steamcleaner.scanner.engine import ScanEngine
@@ -45,6 +46,7 @@ _CATEGORY_COLORS: Final = MappingProxyType(
         "old_log": ft.Colors.BLUE_GREY_700,
         "installer": ft.Colors.AMBER_700,
         "cross_platform": ft.Colors.TEAL_700,
+        "leftover": ft.Colors.BROWN_700,
     }
 )
 
@@ -935,6 +937,11 @@ class SteamCleanerGUI:
                 spacing=12,
             )
 
+        guarded_count = sum(entry.category in GUARDED_CATEGORIES for entry in entries)
+        if guarded_count:
+            warning = ft.Text(t("leftover_warning", count=guarded_count), color=ft.Colors.RED_700)
+            content = ft.Column([content, warning], tight=True, spacing=12)
+
         dialog = ft.AlertDialog(
             title=ft.Text(t("confirm_deletion")),
             content=content,
@@ -977,8 +984,14 @@ class SteamCleanerGUI:
         def run_clean() -> None:
             selected_result = ScanResult(entries=entries)
             use_trash = get_value("clean", "use_trash", "true") == "true"
+            platform = create_adapter()
+            exclusions = ExclusionRegistry()
             cleaner = CleanEngine(
-                use_trash=use_trash, dry_run=False, exclusions=ExclusionRegistry(), platform=create_adapter()
+                use_trash=use_trash,
+                dry_run=False,
+                exclusions=exclusions,
+                platform=platform,
+                still_offered=ScanEngine(platform, exclusions).still_offers,
             )
             stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
             clean_done.set()

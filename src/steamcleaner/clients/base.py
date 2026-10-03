@@ -45,6 +45,14 @@ class GameClient(abc.ABC):
     def scan_junk(self) -> Iterator[JunkEntry]:
         """Yield all junk entries without exclusion filtering."""
 
+    def still_offers(self, entry: JunkEntry) -> bool:
+        """Return whether what made an entry of this client junk still holds. Asked right before deleting it.
+
+        True unless the client overrides it: most entries are junk by what they are, not by what the client
+        knew at scan time.
+        """
+        return True
+
     def scan_safe(self, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:
         """Yield junk entries that are not excluded, each sized by what deleting it gives back to the disk."""
         self._cancel = cancel
