@@ -22,8 +22,6 @@
   <img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR">
 </p>
 
----
-
 <h2 align="center">Quick start</h2>
 
 <p align="center">
@@ -38,9 +36,9 @@
 <h2 align="center">Features</h2>
 
 - **Cross-platform** &middot; Desktop app for Windows, macOS, and Linux with automatic dark/light theme
+- **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Scans** &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
 - **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, unused cross-platform binaries, and folders left by uninstalled Steam games
-- **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Game files** &middot; Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
 - **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
