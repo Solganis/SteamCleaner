@@ -38,6 +38,12 @@ class TestLinuxAdapter:
         adapter = LinuxAdapter()
         assert_that(adapter.list_registry_subkeys("HKLM", r"SOFTWARE\Test")).is_equal_to([])
 
+    def test_has_no_registry(self):
+        assert_that(LinuxAdapter().has_registry()).is_false()
+
+    def test_registry_dword_returns_none(self):
+        assert_that(LinuxAdapter().read_registry_dword("HKLM", r"Software\Valve\Steam\Apps", "Step")).is_none()
+
     def test_programdata(self):
         adapter = LinuxAdapter()
         assert_that(adapter.programdata()).is_equal_to(Path("/var/lib"))

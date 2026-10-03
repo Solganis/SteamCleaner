@@ -22,6 +22,7 @@ class FakePlatformAdapter(PlatformAdapter):
         programdata_dir: Path | None = None,
         wine_prefix_dirs: list[Path] | None = None,
         appdata_local_dir: Path | None = None,
+        has_registry: bool = True,
     ):
         self._install_path = install_path
         self._home = home_dir or Path.home()
@@ -32,6 +33,8 @@ class FakePlatformAdapter(PlatformAdapter):
         self._registry: dict[tuple[str, str, str], str] = {}
         self._registry_subkeys: dict[tuple[str, str], list[str]] = {}
         self._allocated_bytes: dict[Path, int] = {}
+        self._registry_dwords: dict[tuple[str, str, str], int] = {}
+        self._has_registry = has_registry
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
 
@@ -46,6 +49,15 @@ class FakePlatformAdapter(PlatformAdapter):
 
     def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
         return self._registry_subkeys.get((key, subkey), [])
+
+    def set_registry_dword(self, key: str, subkey: str, value_name: str, value: int):
+        self._registry_dwords[(key, subkey, value_name)] = value
+
+    def has_registry(self) -> bool:
+        return self._has_registry
+
+    def read_registry_dword(self, key: str, subkey: str, value_name: str) -> int | None:
+        return self._registry_dwords.get((key, subkey, value_name))
 
     def appdata_local(self) -> Path:
         if self._appdata_local_override:

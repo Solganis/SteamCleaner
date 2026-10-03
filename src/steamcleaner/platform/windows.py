@@ -177,6 +177,20 @@ class WindowsAdapter(PlatformAdapter):
             _logger.debug("Registry key not found: %s\\%s@%s", key, subkey, value_name)
             return None
 
+    def has_registry(self) -> bool:
+        return True
+
+    def read_registry_dword(self, key: str, subkey: str, value_name: str) -> int | None:
+        hkey = self._HKEY_MAP.get(key)
+        if hkey is None:
+            return None
+        try:
+            with winreg.OpenKey(hkey, subkey, 0, winreg.KEY_READ | winreg.KEY_WOW64_32KEY) as reg_key:
+                value, value_type = winreg.QueryValueEx(reg_key, value_name)
+        except OSError:
+            return None
+        return value if value_type == winreg.REG_DWORD else None
+
     def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
         hkey = self._HKEY_MAP.get(key)
         if hkey is None:

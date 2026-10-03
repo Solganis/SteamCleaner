@@ -10,6 +10,12 @@ class MacOSAdapter(PlatformAdapter):
     def list_registry_subkeys(self, key: str, subkey: str) -> list[str]:
         return []
 
+    def has_registry(self) -> bool:
+        return False
+
+    def read_registry_dword(self, key: str, subkey: str, value_name: str) -> int | None:
+        return None
+
     def appdata_local(self) -> Path:
         return Path.home() / "Library" / "Application Support"
 

@@ -29,6 +29,17 @@ class PlatformAdapter(abc.ABC):
         """List subkey names under a registry path."""
 
     @abc.abstractmethod
+    def has_registry(self) -> bool:
+        """Return whether the platform has a registry that read_registry_dword can read."""
+
+    @abc.abstractmethod
+    def read_registry_dword(self, key: str, subkey: str, value_name: str) -> int | None:
+        """Read a DWORD from the 32-bit registry view. None when no such DWORD can be read.
+
+        That view is where Steam's install-script records were observed. That Steam consults it is assumed.
+        """
+
+    @abc.abstractmethod
     def appdata_local(self) -> Path:
         """Return the local application data directory."""
 
