@@ -57,7 +57,7 @@ class TestScanTask:
         with (
             patch("steamcleaner.ui.gui.app.ScanEngine", return_value=mock_engine),
             patch("steamcleaner.ui.gui.app.ExclusionRegistry"),
-            patch("steamcleaner.platform.create_adapter"),
+            patch("steamcleaner.ui.gui.app.create_adapter"),
             patch.object(gui, "_refresh_list"),
         ):
             asyncio.run(gui._scan_task())
@@ -135,6 +135,20 @@ class TestCleanTask:
         stats = CleanStats(deleted=1, bytes_freed=100)
         self._run_clean(gui_with_ui, [ENTRY_SMALL], stats)
         fake_page.overlay.append.assert_called_once()
+
+    def test_permanent_deletion_summary_reports_freed_space(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui_with_ui._selected = {ENTRY_SMALL.path}
+        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(deleted=1, bytes_freed=100))
+        snackbar = fake_page.overlay.append.call_args[0][0]
+        assert_that(snackbar.content.value).is_equal_to(t("deleted_summary", count=1, size="100 B"))
+
+    def test_trash_summary_does_not_claim_freed_space(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui_with_ui._selected = {ENTRY_SMALL.path}
+        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(deleted=1, bytes_trashed=2048))
+        snackbar = fake_page.overlay.append.call_args[0][0]
+        assert_that(snackbar.content.value).is_equal_to(t("trashed_summary", count=1, size="2.0 KB"))
 
     def test_clean_errors_dialog(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])

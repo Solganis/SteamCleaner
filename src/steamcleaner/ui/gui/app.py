@@ -13,7 +13,8 @@ import darkdetect
 import flet as ft
 
 from steamcleaner.cleaner.engine import CleanEngine, CleanStats
-from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.models.scan_result import ScanResult, reclaimable_bytes
+from steamcleaner.platform import create_adapter
 from steamcleaner.scanner.engine import ScanEngine
 from steamcleaner.scanner.exclusions import ExclusionRegistry
 from steamcleaner.ui.gui.i18n import LANGUAGES, get_lang, init_lang, set_lang, t, t_category
@@ -53,6 +54,13 @@ def _row_background(index: int, *, selected: bool) -> str | None:
     if selected:
         return ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
     return ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
+
+
+def _clean_summary(stats: CleanStats) -> str:
+    """Say where the bytes went: trashed bytes still occupy the disk, so they are not called freed."""
+    if stats.bytes_trashed:
+        return t("trashed_summary", count=stats.deleted, size=format_size(stats.bytes_trashed))
+    return t("deleted_summary", count=stats.deleted, size=format_size(stats.bytes_freed))
 
 
 def _row_checkbox(container: ft.Control) -> ft.Checkbox:
@@ -687,7 +695,7 @@ class SteamCleanerGUI:
             self._filter_dropdown.value = "all"
 
     def _update_totals(self) -> None:
-        selected_bytes = sum(entry.size_bytes for entry in self._result.entries if entry.path in self._selected)
+        selected_bytes = reclaimable_bytes(entry for entry in self._result.entries if entry.path in self._selected)
         total_formatted = format_size(self._result.total_bytes)
         selected_formatted = format_size(selected_bytes)
         visible_count = len(self._visible_entries)
@@ -849,8 +857,6 @@ class SteamCleanerGUI:
 
         def run_scan() -> None:
             try:
-                from steamcleaner.platform import create_adapter
-
                 platform = create_adapter()
                 exclusions = ExclusionRegistry()
                 engine = ScanEngine(platform, exclusions)
@@ -906,7 +912,7 @@ class SteamCleanerGUI:
             return
 
         entries = [entry for entry in self._result.entries if entry.path in self._selected]
-        selected_bytes = sum(entry.size_bytes for entry in entries)
+        selected_bytes = reclaimable_bytes(entries)
 
         use_trash = get_value("clean", "use_trash", "true") == "true"
         item_summary = f"{len(entries)} items ({format_size(selected_bytes)})"
@@ -971,7 +977,9 @@ class SteamCleanerGUI:
         def run_clean() -> None:
             selected_result = ScanResult(entries=entries)
             use_trash = get_value("clean", "use_trash", "true") == "true"
-            cleaner = CleanEngine(use_trash=use_trash, dry_run=False, exclusions=ExclusionRegistry())
+            cleaner = CleanEngine(
+                use_trash=use_trash, dry_run=False, exclusions=ExclusionRegistry(), platform=create_adapter()
+            )
             stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
             clean_done.set()
 
@@ -988,10 +996,11 @@ class SteamCleanerGUI:
 
         stats = stats_holder[0]
         _logger.info(
-            "Clean finished: deleted=%d, skipped=%d, freed=%s, errors=%d",
+            "Clean finished: deleted=%d, skipped=%d, freed=%s, trashed=%s, errors=%d",
             stats.deleted,
             stats.skipped,
             format_size(stats.bytes_freed),
+            format_size(stats.bytes_trashed),
             len(stats.errors),
         )
         for error in stats.errors:
@@ -1010,7 +1019,7 @@ class SteamCleanerGUI:
             self._show_error_dialog(stats)
         else:
             self._status.value = t("items_remaining", count=entry_count)
-            self._show_snackbar(t("deleted_summary", count=stats.deleted, size=format_size(stats.bytes_freed)))
+            self._show_snackbar(_clean_summary(stats))
 
         self._cleaning = False
         self._set_controls_locked(locked=False)
