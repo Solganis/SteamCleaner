@@ -22,11 +22,6 @@
   <img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ZH%20%7C%20ES%20%7C%20PT--BR-blue.svg" alt="i18n: EN | RU | ZH | ES | PT-BR">
 </p>
 
-<p align="center">
-  Games accumulate gigabytes of junk over time: redistributable installers, shader caches, crash dumps, old logs, unused cross-platform binaries.<br>
-  Steam Cleaner finds them and lets you safely remove what you don't need.
-</p>
-
 ---
 
 <h2 align="center">Quick start</h2>
@@ -53,7 +48,7 @@
 
 - **Game files** &middot; Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
-- **Recoverable** &middot; Files go to system trash by default, not permanent deletion
+- **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
 
 <h2 align="center">What it finds</h2>
