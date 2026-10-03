@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/demo.gif" alt="SteamCleaner demo" width="720">
+  <img src="assets/screenshot.png" alt="SteamCleaner in the dark and light themes" width="720">
 </p>
 
 <p align="center">
