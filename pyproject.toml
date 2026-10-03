@@ -69,6 +69,7 @@ packages = ["src/steamcleaner"]
 include = [
     "src",
     "tests",
+    "scripts/drop_exempt_survivors.py",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
