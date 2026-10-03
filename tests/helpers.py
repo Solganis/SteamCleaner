@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from steamcleaner.models.junk import JunkEntry
     from steamcleaner.scanner.exclusions import ExclusionRegistry
+    from steamcleaner.utils.vdf import VdfDict
 
 
 class FakePlatformAdapter(PlatformAdapter):
@@ -108,6 +109,34 @@ class ListedEntriesClient(GameClient):
 
     def scan_junk(self) -> Iterator[JunkEntry]:
         yield from self._entries
+
+
+def _escape_vdf_string(raw: str) -> str:
+    """Escape backslash and double quote so parse_vdf reconstructs the original string.
+
+    Order matters: backslashes are doubled first, otherwise the escape we add for a
+    quote would itself be re-escaped. Whitespace and braces are left raw because the
+    parser treats them literally inside quotes.
+    """
+    return raw.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def serialize_vdf(data: VdfDict, indent: int = 0) -> str:
+    """Render a nested dict back into VDF text, the inverse of parse_vdf for quoted tokens."""
+    padding = "\t" * indent
+    lines: list[str] = []
+    for key, value in data.items():
+        quoted_key = f'"{_escape_vdf_string(key)}"'
+        if isinstance(value, dict):
+            lines.append(f"{padding}{quoted_key}")
+            lines.append(f"{padding}{{")
+            nested = serialize_vdf(value, indent + 1)
+            if nested:
+                lines.append(nested)
+            lines.append(f"{padding}}}")
+        else:
+            lines.append(f'{padding}{quoted_key} "{_escape_vdf_string(value)}"')
+    return "\n".join(lines)
 
 
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:

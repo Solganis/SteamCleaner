@@ -7,6 +7,7 @@ import pytest
 from assertpy2 import assert_that
 
 from steamcleaner.cleaner.engine import CleanStats
+from steamcleaner.clients.steam_scripts import GameScripts, InstallerEvidence, InstallStep
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
 from steamcleaner.platform.base import FileAllocation
@@ -40,6 +41,20 @@ RECORDS = [
     pytest.param(lambda: Exclusion(pattern="Steamworks Shared", reason="Shared pool"), id="Exclusion"),
     pytest.param(lambda: CleanStats(deleted=1, skipped=2, errors=["denied"], bytes_freed=3), id="CleanStats"),
     pytest.param(lambda: FileAllocation(allocated_bytes=4096, file_id=(1, 2), link_count=1), id="FileAllocation"),
+    pytest.param(
+        lambda: InstallStep(
+            name="Setup",
+            programs=(Path("C:/Games/Game/setup.exe"),),
+            reached=(Path("C:/Games/Game/setup.exe"),),
+            completion_subkey=r"Software\Valve\Steam\Apps\1",
+            completion_minimum=1,
+        ),
+        id="InstallStep",
+    ),
+    pytest.param(lambda: GameScripts(install_dir=Path("C:/Games/Game"), steps=(), unreadable=False), id="GameScripts"),
+    pytest.param(
+        lambda: InstallerEvidence(needed=frozenset(), finished={}, kept_whole=frozenset()), id="InstallerEvidence"
+    ),
 ]
 
 CONTAINERS = [
@@ -70,6 +85,10 @@ def test_record_keeps_no_instance_dict(build_record: Callable[[], DataclassInsta
 
 def test_clean_stats_start_empty():
     assert_that(CleanStats()).is_equal_to(CleanStats(deleted=0, skipped=0, errors=[], bytes_freed=0, bytes_trashed=0))
+
+
+def test_installer_evidence_keeps_no_game_whole_unless_told():
+    assert_that(InstallerEvidence(needed=frozenset(), finished={}).kept_whole).is_equal_to(frozenset())
 
 
 @pytest.mark.parametrize("container_type", CONTAINERS)

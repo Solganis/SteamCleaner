@@ -1,10 +1,12 @@
 import logging
+import stat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from steamcleaner.clients.base import GameClient
 from steamcleaner.clients.registry import ClientRegistry
 from steamcleaner.clients.shared import scan_cache_dir, scan_game
+from steamcleaner.clients.steam_scripts import InstallerEvidence, collect_installer_evidence
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.utils.fs import dir_size, list_subdirs
 from steamcleaner.utils.vdf import load_vdf
@@ -149,10 +151,43 @@ class SteamClient(GameClient):
         common = library / "steamapps" / "common"
         if not common.is_dir():
             return
+        evidence = collect_installer_evidence(library, self._platform)
         for game_dir in list_subdirs(common):
             if self.cancelled:
                 return
-            yield from scan_game(game_dir, self.name, lambda: self.cancelled)
+            found: list[Path] = []
+            for entry in scan_game(game_dir, self.name, lambda: self.cancelled):
+                if evidence.protects(entry.path):
+                    _logger.info("Kept, an install script of Steam may still need it: %s", entry.path)
+                    continue
+                found.append(entry.path)
+                yield entry
+            yield from self._scan_finished_installers(game_dir, evidence, found)
+
+    def _scan_finished_installers(
+        self, game_dir: Path, evidence: InstallerEvidence, found: list[Path]
+    ) -> Iterator[JunkEntry]:
+        """Yield the installers of this game whose install steps are all recorded as complete.
+
+        One that is a found entry, or lies inside one, is not yielded again.
+        """
+        for installer, step_name in evidence.finished.items():
+            if game_dir not in installer.parents or not {installer, *installer.parents}.isdisjoint(found):
+                continue
+            try:
+                installer_stat = installer.lstat()
+            except OSError:
+                continue
+            if not stat.S_ISREG(installer_stat.st_mode):
+                continue
+            yield JunkEntry(
+                path=installer,
+                category=JunkCategory.INSTALLER,
+                size_bytes=installer_stat.st_size,
+                client_name=self.name,
+                description=f"Installer in {game_dir.name}, Steam install step recorded as complete ({step_name})",
+                game_root=game_dir,
+            )
 
     @staticmethod
     def _build_appid_map(library: Path) -> dict[str, str]:
