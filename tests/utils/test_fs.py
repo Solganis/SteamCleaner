@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Self
 from unittest.mock import patch
 
+import pytest
 from assertpy2 import assert_that
 
 from steamcleaner.utils.fs import dir_size, format_size, is_reparse_point, list_subdirs, safe_rmtree, walk_files
@@ -84,6 +85,17 @@ class TestIsReparsePoint:
         fake_stat = SimpleNamespace(st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)
         with patch.object(Path, "lstat", return_value=fake_stat):
             assert_that(is_reparse_point(target)).is_true()
+
+    def test_windows_attributes_without_the_reparse_flag(self, tmp_path: Path):
+        other_attributes = stat.FILE_ATTRIBUTE_DIRECTORY | stat.FILE_ATTRIBUTE_COMPRESSED
+        fake_stat = SimpleNamespace(st_file_attributes=other_attributes, st_mode=stat.S_IFLNK | 0o777)
+        with patch.object(Path, "lstat", return_value=fake_stat):
+            assert_that(is_reparse_point(tmp_path)).is_false()
+
+    @pytest.mark.parametrize(("mode", "is_link"), [(stat.S_IFLNK | 0o777, True), (stat.S_IFDIR | 0o755, False)])
+    def test_stat_without_windows_attributes_is_judged_by_its_mode(self, tmp_path: Path, mode: int, is_link: bool):
+        with patch.object(Path, "lstat", return_value=SimpleNamespace(st_mode=mode)):
+            assert_that(is_reparse_point(tmp_path)).is_equal_to(is_link)
 
 
 class TestWalkFiles:

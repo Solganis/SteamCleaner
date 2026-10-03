@@ -13,12 +13,19 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
+def is_reparse_stat(path_stat: os.stat_result) -> bool:
+    """Check if an lstat result describes a symlink, junction, or other reparse point."""
+    try:
+        return bool(path_stat.st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)  # Windows-only attr
+    except AttributeError:
+        return stat.S_ISLNK(path_stat.st_mode)
+
+
 def is_reparse_point(path: Path) -> bool:
     """Check if path is a symlink, junction, or other reparse point."""
     try:
-        attrs = path.lstat().st_file_attributes  # Windows-only attr
-        return bool(attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT)
-    except (AttributeError, OSError):  # fmt: skip  # cosmic-ray (parso) lacks PEP 758
+        return is_reparse_stat(path.lstat())
+    except OSError:
         return path.is_symlink()
 
 
