@@ -1,6 +1,6 @@
 [project]
 name = "steamcleaner"
-version = "1.1.1"
+version = "1.2.0"
 description = "Cross-platform GUI tool (Windows, macOS, Linux) for reclaiming disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect"
 readme = "README.md"
 license = "MIT"

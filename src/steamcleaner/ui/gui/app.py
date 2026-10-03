@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-_VERSION: Final = "1.1.1"
+_VERSION: Final = "1.2.0"
 _GITHUB_URL: Final = "https://github.com/Solganis/SteamCleaner"
 _BOOSTY_URL: Final = "https://boosty.to/solganis"
 _DONATE_URL: Final = "https://www.donationalerts.com/r/Solganis"
