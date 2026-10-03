@@ -2,12 +2,14 @@ import json
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
+import pytest
 from assertpy2 import assert_that
 from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
 from steamcleaner.clients.epic import EpicClient
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.exclusions import ExclusionRegistry
+from steamcleaner.utils.fs import list_subdirs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,6 +84,29 @@ class TestEpicGameDiscovery:
         names = [path.name for path in paths]
         assert_that(names).does_not_contain("Launcher")
         assert_that(names).contains("Fortnite")
+
+    @pytest.mark.parametrize("source", ["program files", "program data", "wine prefix"])
+    def test_game_listed_after_the_launcher_is_still_found(self, tmp_path: Path, source: str):
+        root = tmp_path / "root"
+        epic_parent = root / "Program Files" if source == "wine prefix" else root
+        for directory_name in ("Launcher", "Fortnite"):
+            (epic_parent / "Epic Games" / directory_name).mkdir(parents=True)
+        elsewhere = tmp_path / "elsewhere"
+        platform = FakePlatformAdapter(
+            home_dir=tmp_path / "home",
+            program_files_dirs=[root if source == "program files" else elsewhere],
+            programdata_dir=root if source == "program data" else elsewhere,
+            wine_prefix_dirs=[root] if source == "wine prefix" else [],
+        )
+        client = EpicClient(platform, ExclusionRegistry())
+
+        def launcher_first(directory: Path) -> list[Path]:
+            return sorted(list_subdirs(directory), key=lambda subdirectory: subdirectory.name != "Launcher")
+
+        with patch("steamcleaner.clients.epic.list_subdirs", side_effect=launcher_first):
+            paths = client.game_install_paths()
+
+        assert_that(paths).is_equal_to([epic_parent / "Epic Games" / "Fortnite"])
 
     def test_discovers_from_manifests(self, tmp_path: Path):
         game_dir = tmp_path / "CustomGames" / "MyGame"
