@@ -36,6 +36,8 @@
     "permanent_deletion": "Exclusão permanente",
     "permanent_warning": "{count} itens ({size}) serão excluídos permanentemente. Isso não pode ser desfeito.",
     "leftover_warning": "{count} deles são pastas de jogos desinstalados. Podem conter saves e configurações.",
+    "no_trash_warning": "Não se espera que a lixeira mantenha {count} itens ({size}). Os que ela recusar serão excluídos permanentemente:",
+    "and_more": "e mais {count}",
     "delete_permanently": "Excluir permanentemente",
     "delete": "Excluir",
     "cleaning": "Limpando...",

@@ -1,11 +1,13 @@
 import asyncio
 import contextlib
 import logging
+import os
 import queue
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final
 
@@ -24,8 +26,6 @@ from steamcleaner.utils.fs import format_size
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from steamcleaner.models.junk import JunkEntry
 
 _logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ _PADDING_H: Final = 16
 _TOOLBAR_HEIGHT: Final = 44
 _TOOLBAR_RADIUS: Final = 8
 _DROPDOWN_HEIGHT: Final = 48
+_LISTED_PATHS: Final = 5
 _CATEGORY_COLORS: Final = MappingProxyType(
     {
         "redistributable": ft.Colors.ORANGE_700,
@@ -99,11 +100,17 @@ def _fit_toolbar_dropdown(dropdown: ft.Dropdown) -> ft.Container:
     )
 
 
+def _count_and_size(entries: list[JunkEntry]) -> dict[str, str | int]:
+    return {"count": len(entries), "size": format_size(reclaimable_bytes(entries))}
+
+
 def _clean_summary(stats: CleanStats) -> str:
     """Say where the bytes went: trashed bytes still occupy the disk, so they are not called freed."""
-    if stats.bytes_trashed:
-        return t("trashed_summary", count=stats.deleted, size=format_size(stats.bytes_trashed))
-    return t("deleted_summary", count=stats.deleted, size=format_size(stats.bytes_freed))
+    trashed = t("trashed_summary", count=stats.trashed, size=format_size(stats.bytes_trashed))
+    deleted = t("deleted_summary", count=stats.deleted - stats.trashed, size=format_size(stats.bytes_freed))
+    if stats.trashed == stats.deleted and stats.trashed:
+        return trashed
+    return f"{trashed} {deleted}" if stats.trashed else deleted
 
 
 def _row_checkbox(container: ft.Control) -> ft.Checkbox:
@@ -959,32 +966,52 @@ class SteamCleanerGUI:
             return
 
         entries = [entry for entry in self._result.entries if entry.path in self._selected]
-        counted: dict[str, str | int] = {"count": len(entries), "size": format_size(reclaimable_bytes(entries))}
-
         use_trash = get_value("clean", "use_trash", "true") == "true"
+        platform = create_adapter()
+        real = {entry.path: Path(os.path.realpath(entry.path)) for entry in entries}
+        unkept = {
+            real[entry.path]
+            for entry in entries
+            if use_trash and not platform.keeps_trash(entry.path, entry.size_bytes)
+        }
+        lost_paths = frozenset(
+            path for path, place in real.items() if place in unkept or not unkept.isdisjoint(place.parents)
+        )
+        lost = [entry for entry in entries if entry.path in lost_paths]
+        kept = [entry for entry in entries if entry.path not in lost_paths]
+        all_for_good = not use_trash or not kept
 
-        if use_trash:
-            content = ft.Text(t("move_to_trash", **counted))
-        else:
-            content = ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Icon(ft.Icons.WARNING_AMBER, color=ft.Colors.RED_700, size=24),
-                            ft.Text(t("permanent_deletion"), weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700),
-                        ],
-                        spacing=8,
-                    ),
-                    ft.Text(t("permanent_warning", **counted)),
-                ],
-                tight=True,
-                spacing=12,
+        red = ft.Colors.RED_700
+        blocks: list[ft.Control] = []
+        if not use_trash:
+            blocks.append(
+                ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Icon(ft.Icons.WARNING_AMBER, color=red, size=24),
+                                ft.Text(t("permanent_deletion"), weight=ft.FontWeight.BOLD, color=red),
+                            ],
+                            spacing=8,
+                        ),
+                        ft.Text(t("permanent_warning", **_count_and_size(entries))),
+                    ],
+                    tight=True,
+                    spacing=12,
+                )
             )
-
+        elif kept:
+            blocks.append(ft.Text(t("move_to_trash", **_count_and_size(kept))))
+        if lost:
+            lines: list[ft.Control] = [ft.Text(t("no_trash_warning", **_count_and_size(lost)), color=red)]
+            lines.extend(ft.Text(str(entry.path), color=red, size=12) for entry in lost[:_LISTED_PATHS])
+            if len(lost) > _LISTED_PATHS:
+                lines.append(ft.Text(t("and_more", count=len(lost) - _LISTED_PATHS), color=red, size=12))
+            blocks.append(ft.Column(lines, tight=True, spacing=4))
         guarded_count = sum(entry.category in GUARDED_CATEGORIES for entry in entries)
         if guarded_count:
-            warning = ft.Text(t("leftover_warning", count=guarded_count), color=ft.Colors.RED_700)
-            content = ft.Column([content, warning], tight=True, spacing=12)
+            blocks.append(ft.Text(t("leftover_warning", count=guarded_count), color=red))
+        content = blocks[0] if len(blocks) == 1 else ft.Column(blocks, tight=True, spacing=12)
 
         dialog = ft.AlertDialog(
             title=ft.Text(t("confirm_deletion")),
@@ -992,17 +1019,17 @@ class SteamCleanerGUI:
             actions=[
                 ft.TextButton(t("cancel"), on_click=lambda _: self._close_dialog()),
                 ft.Button(
-                    t("delete_permanently") if not use_trash else t("delete"),
+                    t("delete_permanently") if all_for_good else t("delete"),
                     color=ft.Colors.WHITE,
                     bgcolor=ft.Colors.RED_700,
-                    on_click=lambda _: self._confirm_clean(entries),
+                    on_click=lambda _: self._confirm_clean(entries, use_trash=use_trash, for_good=lost_paths),
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self._open_dialog(dialog)
 
-    def _confirm_clean(self, entries: list[JunkEntry]) -> None:
+    def _confirm_clean(self, entries: list[JunkEntry], *, use_trash: bool, for_good: frozenset[Path]) -> None:
         self._close_dialog()
         self._cleaning = True
         self._status.value = t("cleaning")
@@ -1010,9 +1037,9 @@ class SteamCleanerGUI:
         self._set_controls_locked(locked=True)
         self._scan_button.disabled = True
         self._page.update()
-        self._page.run_task(self._clean_task, entries)
+        self._page.run_task(self._clean_task, entries, use_trash, for_good)
 
-    async def _clean_task(self, entries: list[JunkEntry]) -> None:
+    async def _clean_task(self, entries: list[JunkEntry], use_trash: bool, for_good: frozenset[Path]) -> None:
         deleted_ids = {id(entry) for entry in entries}
         clean_done = threading.Event()
         stats_holder: list[CleanStats] = []
@@ -1027,7 +1054,6 @@ class SteamCleanerGUI:
 
         def run_clean() -> None:
             selected_result = ScanResult(entries=entries)
-            use_trash = get_value("clean", "use_trash", "true") == "true"
             platform = create_adapter()
             exclusions = ExclusionRegistry()
             cleaner = CleanEngine(
@@ -1036,6 +1062,7 @@ class SteamCleanerGUI:
                 exclusions=exclusions,
                 platform=platform,
                 still_offered=ScanEngine(platform, exclusions).still_offers,
+                delete_for_good=for_good,
             )
             stats_holder.append(cleaner.clean(selected_result, callback=on_entry_cleaned))
             clean_done.set()

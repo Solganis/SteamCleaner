@@ -2,10 +2,16 @@ import abc
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+from send2trash import send2trash
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 POSIX_BLOCK_BYTES: Final = 512
+
+
+class TrashRefusedError(OSError):
+    """The trash would not keep the path. Nothing was deleted for good."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -73,6 +79,20 @@ class PlatformAdapter(abc.ABC):
             file_id=(file_stat.st_dev, file_stat.st_ino),
             link_count=file_stat.st_nlink,
         )
+
+    def keeps_trash(self, path: Path, size_bytes: int) -> bool:
+        """Forecast whether send_to_trash would move an item of this size at path. Used by a dialog and a dry run."""
+        return True
+
+    def send_to_trash(self, path: Path) -> bool:
+        """Move path to the trash and return whether the trash holds it.
+
+        Raises:
+            TrashRefusedError: The trash would not keep it. Nothing was deleted for good.
+            OSError: The move failed.
+        """
+        send2trash(str(path))
+        return True
 
     def wine_prefixes(self) -> list[Path]:  # pragma: no cover - default only used by WindowsAdapter
         """Return discovered Wine/Proton drive_c paths. Empty on Windows."""

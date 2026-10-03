@@ -1,4 +1,5 @@
 import logging
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import patch
@@ -209,7 +210,7 @@ class TestCleanEngineSafetyChecks:
         result = ScanResult(entries=[_make_entry(target, size=100)])
         engine = CleanEngine(use_trash=False, dry_run=False)
 
-        # First call is clean()'s gate (path still looks safe); second is _delete()'s re-check,
+        # First call is clean()'s gate (path still looks safe); second is _try_remove()'s re-check,
         # by which point the path was swapped for a junction. The engine must refuse and keep data.
         with patch("steamcleaner.cleaner.engine.is_reparse_point", side_effect=[False, True]):
             stats = engine.clean(result)
@@ -367,6 +368,7 @@ class TestCleanEngineAsksAgainBeforeDeleting:
             CleanStats(
                 deleted=1,
                 skipped=1,
+                trashed=1,
                 errors=[f"Skipped, no longer confirmed as junk: {leftover.path}"],
                 bytes_trashed=64,
             )
@@ -474,6 +476,30 @@ class TestCleanEngineMultipleEntries:
         assert_that(stats.bytes_freed).is_equal_to(100)
         assert_that(str(valid)).does_not_exist()
 
+    def test_entry_whose_path_cannot_be_inspected_is_not_taken_for_gone(self, tmp_path: Path, monkeypatch):
+        target = tmp_path / "redist"
+        target.mkdir()
+        entry = _make_entry(target, 100)
+        real_lstat = Path.lstat
+        callback_log: list[tuple[JunkEntry, bool]] = []
+
+        def deny_the_target(path: Path) -> os.stat_result:
+            if path == target:
+                raise PermissionError("Access is denied")
+            return real_lstat(path)
+
+        monkeypatch.setattr(Path, "lstat", deny_the_target)
+        monkeypatch.setattr(Path, "exists", lambda path: path != target)
+        engine = CleanEngine(use_trash=False, dry_run=False)
+
+        with patch.object(engine, "_delete", side_effect=PermissionError("Access is denied")):
+            stats = engine.clean(
+                ScanResult(entries=[entry]), callback=lambda entry, success: callback_log.append((entry, success))
+            )
+
+        assert_that(stats).is_equal_to(CleanStats(skipped=1, errors=[f"{target}: Access is denied"]))
+        assert_that(callback_log).is_equal_to([(entry, False)])
+
     def test_multiple_valid_deletions(self, tmp_path: Path):
         entries = []
         for name in ("cache_a", "cache_b", "cache_c"):
@@ -503,7 +529,7 @@ class TestCleanEngineMultipleEntries:
 
         original_delete = engine._delete
 
-        def selective_delete(path: Path):
+        def selective_delete(path: Path) -> None:
             if path == bad:
                 raise PermissionError("locked")
             original_delete(path)
@@ -545,7 +571,7 @@ class TestCleanEngineTrashMode:
         result = ScanResult(entries=[_make_entry(target)])
         engine = CleanEngine(use_trash=True, dry_run=False)
 
-        with patch("steamcleaner.cleaner.engine.send2trash") as mock_trash:
+        with patch("steamcleaner.platform.base.send2trash") as mock_trash:
             stats = engine.clean(result)
 
         mock_trash.assert_called_once_with(str(target))
@@ -558,7 +584,7 @@ class TestCleanEngineTrashMode:
         result = ScanResult(entries=[_make_entry(target)])
         engine = CleanEngine(use_trash=True, dry_run=False)
 
-        with patch("steamcleaner.cleaner.engine.send2trash", side_effect=OSError("trash full")):
+        with patch("steamcleaner.platform.base.send2trash", side_effect=OSError("trash full")):
             stats = engine.clean(result)
 
         assert_that(stats.deleted).is_equal_to(0)
@@ -570,7 +596,7 @@ class TestCleanEngineTrashMode:
         target.mkdir()
 
         engine = CleanEngine(use_trash=True, dry_run=False)
-        with patch("steamcleaner.cleaner.engine.send2trash"):
+        with patch("steamcleaner.platform.base.send2trash"):
             stats = engine.clean(ScanResult(entries=[_make_entry(target, 700)]))
 
         assert_that(stats.bytes_trashed).is_equal_to(700)
@@ -584,6 +610,250 @@ class TestCleanEngineTrashMode:
 
         assert_that(stats.bytes_freed).is_equal_to(700)
         assert_that(stats.bytes_trashed).is_equal_to(0)
+
+
+class TestCleanEngineTrashThatKeepsNothing:
+    @staticmethod
+    def _make_junk(tmp_path: Path, name: str = "redist", size: int = 700) -> JunkEntry:
+        junk = tmp_path / name
+        junk.mkdir()
+        (junk / "setup.exe").write_bytes(b"x" * size)
+        return _make_entry(junk, size=size)
+
+    @staticmethod
+    def _make_redist_with_two_installers(tmp_path: Path) -> Path:
+        redist = tmp_path / "redist"
+        redist.mkdir()
+        (redist / "first.exe").write_bytes(b"x" * 600)
+        (redist / "second.exe").write_bytes(b"x" * 400)
+        return redist
+
+    def test_entry_the_trash_refuses_is_left_alone(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(tmp_path)
+        callback_log: list[tuple[JunkEntry, bool]] = []
+
+        with patch("steamcleaner.platform.base.send2trash") as mock_trash:
+            stats = CleanEngine(use_trash=True, platform=platform).clean(
+                ScanResult(entries=[junk]), callback=lambda entry, success: callback_log.append((entry, success))
+            )
+
+        mock_trash.assert_not_called()
+        assert_that(str(junk.path / "setup.exe")).exists()
+        assert_that(stats).is_equal_to(
+            CleanStats(skipped=1, errors=[f"Skipped, the trash would not keep it: {junk.path}"])
+        )
+        assert_that(callback_log).is_equal_to([(junk, False)])
+
+    def test_engine_built_without_a_platform_asks_the_trash_of_this_machine(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        machine = FakePlatformAdapter()
+        machine.lose_trash_under(tmp_path)
+
+        with (
+            patch("steamcleaner.cleaner.engine.create_adapter", return_value=machine),
+            patch("steamcleaner.platform.base.send2trash") as mock_trash,
+        ):
+            stats = CleanEngine().clean(ScanResult(entries=[junk]))
+
+        mock_trash.assert_not_called()
+        assert_that(str(junk.path / "setup.exe")).exists()
+        assert_that(stats).is_equal_to(
+            CleanStats(skipped=1, errors=[f"Skipped, the trash would not keep it: {junk.path}"])
+        )
+
+    def test_only_a_path_the_caller_named_is_deleted_for_good(self, tmp_path: Path):
+        named = self._make_junk(tmp_path, "named", 700)
+        other = self._make_junk(tmp_path, "other", 300)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(tmp_path)
+        engine = CleanEngine(use_trash=True, platform=platform, delete_for_good=[named.path])
+
+        with patch("steamcleaner.platform.base.send2trash") as mock_trash:
+            stats = engine.clean(ScanResult(entries=[named, other]))
+
+        mock_trash.assert_not_called()
+        assert_that([named.path.exists(), other.path.exists()]).is_equal_to([False, True])
+        assert_that(stats).is_equal_to(
+            CleanStats(
+                deleted=1,
+                skipped=1,
+                errors=[f"Skipped, the trash would not keep it: {other.path}"],
+                bytes_freed=700,
+            )
+        )
+
+    def test_path_named_for_deletion_still_goes_to_a_trash_that_keeps_it(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        engine = CleanEngine(use_trash=True, platform=FakePlatformAdapter(), delete_for_good=[junk.path])
+
+        with patch("steamcleaner.platform.base.send2trash", side_effect=shutil.rmtree) as mock_trash:
+            stats = engine.clean(ScanResult(entries=[junk]))
+
+        mock_trash.assert_called_once_with(str(junk.path))
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, trashed=1, bytes_trashed=700))
+
+    def test_forecast_that_the_trash_would_not_keep_an_entry_does_not_cost_it_the_trash(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        platform = FakePlatformAdapter()
+
+        with (
+            patch.object(platform, "keeps_trash", return_value=False),
+            patch.object(platform, "send_to_trash", return_value=True) as move,
+        ):
+            stats = CleanEngine(use_trash=True, platform=platform).clean(ScanResult(entries=[junk]))
+
+        move.assert_called_once_with(junk.path)
+        assert_that(str(junk.path)).exists()
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, trashed=1, bytes_trashed=700))
+
+    def test_dry_run_forecasts_by_the_size_measured_on_disk(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path, size=700)
+        recorded_smaller = _make_entry(junk.path, size=5)
+        platform = FakePlatformAdapter()
+        platform.trash_capacity = 699
+
+        with patch.object(platform, "send_to_trash") as move:
+            stats = CleanEngine(use_trash=True, dry_run=True, platform=platform).clean(
+                ScanResult(entries=[recorded_smaller])
+            )
+
+        move.assert_not_called()
+        assert_that(stats).is_equal_to(
+            CleanStats(skipped=1, errors=[f"Skipped, the trash would not keep it: {junk.path}"])
+        )
+
+    @pytest.mark.parametrize(
+        ("recorded", "expected"),
+        [
+            (699, CleanStats(deleted=1, trashed=1, bytes_trashed=699)),
+            (700, CleanStats(skipped=1, errors=["Skipped, the trash would not keep it: {path}"])),
+        ],
+        ids=["fits", "too-big"],
+    )
+    def test_dry_run_without_a_platform_forecasts_by_the_size_the_scan_recorded(
+        self, tmp_path: Path, recorded: int, expected: CleanStats
+    ):
+        junk = self._make_junk(tmp_path, size=5)
+        machine = FakePlatformAdapter()
+        machine.trash_capacity = 699
+
+        with patch("steamcleaner.cleaner.engine.create_adapter", return_value=machine):
+            stats = CleanEngine(dry_run=True).clean(ScanResult(entries=[_make_entry(junk.path, size=recorded)]))
+
+        assert_that(stats.errors).is_equal_to([error.format(path=junk.path) for error in expected.errors])
+        assert_that((stats.deleted, stats.trashed, stats.skipped, stats.bytes_trashed, stats.bytes_freed)).is_equal_to(
+            (expected.deleted, expected.trashed, expected.skipped, expected.bytes_trashed, expected.bytes_freed)
+        )
+        assert_that(str(junk.path)).exists()
+
+    def test_dry_run_counts_a_named_path_the_trash_would_not_keep_as_deleted_for_good(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(tmp_path)
+        engine = CleanEngine(use_trash=True, dry_run=True, platform=platform, delete_for_good=[junk.path])
+
+        stats = engine.clean(ScanResult(entries=[junk]))
+
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, bytes_freed=700))
+        assert_that(str(junk.path)).exists()
+
+    def test_item_the_trash_took_but_does_not_hold_counts_as_deleted_for_good(self, tmp_path: Path):
+        junk = self._make_junk(tmp_path)
+        platform = FakePlatformAdapter()
+        platform.trash_holds_what_it_takes = False
+
+        with patch("steamcleaner.platform.base.send2trash", side_effect=shutil.rmtree):
+            stats = CleanEngine(use_trash=True, platform=platform).clean(ScanResult(entries=[junk]))
+
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, bytes_freed=700))
+
+    def test_failed_move_to_the_trash_claims_no_bytes_either_way(self, tmp_path: Path):
+        redist = self._make_redist_with_two_installers(tmp_path)
+
+        def take_the_first_installer_then_fail(path: str) -> None:
+            (Path(path) / "first.exe").unlink()
+            raise OSError("second.exe is locked")
+
+        with patch("steamcleaner.platform.base.send2trash", side_effect=take_the_first_installer_then_fail):
+            stats = CleanEngine(use_trash=True, platform=FakePlatformAdapter(), delete_for_good=[redist]).clean(
+                ScanResult(entries=[_make_entry(redist, 1000)])
+            )
+
+        assert_that(stats).is_equal_to(CleanStats(skipped=1, errors=[f"{redist}: second.exe is locked"]))
+        assert_that(str(redist / "second.exe")).exists()
+
+    def test_deletion_for_good_that_fails_part_way_after_a_refusal_counts_what_went(self, tmp_path: Path):
+        redist = self._make_redist_with_two_installers(tmp_path)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(tmp_path)
+
+        def remove_the_first_installer_then_fail(path: Path) -> None:
+            (path / "first.exe").unlink()
+            raise OSError("second.exe is locked")
+
+        with patch("steamcleaner.cleaner.engine.shutil.rmtree", side_effect=remove_the_first_installer_then_fail):
+            stats = CleanEngine(use_trash=True, platform=platform, delete_for_good=[redist]).clean(
+                ScanResult(entries=[_make_entry(redist, 1000)])
+            )
+
+        assert_that(stats).is_equal_to(
+            CleanStats(skipped=1, errors=[f"{redist}: second.exe is locked"], bytes_freed=600)
+        )
+
+    @pytest.mark.parametrize("dry_run", [False, True], ids=["real", "dry-run"])
+    def test_one_run_reports_what_was_trashed_and_what_was_deleted_for_good_apart(self, tmp_path: Path, dry_run: bool):
+        kept_volume = tmp_path / "kept"
+        lost_volume = tmp_path / "lost"
+        kept_volume.mkdir()
+        lost_volume.mkdir()
+        trashed = self._make_junk(kept_volume, size=700)
+        deleted = self._make_junk(lost_volume, size=300)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(lost_volume)
+        engine = CleanEngine(use_trash=True, dry_run=dry_run, platform=platform, delete_for_good=[deleted.path])
+
+        with patch("steamcleaner.platform.base.send2trash", side_effect=shutil.rmtree):
+            stats = engine.clean(ScanResult(entries=[trashed, deleted]))
+
+        assert_that(stats).is_equal_to(CleanStats(deleted=2, trashed=1, bytes_trashed=700, bytes_freed=300))
+        assert_that([trashed.path.exists(), deleted.path.exists()]).is_equal_to([dry_run, dry_run])
+
+    def test_entry_that_went_with_a_trashed_folder_counts_as_trashed(self, tmp_path: Path):
+        folder = self._make_junk(tmp_path)
+        inside = _make_entry(folder.path / "setup.exe", size=700)
+
+        with patch("steamcleaner.platform.base.send2trash", side_effect=shutil.rmtree):
+            stats = CleanEngine(use_trash=True, platform=FakePlatformAdapter()).clean(
+                ScanResult(entries=[inside, folder])
+            )
+
+        assert_that(stats).is_equal_to(CleanStats(deleted=2, trashed=2, bytes_trashed=700))
+
+    def test_entry_that_went_with_a_folder_deleted_for_good_does_not_count_as_trashed(self, tmp_path: Path):
+        folder = self._make_junk(tmp_path)
+        inside = _make_entry(folder.path / "setup.exe", size=700)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(tmp_path)
+        engine = CleanEngine(use_trash=True, platform=platform, delete_for_good=[folder.path])
+
+        stats = engine.clean(ScanResult(entries=[inside, folder]))
+
+        assert_that(stats).is_equal_to(CleanStats(deleted=2, bytes_freed=700))
+
+    @pytest.mark.parametrize("dry_run", [False, True], ids=["real", "dry-run"])
+    def test_permanent_mode_never_asks_about_the_trash(self, tmp_path: Path, dry_run: bool):
+        junk = self._make_junk(tmp_path)
+        platform = FakePlatformAdapter()
+
+        with patch.object(platform, "keeps_trash") as forecast, patch.object(platform, "send_to_trash") as move:
+            stats = CleanEngine(use_trash=False, dry_run=dry_run, platform=platform).clean(ScanResult(entries=[junk]))
+
+        forecast.assert_not_called()
+        move.assert_not_called()
+        assert_that(junk.path.exists()).is_equal_to(dry_run)
+        assert_that(stats).is_equal_to(CleanStats(deleted=1, bytes_freed=700))
 
 
 class TestCleanEngineNestedEntries:
@@ -767,7 +1037,9 @@ class TestCleanEngineCallback:
         assert_that(str(target)).does_not_exist()
 
     @pytest.mark.parametrize(
-        ("use_trash", "outcome"), [(False, "freed"), (True, "moved to trash")], ids=["deleted", "trashed"]
+        ("use_trash", "outcome"),
+        [(False, "0 bytes moved to trash, 700 bytes freed"), (True, "700 bytes moved to trash, 0 bytes freed")],
+        ids=["deleted", "trashed"],
     )
     def test_log_says_whether_the_space_was_freed_or_moved_to_the_trash(
         self, tmp_path: Path, caplog, use_trash: bool, outcome: str
@@ -777,11 +1049,11 @@ class TestCleanEngineCallback:
 
         with (
             caplog.at_level(logging.INFO, logger="steamcleaner.cleaner.engine"),
-            patch("steamcleaner.cleaner.engine.send2trash"),
+            patch("steamcleaner.platform.base.send2trash"),
         ):
             CleanEngine(use_trash=use_trash, dry_run=False).clean(ScanResult(entries=[_make_entry(target, 700)]))
 
-        assert_that(caplog.messages[-1]).is_equal_to(f"Clean complete: 1 deleted, 0 skipped, 700 bytes {outcome}")
+        assert_that(caplog.messages[-1]).is_equal_to(f"Clean complete: 1 entries, 0 skipped, {outcome}")
 
     def test_dry_run_says_in_the_log_that_nothing_was_removed(self, tmp_path: Path, caplog):
         target = tmp_path / "redist"
@@ -794,6 +1066,6 @@ class TestCleanEngineCallback:
             [
                 "Starting clean: 1 entries, dry_run=True, use_trash=False",
                 f"Dry run, would remove: {target} (700 bytes)",
-                "Dry run complete: would remove 1 entries (700 bytes), 0 skipped",
+                "Dry run complete, would remove: 1 entries, 0 skipped, 0 bytes moved to trash, 700 bytes freed",
             ]
         )

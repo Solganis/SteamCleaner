@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import ClassVar, Final
 
 from steamcleaner.platform.base import FileAllocation, PlatformAdapter
+from steamcleaner.platform.recycle_bin import forecast_keeps, recycle
 
 _logger = logging.getLogger(__name__)
 
@@ -122,6 +123,12 @@ class WindowsAdapter(PlatformAdapter):
 
     def __init__(self) -> None:
         self._cluster_bytes_by_volume: dict[int, int] = {}
+
+    def keeps_trash(self, path: Path, size_bytes: int) -> bool:
+        return forecast_keeps(path, size_bytes)
+
+    def send_to_trash(self, path: Path) -> bool:
+        return recycle(path)
 
     def file_allocation(self, path: Path) -> FileAllocation:
         """Return the clusters NTFS allocates to the file, after compression and sparse holes.

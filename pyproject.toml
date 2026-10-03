@@ -100,11 +100,13 @@ filterwarnings = ["error"]
 [tool.coverage.run]
 branch = true
 source = ["steamcleaner"]
-# Out of the 100% target by scope: ui/* is flet GUI paint, windows.py and macos.py each run on one OS only, so
-# no single run covers both (their tests run on the matching CI job), __main__.py and app.py are entry-point wiring.
+# Out of the 100% target by scope: ui/* is flet GUI paint, windows.py, recycle_bin.py and macos.py each run on one OS
+# only, so no single run covers them all (their tests run on the matching CI job), __main__.py and app.py are
+# entry-point wiring.
 omit = [
     "src/steamcleaner/ui/*",
     "src/steamcleaner/platform/windows.py",
+    "src/steamcleaner/platform/recycle_bin.py",
     "src/steamcleaner/platform/macos.py",
     "src/steamcleaner/__main__.py",
     "src/steamcleaner/app.py",

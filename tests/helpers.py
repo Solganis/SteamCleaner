@@ -1,12 +1,13 @@
+import asyncio
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from steamcleaner.clients.base import GameClient
-from steamcleaner.platform.base import FileAllocation, PlatformAdapter
+from steamcleaner.platform.base import FileAllocation, PlatformAdapter, TrashRefusedError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Coroutine, Iterator
 
     from steamcleaner.models.junk import JunkEntry
     from steamcleaner.scanner.exclusions import ExclusionRegistry
@@ -36,6 +37,9 @@ class FakePlatformAdapter(PlatformAdapter):
         self._allocated_bytes: dict[Path, int] = {}
         self._registry_dwords: dict[tuple[str, str, str], int] = {}
         self._has_registry = has_registry
+        self._trashless_roots: list[Path] = []
+        self.trash_holds_what_it_takes = True
+        self.trash_capacity: int | None = None
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
 
@@ -82,6 +86,21 @@ class FakePlatformAdapter(PlatformAdapter):
 
     def set_allocated_bytes(self, path: Path, allocated_bytes: int):
         self._allocated_bytes[path] = allocated_bytes
+
+    def lose_trash_under(self, root: Path):
+        self._trashless_roots.append(root)
+
+    def keeps_trash(self, path: Path, size_bytes: int) -> bool:
+        fits = self.trash_capacity is None or size_bytes <= self.trash_capacity
+        return fits and not any(path.is_relative_to(root) for root in self._trashless_roots)
+
+    def send_to_trash(self, path: Path) -> bool:
+        held = [path, *path.rglob("*")] if path.is_dir() else [path]
+        length = sum(item.lstat().st_size for item in held if item.is_file())
+        if not self.keeps_trash(path, length):
+            raise TrashRefusedError("the trash would not keep it")
+        super().send_to_trash(path)
+        return self.trash_holds_what_it_takes
 
     def file_allocation(self, path: Path) -> FileAllocation:
         """Report the file length as its allocation unless a test set one, so sizes are the same on every OS."""
@@ -170,6 +189,11 @@ def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) ->
                 file_path = subdir / filename
                 file_path.write_bytes(b"\x00" * 1024)
     return steam
+
+
+def run_bounded(task: Coroutine[object, object, None], seconds: float = 10) -> None:
+    """Run a GUI task to its end. One that does not end fails the test instead of hanging the run."""
+    asyncio.run(asyncio.wait_for(task, timeout=seconds))
 
 
 def scan_with_cancel_already_set(client: GameClient) -> list[JunkEntry]:

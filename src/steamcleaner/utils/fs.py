@@ -29,6 +29,17 @@ def is_reparse_point(path: Path) -> bool:
         return path.is_symlink()
 
 
+def is_gone(path: Path) -> bool:
+    """Whether the file is verifiably absent: an error other than "not found" proves nothing."""
+    try:
+        path.lstat()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return False
+
+
 def safe_rmtree(path: Path) -> bool:
     """Remove a directory tree, refusing to traverse reparse points."""
     if is_reparse_point(path):

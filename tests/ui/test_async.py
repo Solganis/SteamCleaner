@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import flet as ft
 import pytest
 from assertpy2 import assert_that
-from helpers import FakePlatformAdapter, write_app_manifest
+from helpers import FakePlatformAdapter, run_bounded, write_app_manifest
 
 from steamcleaner.cleaner.engine import CleanStats
 from steamcleaner.models.junk import JunkCategory, JunkEntry
@@ -114,7 +114,7 @@ class TestCleanTask:
             patch("steamcleaner.ui.gui.app.CleanEngine", return_value=mock_cleaner),
             patch.object(gui, "_refresh_list"),
         ):
-            asyncio.run(gui._clean_task(entries))
+            run_bounded(gui._clean_task(entries, True, frozenset()))
 
     def test_clean_removes_entries(self, gui_with_ui: SteamCleanerGUI):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL, ENTRY_LARGE])
@@ -148,9 +148,28 @@ class TestCleanTask:
     def test_trash_summary_does_not_claim_freed_space(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
         gui_with_ui._selected = {ENTRY_SMALL.path}
-        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(deleted=1, bytes_trashed=2048))
+        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(deleted=1, trashed=1, bytes_trashed=2048))
         snackbar = fake_page.overlay.append.call_args[0][0]
         assert_that(snackbar.content.value).is_equal_to(t("trashed_summary", count=1, size="2.0 KB"))
+
+    def test_summary_tells_what_was_trashed_from_what_was_deleted_for_good(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE])
+        stats = CleanStats(deleted=3, trashed=1, bytes_trashed=2048, bytes_freed=4096)
+        self._run_clean(gui_with_ui, [ENTRY_SMALL, ENTRY_MEDIUM, ENTRY_LARGE], stats)
+        snackbar = fake_page.overlay.append.call_args[0][0]
+        assert_that(snackbar.content.value).is_equal_to(
+            "Moved 1 items (2.0 KB) to the trash. Empty it to free the space. Deleted 2 items, freed 4.0 KB"
+        )
+
+    def test_summary_of_a_clean_that_removed_nothing_claims_no_trash(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
+        self._run_clean(gui_with_ui, [ENTRY_SMALL], CleanStats(skipped=1))
+        snackbar = fake_page.overlay.append.call_args[0][0]
+        assert_that(snackbar.content.value).is_equal_to("Deleted 0 items, freed 0 B")
 
     def test_clean_errors_dialog(self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock):
         gui_with_ui._result = ScanResult(entries=[ENTRY_SMALL])
@@ -209,6 +228,213 @@ class TestOnClean:
         )
         assert_that(usual_content).is_instance_of(ft.Text if use_trash == "true" else ft.Column)
 
+    WARNING = "The trash is not expected to keep {}. Those it refuses will be deleted permanently:"
+
+    @staticmethod
+    def _open(gui: SteamCleanerGUI, fake_page: MagicMock, entries: list[JunkEntry], platform: FakePlatformAdapter):
+        gui._result = ScanResult(entries=entries)
+        gui._selected = {entry.path for entry in entries}
+        with (
+            patch("steamcleaner.ui.gui.app.get_value", return_value="true"),
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+        ):
+            gui._on_clean(None)
+        return fake_page.show_dialog.call_args[0][0]
+
+    @staticmethod
+    def _lines(block: ft.Column) -> list[str]:
+        return [line.value for line in block.controls if isinstance(line, ft.Text)]
+
+    def test_dialog_tells_what_goes_to_the_trash_from_what_the_trash_is_not_expected_to_keep(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        entries = [ENTRY_SMALL, ENTRY_MEDIUM]
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(ENTRY_SMALL.path)
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        to_trash, not_kept = dialog.content.controls
+        assert_that(to_trash.value).is_equal_to("Move 1 items (4.9 KB) to trash?")
+        assert_that(self._lines(not_kept)).is_equal_to([self.WARNING.format("1 items (100 B)"), str(ENTRY_SMALL.path)])
+        assert_that(dialog.actions[1].content).is_equal_to("Delete")
+
+        dialog.actions[1].on_click(None)
+
+        fake_page.run_task.assert_called_once_with(gui._clean_task, entries, True, frozenset({ENTRY_SMALL.path}))
+
+    def test_dialog_for_a_selection_the_trash_keeps_none_of_does_not_speak_of_a_move(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        entries = [ENTRY_SMALL, ENTRY_MEDIUM]
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(Path("C:/Games"))
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        assert_that(self._lines(dialog.content)).is_equal_to(
+            [self.WARNING.format("2 items (5.0 KB)"), str(ENTRY_SMALL.path), str(ENTRY_MEDIUM.path)]
+        )
+        assert_that(dialog.actions[1].content).is_equal_to("Delete permanently")
+
+        dialog.actions[1].on_click(None)
+
+        fake_page.run_task.assert_called_once_with(
+            gui._clean_task, entries, True, frozenset({ENTRY_SMALL.path, ENTRY_MEDIUM.path})
+        )
+
+    def test_dialog_lists_five_of_the_paths_and_counts_the_rest(self, gui: SteamCleanerGUI, fake_page: MagicMock):
+        entries = [_make_entry(f"dump{number}.dmp", JunkCategory.CRASH_DUMP, 10) for number in range(7)]
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(Path("C:/Games"))
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        assert_that(self._lines(dialog.content)[1:]).is_equal_to(
+            [*(str(entry.path) for entry in entries[:5]), "and 2 more"]
+        )
+
+    def test_dialog_lists_exactly_five_paths_without_a_count_of_the_rest(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        entries = [_make_entry(f"dump{number}.dmp", JunkCategory.CRASH_DUMP, 10) for number in range(5)]
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(Path("C:/Games"))
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        assert_that(self._lines(dialog.content)[1:]).is_equal_to([str(entry.path) for entry in entries])
+
+    def test_entry_inside_a_folder_the_trash_would_not_keep_is_listed_with_that_folder(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        folder = _make_entry("Big", JunkCategory.REDISTRIBUTABLE, 5000)
+        inside = _make_entry("Big/crash.dmp", JunkCategory.CRASH_DUMP, 100)
+        entries = [ENTRY_SMALL, inside, folder]
+        platform = FakePlatformAdapter()
+        platform.trash_capacity = 1000
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        to_trash, not_kept = dialog.content.controls
+        assert_that(to_trash.value).is_equal_to("Move 1 items (100 B) to trash?")
+        assert_that(self._lines(not_kept)).is_equal_to(
+            [self.WARNING.format("2 items (4.9 KB)"), str(inside.path), str(folder.path)]
+        )
+
+        dialog.actions[1].on_click(None)
+
+        fake_page.run_task.assert_called_once_with(
+            gui._clean_task, entries, True, frozenset({inside.path, folder.path})
+        )
+
+    def test_dialog_lists_paths_so_that_two_games_of_one_name_are_told_apart(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        entries = [
+            JunkEntry(
+                path=Path(f"{drive}:/SteamLibrary/steamapps/common/Old Game"),
+                category=JunkCategory.LEFTOVER,
+                size_bytes=700,
+                client_name="Steam",
+                display_name="Old Game",
+            )
+            for drive in ("C", "D")
+        ]
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(Path("C:/SteamLibrary"))
+        platform.lose_trash_under(Path("D:/SteamLibrary"))
+
+        dialog = self._open(gui, fake_page, entries, platform)
+
+        not_kept, _saves = dialog.content.controls
+        assert_that(self._lines(not_kept)[1:]).is_equal_to([str(entry.path) for entry in entries])
+
+    def test_entry_reached_through_another_spelling_of_the_folder_is_listed_with_that_folder(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        folder = _make_entry("Big", JunkCategory.REDISTRIBUTABLE, 5000)
+        inside = JunkEntry(
+            path=Path("M:/mounted/Big/crash.dmp"), category=JunkCategory.CRASH_DUMP, size_bytes=100, client_name="Steam"
+        )
+        entries = [ENTRY_SMALL, inside, folder]
+        platform = FakePlatformAdapter()
+        platform.trash_capacity = 1000
+
+        def resolve(path: Path) -> str:
+            return str(folder.path / "crash.dmp") if path == inside.path else str(path)
+
+        with patch("steamcleaner.ui.gui.app.os.path.realpath", side_effect=resolve):
+            dialog = self._open(gui, fake_page, entries, platform)
+
+        to_trash, not_kept = dialog.content.controls
+        assert_that(to_trash.value).is_equal_to("Move 1 items (100 B) to trash?")
+        assert_that(self._lines(not_kept)[1:]).is_equal_to([str(inside.path), str(folder.path)])
+
+        dialog.actions[1].on_click(None)
+
+        fake_page.run_task.assert_called_once_with(
+            gui._clean_task, entries, True, frozenset({inside.path, folder.path})
+        )
+
+    def test_dialog_warns_about_an_item_too_big_for_the_trash(self, gui: SteamCleanerGUI, fake_page: MagicMock):
+        platform = FakePlatformAdapter()
+        platform.trash_capacity = ENTRY_MEDIUM.size_bytes - 1
+
+        dialog = self._open(gui, fake_page, [ENTRY_SMALL, ENTRY_MEDIUM], platform)
+
+        to_trash, not_kept = dialog.content.controls
+        assert_that(to_trash.value).is_equal_to("Move 1 items (100 B) to trash?")
+        assert_that(self._lines(not_kept)).is_equal_to(
+            [self.WARNING.format("1 items (4.9 KB)"), str(ENTRY_MEDIUM.path)]
+        )
+
+    def test_leftover_the_trash_is_not_expected_to_keep_gets_both_warnings(
+        self, gui: SteamCleanerGUI, fake_page: MagicMock
+    ):
+        leftover = _make_entry("Old Game", JunkCategory.LEFTOVER, 700)
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(leftover.path)
+
+        dialog = self._open(gui, fake_page, [leftover], platform)
+
+        not_kept, saves = dialog.content.controls
+        assert_that(self._lines(not_kept)).is_equal_to([self.WARNING.format("1 items (700 B)"), str(leftover.path)])
+        assert_that(saves.value).is_equal_to(
+            "1 of them are folders left by uninstalled games. They may hold saves and settings."
+        )
+
+    def test_permanent_mode_names_no_path_and_hands_the_mode_on(self, gui: SteamCleanerGUI, fake_page: MagicMock):
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(ENTRY_SMALL.path)
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._selected = {ENTRY_SMALL.path}
+        with (
+            patch("steamcleaner.ui.gui.app.get_value", return_value="false"),
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+        ):
+            gui._on_clean(None)
+        delete = fake_page.show_dialog.call_args[0][0].actions[1]
+        delete.on_click(None)
+
+        assert_that(delete.content).is_equal_to("Delete permanently")
+        fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL], False, frozenset())
+
+    def test_permanent_mode_dialog_does_not_speak_of_the_trash(self, gui: SteamCleanerGUI, fake_page: MagicMock):
+        platform = FakePlatformAdapter()
+        platform.lose_trash_under(ENTRY_SMALL.path)
+        gui._result = ScanResult(entries=[ENTRY_SMALL])
+        gui._selected = {ENTRY_SMALL.path}
+        with (
+            patch("steamcleaner.ui.gui.app.get_value", return_value="false"),
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+        ):
+            gui._on_clean(None)
+
+        header, warning = fake_page.show_dialog.call_args[0][0].content.controls
+        assert_that(header).is_instance_of(ft.Row)
+        assert_that(warning.value).is_equal_to("1 items (100 B) will be deleted permanently. This cannot be undone.")
+
     def test_dialog_has_two_actions(self, gui: SteamCleanerGUI, fake_page: MagicMock):
         gui._result = ScanResult(entries=[ENTRY_SMALL])
         gui._selected = {ENTRY_SMALL.path}
@@ -222,17 +448,17 @@ class TestOnClean:
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class TestConfirmClean:
     def test_sets_cleaning_flag(self, gui: SteamCleanerGUI):
-        gui._confirm_clean([ENTRY_SMALL])
+        gui._confirm_clean([ENTRY_SMALL], use_trash=True, for_good=frozenset())
         assert_that(gui._cleaning).is_true()
 
     def test_locks_controls(self, gui: SteamCleanerGUI):
-        gui._confirm_clean([ENTRY_SMALL])
+        gui._confirm_clean([ENTRY_SMALL], use_trash=True, for_good=frozenset())
         assert_that(gui._scan_button.disabled).is_true()
         assert_that(gui._sort_dropdown.disabled).is_true()
 
     def test_triggers_clean_task(self, gui: SteamCleanerGUI, fake_page: MagicMock):
-        gui._confirm_clean([ENTRY_SMALL])
-        fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL])
+        gui._confirm_clean([ENTRY_SMALL], use_trash=False, for_good=frozenset({ENTRY_SMALL.path}))
+        fake_page.run_task.assert_called_once_with(gui._clean_task, [ENTRY_SMALL], False, frozenset({ENTRY_SMALL.path}))
 
 
 # test reads protected GUI members
@@ -250,22 +476,95 @@ class TestCleanTaskChecksLeftoversAgain:
         return library, JunkEntry(path=old_game, category=JunkCategory.LEFTOVER, size_bytes=3000, client_name="Steam")
 
     @staticmethod
-    def _clean_for_real(gui: SteamCleanerGUI, library: Path, entry: JunkEntry):
+    def _clean_for_real(gui: SteamCleanerGUI, library: Path, entry: JunkEntry) -> MagicMock:
         gui._result = ScanResult(entries=[entry])
         platform = FakePlatformAdapter(install_path=library, home_dir=library.parent)
         with (
             patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
-            patch("steamcleaner.ui.gui.app.get_value", return_value="false"),
+            patch("steamcleaner.platform.base.send2trash") as mock_trash,
             patch.object(gui, "_refresh_list"),
         ):
-            asyncio.run(gui._clean_task([entry]))
+            run_bounded(gui._clean_task([entry], False, frozenset()))
+        return mock_trash
 
     def test_leftover_nothing_has_claimed_since_the_scan_is_removed(self, gui_with_ui: SteamCleanerGUI, tmp_path: Path):
         library, leftover = self._make_leftover(tmp_path)
 
-        self._clean_for_real(gui_with_ui, library, leftover)
+        mock_trash = self._clean_for_real(gui_with_ui, library, leftover)
 
+        mock_trash.assert_not_called()
         assert_that(str(leftover.path)).does_not_exist()
+
+    @pytest.mark.parametrize("warned", [True, False], ids=["warned", "not-warned"])
+    def test_item_the_trash_would_not_keep_is_deleted_for_good_only_when_the_dialog_said_so(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock, tmp_path: Path, warned: bool
+    ):
+        junk = tmp_path / "redist"
+        junk.mkdir()
+        (junk / "setup.exe").write_bytes(b"x" * 2048)
+        entry = JunkEntry(path=junk, category=JunkCategory.REDISTRIBUTABLE, size_bytes=2048, client_name="Custom")
+        gui_with_ui._result = ScanResult(entries=[entry])
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        platform.lose_trash_under(tmp_path)
+        with (
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+            patch("steamcleaner.platform.base.send2trash") as mock_trash,
+            patch.object(gui_with_ui, "_refresh_list"),
+        ):
+            run_bounded(gui_with_ui._clean_task([entry], True, frozenset({junk} if warned else ())))
+
+        mock_trash.assert_not_called()
+        assert_that(junk.exists()).is_equal_to(not warned)
+        if warned:
+            snackbar = fake_page.overlay.append.call_args[0][0]
+            assert_that(snackbar.content.value).is_equal_to("Deleted 1 items, freed 2.0 KB")
+        else:
+            dialog = fake_page.show_dialog.call_args[0][0]
+            assert_that([line.value for line in dialog.content.controls]).is_equal_to(
+                [f"Skipped, the trash would not keep it: {junk}"]
+            )
+
+    def test_file_selected_with_the_folder_that_holds_it_meets_the_fate_the_dialog_showed(
+        self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock, tmp_path: Path
+    ):
+        folder = tmp_path / "Big"
+        folder.mkdir()
+        (folder / "data.bin").write_bytes(b"x" * 5000)
+        (folder / "crash.dmp").write_bytes(b"x" * 100)
+        entries = [
+            JunkEntry(
+                path=folder / "crash.dmp", category=JunkCategory.CRASH_DUMP, size_bytes=100, client_name="Custom"
+            ),
+            JunkEntry(path=folder, category=JunkCategory.REDISTRIBUTABLE, size_bytes=5100, client_name="Custom"),
+        ]
+        platform = FakePlatformAdapter(home_dir=tmp_path)
+        platform.trash_capacity = 1000
+        gui_with_ui._result = ScanResult(entries=entries)
+        gui_with_ui._selected = {entry.path for entry in entries}
+        with (
+            patch("steamcleaner.ui.gui.app.create_adapter", return_value=platform),
+            patch("steamcleaner.ui.gui.app.get_value", return_value="true"),
+            patch("steamcleaner.platform.base.send2trash") as mock_trash,
+            patch.object(gui_with_ui, "_refresh_list"),
+        ):
+            gui_with_ui._on_clean(None)
+            dialog = fake_page.show_dialog.call_args[0][0]
+            dialog.actions[1].on_click(None)
+            task, *arguments = fake_page.run_task.call_args[0]
+            run_bounded(task(*arguments))
+
+        assert_that(dialog.actions[1].content).is_equal_to("Delete permanently")
+        assert_that([line.value for line in dialog.content.controls]).is_equal_to(
+            [
+                "The trash is not expected to keep 2 items (5.0 KB). Those it refuses will be deleted permanently:",
+                str(folder / "crash.dmp"),
+                str(folder),
+            ]
+        )
+        mock_trash.assert_not_called()
+        assert_that(str(folder)).does_not_exist()
+        snackbar = fake_page.overlay.append.call_args[0][0]
+        assert_that(snackbar.content.value).is_equal_to("Deleted 2 items, freed 5.0 KB")
 
     def test_leftover_a_game_was_installed_into_after_the_scan_is_kept(
         self, gui_with_ui: SteamCleanerGUI, fake_page: MagicMock, tmp_path: Path

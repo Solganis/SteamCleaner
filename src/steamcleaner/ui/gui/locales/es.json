@@ -36,6 +36,8 @@
     "permanent_deletion": "Eliminación permanente",
     "permanent_warning": "{count} elementos ({size}) se eliminarán permanentemente. Esta acción no se puede deshacer.",
     "leftover_warning": "{count} de ellos son carpetas de juegos desinstalados. Pueden contener partidas guardadas y ajustes.",
+    "no_trash_warning": "No se espera que la papelera conserve {count} elementos ({size}). Los que rechace se eliminarán de forma permanente:",
+    "and_more": "y {count} más",
     "delete_permanently": "Eliminar permanentemente",
     "delete": "Eliminar",
     "cleaning": "Limpiando...",

@@ -2,11 +2,19 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
+from helpers import FakePlatformAdapter
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def platform_with_a_trash():
+    """Keep the dialogs from reading how the Recycle Bin of the machine that runs the tests is set."""
+    with patch("steamcleaner.ui.gui.app.create_adapter", return_value=FakePlatformAdapter()):
+        yield
 
 
 @pytest.fixture

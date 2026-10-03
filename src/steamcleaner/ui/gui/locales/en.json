@@ -36,6 +36,8 @@
     "permanent_deletion": "Permanent deletion",
     "permanent_warning": "{count} items ({size}) will be deleted permanently. This cannot be undone.",
     "leftover_warning": "{count} of them are folders left by uninstalled games. They may hold saves and settings.",
+    "no_trash_warning": "The trash is not expected to keep {count} items ({size}). Those it refuses will be deleted permanently:",
+    "and_more": "and {count} more",
     "delete_permanently": "Delete permanently",
     "delete": "Delete",
     "cleaning": "Cleaning...",

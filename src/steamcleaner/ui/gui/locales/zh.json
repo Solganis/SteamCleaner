@@ -36,6 +36,8 @@
     "permanent_deletion": "永久删除",
     "permanent_warning": "{count} 个项目（{size}）将被永久删除，此操作不可撤销。",
     "leftover_warning": "其中 {count} 个是已卸载游戏留下的文件夹，可能包含存档和设置。",
+    "no_trash_warning": "回收站预计无法保留 {count} 个项目（{size}）。被拒收的项目将被永久删除：",
+    "and_more": "以及另外 {count} 个",
     "delete_permanently": "永久删除",
     "delete": "删除",
     "cleaning": "清理中...",
