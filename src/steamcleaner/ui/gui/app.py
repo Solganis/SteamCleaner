@@ -56,18 +56,13 @@ _CATEGORY_COLORS: Final = MappingProxyType(
 
 
 def _row_background(index: int, *, selected: bool) -> str | None:
-    """Background of a result row: tinted when selected, zebra-striped otherwise."""
     if selected:
         return ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
     return ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) if index % 2 == 0 else None
 
 
 def _style_toolbar_field(field: ft.Dropdown | ft.TextField) -> None:
-    """Give a toolbar input the look of the buttons beside it: a filled block of their height and corners.
-
-    The border is named for the disabled state too: left out, Flutter draws its own dark outline around an
-    input for as long as a scan or a clean keeps it locked.
-    """
+    """Fill a toolbar input like the buttons beside it. DISABLED is named too, or Flutter outlines a locked input."""
     no_side = ft.BorderSide(width=0, style=ft.BorderStyle.NONE)
     plain = ft.OutlineInputBorder(side=no_side, border_radius=_TOOLBAR_RADIUS)
     focused = ft.OutlineInputBorder(side=ft.BorderSide(width=2, color=ft.Colors.PRIMARY), border_radius=_TOOLBAR_RADIUS)
@@ -85,12 +80,7 @@ def _style_toolbar_field(field: ft.Dropdown | ft.TextField) -> None:
 
 
 def _fit_toolbar_dropdown(dropdown: ft.Dropdown) -> ft.Container:
-    """Return the dropdown inside a block that clips it to the toolbar height.
-
-    Flutter draws a dropdown 48 high whatever height it is given: its arrow button is 40 with 4 around it,
-    and the field sits at the top of its box. The field is moved up by half the excess, and the block cuts
-    off what sticks out above and below.
-    """
+    """Clip the dropdown to the toolbar height: Flutter draws it 48 high whatever height it is given."""
     dropdown.offset = ft.Offset(0, (_TOOLBAR_HEIGHT - _DROPDOWN_HEIGHT) / 2 / _TOOLBAR_HEIGHT)
     return ft.Container(
         content=dropdown,
@@ -114,7 +104,6 @@ def _clean_summary(stats: CleanStats) -> str:
 
 
 def _row_checkbox(container: ft.Control) -> ft.Checkbox:
-    """The selection checkbox of a result row built by `SteamCleanerGUI._make_row`."""
     assert isinstance(container, ft.Container)
     assert isinstance(container.content, ft.Row)
     checkbox = container.content.controls[0]
@@ -123,7 +112,6 @@ def _row_checkbox(container: ft.Control) -> ft.Checkbox:
 
 
 def _paint_row(container: ft.Control, index: int, *, selected: bool) -> None:
-    """Show a result row as selected or not: its checkbox and its background."""
     assert isinstance(container, ft.Container)
     _row_checkbox(container).value = selected
     container.bgcolor = _row_background(index, selected=selected)
@@ -338,7 +326,6 @@ class SteamCleanerGUI:
 
     @staticmethod
     def _cmd_pressed(event: ft.KeyboardEvent) -> bool:
-        """Primary command modifier: Cmd (meta) on macOS, Ctrl on Windows/Linux."""
         return event.meta if sys.platform == "darwin" else event.ctrl
 
     @staticmethod
@@ -348,7 +335,6 @@ class SteamCleanerGUI:
 
     @staticmethod
     def _is_clean_shortcut(event: ft.KeyboardEvent, cmd_pressed: bool) -> bool:
-        """Delete on Windows/Linux; Cmd+Backspace (move to trash) or forward Delete on macOS."""
         if sys.platform == "darwin":
             return event.key == "Delete" or (event.key == "Backspace" and cmd_pressed)
         return event.key == "Delete"

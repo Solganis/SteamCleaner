@@ -1,22 +1,9 @@
 """Remove from a finished cosmic-ray session the survivors this project exempts from the survival rate.
 
-Two kinds are exempt, each only when the mutant ran and survived, so a mutant the suite kills stays a kill:
-
-- The negation of an import-only `if TYPE_CHECKING:` guard. Such a guard has no `else` and nothing but
-  imports in its body, so negating it only makes the module run imports it otherwise skips.
-- A replaced `|` inside an annotation whose operands are written as types: a name, an attribute, a
-  subscript, `None`, or such a union. An annotation is evaluated lazily (PEP 649), so the mutated union runs
-  only when something reads it. That of a local variable is never evaluated.
-
-These are exemptions by decision, not proofs that no test could kill the mutant: a test that asserted an
-effect of the guarded import, or that evaluated the annotation, would. The union rule is syntactic. A name
-is taken for a type without looking at what it is bound to.
-
-The work items are deleted rather than marked skipped, because `cr-rate` counts a skipped item as killed.
-A session in which some mutant has no result is refused: `cr-rate` would rate the finished part alone.
-
-Usage, after `cosmic-ray exec` and before `cr-rate`:
-    uv run python scripts/drop_exempt_survivors.py session.sqlite
+Exempt, only when the mutant ran and survived: the negation of an import-only `if TYPE_CHECKING:` guard, and
+a replaced `|` between types in an annotation. Both are decisions, not proofs that no test could kill them.
+The items are deleted, not skipped: `cr-rate` counts a skipped one as killed. An unfinished session is
+refused: `cr-rate` would rate the finished part alone.
 """
 
 import argparse
@@ -149,16 +136,10 @@ def _canonically_bound(tree: ast.Module) -> set[type[ast.expr]]:
 
 @cache
 def find_import_only_guards(source: str) -> set[SourceSpan]:
-    """Return the spans of the `TYPE_CHECKING` conditions whose negation only runs imports.
+    """Return the spans of the module-level `TYPE_CHECKING` conditions whose negation only runs imports.
 
-    Only guards directly at module level count: one that runs while the module imports cannot refer to an
-    unbound name, or the import would fail before cosmic-ray could run a job. The guard's name has to come
-    from a canonical import at module level, `from typing import TYPE_CHECKING` for a bare name and
-    `import typing` for `typing.TYPE_CHECKING`. A module that binds or alters `TYPE_CHECKING` or `typing`
-    any other way, or star-imports, yields nothing: its guard may not be the constant from `typing`. So does
-    one that assigns or deletes any attribute named `TYPE_CHECKING`, on purpose, even one that could not
-    reach `typing`. The check is static, so indirect changes such as
-    `setattr(typing, "TYPE_CHECKING", True)` are not seen.
+    Nothing for a module that binds or alters `TYPE_CHECKING` or `typing` other than by the canonical imports,
+    or star-imports. The check is static: `setattr(typing, "TYPE_CHECKING", True)` is not seen.
     """
     tree = ast.parse(source)
     if _rebinds_type_checking(tree):
@@ -179,7 +160,6 @@ def find_import_only_guards(source: str) -> set[SourceSpan]:
 
 
 def _annotations_of(node: ast.AST) -> list[ast.expr | None]:
-    """Return the type expressions a node carries in annotation position."""
     match node:
         case ast.arg(annotation=annotation) | ast.AnnAssign(annotation=annotation):
             return [annotation]
@@ -205,11 +185,7 @@ def _is_type_expression(node: ast.expr) -> bool:
 
 
 def _find_value_holders(tree: ast.Module) -> dict[str, str]:
-    """Map every name `Literal` or `Annotated` is imported under to the one it stands for.
-
-    Scopes are not told apart. A name imported for both anywhere in the module counts as `Literal`, whose
-    subscript is never entered.
-    """
+    """Map every name `Literal` or `Annotated` is imported under to the one it stands for. Scopes are ignored."""
     holders = {name: name for name in VALUE_HOLDERS}
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
@@ -232,8 +208,7 @@ def _subscripted_holder(node: ast.Subscript, holders: dict[str, str]) -> str | N
 def _type_unions(node: ast.expr, holders: dict[str, str]) -> Iterator[ast.BinOp]:
     """Yield the `|` operations between type expressions in an annotation.
 
-    The values of a `Literal[...]` and the metadata of an `Annotated[...]` are ordinary expressions, where a
-    replaced `|` can give another valid value, so they are not entered.
+    `Literal` values and `Annotated` metadata are not entered: a replaced `|` there can give another valid value.
     """
     match node:
         case ast.BinOp(op=ast.BitOr(), left=left, right=right):
@@ -260,10 +235,8 @@ def _type_unions(node: ast.expr, holders: dict[str, str]) -> Iterator[ast.BinOp]
 def find_annotation_unions(source: str) -> set[SourceSpan]:
     """Return where the `|` of every union of types in an annotation sits: between its two operands.
 
-    Annotations are those of parameters, returns and annotated assignments, the values of `type` aliases,
-    and the bound, constraints and default of a `TypeVar` type parameter. The default of a `ParamSpec` or a
-    `TypeVarTuple` is not looked at. `Literal` and `Annotated` are recognized under any name an import gives
-    them, not under one made by assignment.
+    Covers parameters, returns, annotated assignments, `type` aliases and the bound, constraints and default of
+    a `TypeVar`. Not the default of a `ParamSpec` or a `TypeVarTuple`.
     """
     tree = ast.parse(source)
     holders = _find_value_holders(tree)
@@ -291,7 +264,6 @@ def _is_exempt(operator_name: str, mutation: SourceSpan, source: str) -> bool:
 
 
 def find_exempt_survivors(connection: sqlite3.Connection) -> list[str]:
-    """Return the job ids of the surviving mutants that are exempt from the survival rate."""
     job_ids = []
     for job_id, module_path, operator_name, *positions in connection.execute(SURVIVOR_QUERY).fetchall():
         start_row, start_column, end_row, end_column = positions
@@ -310,7 +282,6 @@ def find_unfinished_jobs(connection: sqlite3.Connection) -> list[str]:
 
 
 def drop_jobs(connection: sqlite3.Connection, job_ids: list[str]) -> None:
-    """Delete the given jobs from every table of the session."""
     for table in SESSION_TABLES:
         connection.executemany(f"DELETE FROM {table} WHERE job_id = ?", [(job_id,) for job_id in job_ids])
     connection.commit()

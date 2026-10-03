@@ -1,9 +1,3 @@
-"""Property-based tests for format_size.
-
-The unit-selection and one-decimal rounding logic is only sampled at six points by
-the example tests; these checks hold across the whole input range.
-"""
-
 from assertpy2 import assert_that
 from hypothesis import given
 from hypothesis import strategies as st
@@ -29,6 +23,5 @@ class TestFormatSizeProperties:
         number_text, unit = format_size(size_bytes).rsplit(" ", 1)
         multiplier = _UNIT_MULTIPLIER[unit]
         reconstructed = float(number_text) * multiplier
-        # The scaled value is shown with one decimal, so the absolute error of the
-        # reconstructed byte count is bounded by half a displayed step (0.05 * multiplier).
+        # One displayed decimal bounds the error by half a step (0.05 * multiplier).
         assert_that(abs(reconstructed - size_bytes)).is_less_than_or_equal_to(0.05 * multiplier + 1)

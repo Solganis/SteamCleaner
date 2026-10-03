@@ -195,7 +195,6 @@ class TestScanGame:
         game = tmp_path / "Game"
         redist = game / "_CommonRedist"
         redist.mkdir(parents=True)
-        # Junk-extension file present but empty -> redist junk_size is 0, nothing yielded.
         (redist / "empty.exe").write_bytes(b"")
         entries = list(scan_game(game, "TestClient", lambda: False))
         redist_entries = [entry for entry in entries if entry.category == JunkCategory.REDISTRIBUTABLE]

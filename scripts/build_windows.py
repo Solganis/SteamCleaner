@@ -1,20 +1,7 @@
-"""Two-step Windows build: flet build -> patch -> flutter rebuild.
+"""Windows build: flet build, patch the runner, flutter rebuild.
 
-Flet's Flutter runner shows the window before Python gets control, causing a
-visible flash on startup. `hide_window_on_start` under `[tool.flet.windows.app]`
-in pyproject.toml stops both the Dart side and the native runner from showing
-it (the app shows it when ready). This script checks that the setting reached
-the generated sources, then patches what flet does not expose:
-
-1. windows/runner/win32_window.cpp: sets BLACK_BRUSH background to prevent white flash
-2. windows/runner/resources/app_icon.ico: replaced with assets/icon.ico
-
-Then rebuilds via flutter build to compile the patches into the final binary.
-
-Usage:
-    uv run python scripts/build_windows.py
-    uv run python scripts/build_windows.py --skip-flet-build
-    uv run python scripts/build_windows.py --flutter-sdk C:\\flutter\\3.44.8
+Checks that `hide_window_on_start` reached the generated sources, then patches what flet does not expose:
+a black window brush in `win32_window.cpp` and the application icon.
 """
 
 import argparse

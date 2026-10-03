@@ -210,8 +210,7 @@ class TestCleanEngineSafetyChecks:
         result = ScanResult(entries=[_make_entry(target, size=100)])
         engine = CleanEngine(use_trash=False, dry_run=False)
 
-        # First call is clean()'s gate (path still looks safe); second is _try_remove()'s re-check,
-        # by which point the path was swapped for a junction. The engine must refuse and keep data.
+        # clean() sees a plain path, _try_remove() sees the junction swapped in after.
         with patch("steamcleaner.cleaner.engine.is_reparse_point", side_effect=[False, True]):
             stats = engine.clean(result)
 
@@ -460,8 +459,6 @@ class TestCleanEngineMultipleEntries:
         assert_that(stats.bytes_freed).is_equal_to(100)
 
     def test_missing_entry_does_not_abort_remaining(self, tmp_path: Path):
-        # A non-existent entry must be skipped, not end the loop: a valid entry placed after it
-        # still gets cleaned. Pins the `continue` (not `break`) in the path-no-longer-exists branch.
         missing = tmp_path / "already_gone"
         valid = tmp_path / "redist"
         valid.mkdir()

@@ -233,7 +233,6 @@ class TestSteamAppidMap:
         steam = tmp_path / "Steam"
         steamapps = steam / "steamapps"
         (steamapps / "common").mkdir(parents=True)
-        # AppState is a scalar string, not a nested block.
         (steamapps / "appmanifest_111.acf").write_text('"AppState"\t\t"broken"')
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())

@@ -22,7 +22,6 @@ CleanCallback = Callable[[JunkEntry, bool], None]
 
 
 def _stands_unchecked(entry: JunkEntry) -> bool:
-    """Whether an entry may be deleted on the word of the scan alone: all but the guarded categories."""
     return entry.category not in GUARDED_CATEGORIES
 
 
@@ -37,13 +36,10 @@ class _Removal:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CleanStats:
-    """Outcome of a clean run: counts, per-entry error messages, and where the bytes went.
+    """Outcome of a clean, or what a dry run would do.
 
-    bytes_freed is the on-disk allocation of what was deleted for good. bytes_trashed is the allocation of
-    what was moved to the trash, which still occupies the disk until the trash is emptied. Both are what
-    the filesystem reported for the files: a file another process still holds open is released only when
-    that process closes it, and directory metadata is not counted. trashed counts the deleted entries the
-    trash holds. In a dry run the same fields report what the run would have removed.
+    trashed counts the deleted entries the trash holds. bytes_trashed stays on disk until the trash is emptied,
+    bytes_freed is what was deleted for good. A failed move to the trash adds to neither.
     """
 
     deleted: int = 0
@@ -55,8 +51,6 @@ class CleanStats:
 
 
 class CleanEngine:
-    """Engine that deletes scanned junk, honoring dry-run, trash, exclusion, and reparse-point safety."""
-
     def __init__(
         self,
         *,
@@ -71,37 +65,17 @@ class CleanEngine:
         self._dry_run = dry_run
         self._still_offered = _stands_unchecked if still_offered is None else still_offered
         self._delete_for_good = frozenset(delete_for_good)
-        # Enforce the never-delete list at delete time, not only during scan_safe(). Default to the
-        # builtins so the guarantee holds even when a caller wires no registry; this is the last-line
-        # guard against a protected path reaching deletion via custom_paths, a bug, or a future path.
+        # The builtin list by default: a caller that wires no registry still cannot delete a protected path.
         self._exclusions = exclusions or ExclusionRegistry()
         self._platform = platform
         self._trash = platform or create_adapter()
 
     def clean(self, result: ScanResult, callback: CleanCallback | None = None) -> CleanStats:
-        """Delete (or simulate deleting) every entry in result.
+        """Delete every entry of result, parents first. A dry run only reports.
 
-        Respects the engine's dry_run and use_trash settings, refuses to delete a path that is on the
-        exclusion list or is itself a reparse point, and invokes callback(entry, deleted) per entry
-        when provided. A result can be minutes old by the time it is cleaned, so the engine asks
-        still_offered about each entry it is about to remove and leaves alone one that is not confirmed.
-        Without still_offered it confirms every entry except those of the guarded categories.
-
-        An entry that is verifiably gone is passed over without a callback. Entries are handled parents
-        first. One nested under an entry that was just removed, or listed a second time, went with it: it
-        counts as deleted, adds no bytes of its own and is not asked about.
-
-        With a platform the engine measures each entry right before removing it, and when a permanent
-        deletion fails part-way it counts the files that are verifiably gone. A failed move to the
-        trash counts nothing: where the files went is not known. Without a platform it trusts the size
-        the scan recorded and counts nothing for an entry that failed.
-
-        With use_trash every entry is offered to the trash. One the trash refuses is left alone, unless
-        its path is in delete_for_good: then it is deleted for good. A dry run does not ask the trash,
-        it uses its forecast. Without a platform the adapter of this machine stands for the trash.
-
-        Returns:
-            CleanStats with deleted/skipped counts, freed and trashed bytes, and error messages.
+        Left alone: an excluded path, a reparse point, an entry still_offered no longer confirms, and one the
+        trash refuses unless its path is in delete_for_good. With a platform sizes are measured at deletion,
+        without one the adapter of this machine still stands for the trash.
         """
         deleted = 0
         trashed = 0
@@ -214,10 +188,7 @@ class CleanEngine:
         return _Removal(failure=TrashRefusedError())
 
     def _try_remove(self, path: Path) -> _Removal:
-        """Offer path to the trash, or delete it for good where that is the mode or what the caller named it for.
-
-        The reparse check is repeated here: a link may replace the path after clean() looked (TOCTOU).
-        """
+        """Offer path to the trash or delete it for good. The reparse check is repeated: a link may replace it."""
         if is_reparse_point(path):
             return _Removal(failure=RuntimeError(f"Path became a reparse point before deletion: {path}"))
         if self._use_trash:

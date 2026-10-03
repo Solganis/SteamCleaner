@@ -1,21 +1,8 @@
 """Remove from a built Windows bundle the parts of the Python runtime the app does not use.
 
-`flet build` bundles a whole Python: every extension module, with Python 3.14 also its debug twin, the
-Tcl/Tk libraries, and the full standard library. The app loads a fraction of it. What goes:
-
-- A debug twin (`_ssl_d.pyd` beside `_ssl.pyd`). The bundle has no debug interpreter to load one.
-- The Tcl/Tk libraries, when the bundle has no `_tkinter` to load them.
-- SQLite, and the standard-library modules in `UNUSED_STDLIB`. None was loaded by the bundled app while
-  it started, scanned and ran a dry-run clean. What still imports one of them among the modules that
-  stay: `__main__` code (`asyncio.__main__`, the block at the end of `heapq`), a test (`certifi`), the
-  `help()` builtin and the interactive-prompt hook of `site`, and `xmlrpc.server`, which nothing in the
-  bundle imports.
-
-Nothing is removed on a guess: a debug file without its release twin stays, and so do the Tcl/Tk libraries
-of a bundle that has `_tkinter`. A layout the script does not know is refused.
-
-Usage, after the bundle is built:
-    uv run python scripts/prune_bundle.py build/windows
+Debug twins of extension modules, Tcl/Tk when the bundle has no `_tkinter`, SQLite and `UNUSED_STDLIB`. None
+was loaded while the bundled app started, scanned and ran a dry-run clean. What still imports one of them:
+`__main__` blocks, a `certifi` test, `help()`, the prompt hook of `site`, and `xmlrpc.server`.
 """
 
 import argparse

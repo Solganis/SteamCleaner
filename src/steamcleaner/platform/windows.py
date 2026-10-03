@@ -96,7 +96,6 @@ def _extended_path(path: Path) -> str:
 
 
 def _query_cluster_bytes(extended_path: str) -> int:
-    """Return the cluster size of the volume that holds the path."""
     volume_root = ctypes.create_unicode_buffer(len(extended_path) + 1)
     sectors_per_cluster = ctypes.wintypes.DWORD()
     bytes_per_sector = ctypes.wintypes.DWORD()
@@ -133,10 +132,9 @@ class WindowsAdapter(PlatformAdapter):
     def file_allocation(self, path: Path) -> FileAllocation:
         """Return the clusters NTFS allocates to the file, after compression and sparse holes.
 
-        An allocation that is not a whole number of the volume's clusters is reported as 0. That is a
-        heuristic for a file stored inside its MFT record, checked on 4096-byte clusters with 1024-byte
-        file records, where deleting 20000 such files returned the same 2.9 MB whether they held 100 or
-        600 bytes. A resident file whose allocation is a whole number of clusters is still counted.
+        An allocation that is not a whole number of clusters is reported as 0, a heuristic for a file stored in
+        its MFT record. Measured on 4096-byte clusters: deleting 20000 such files gave back the same 2.9 MB at
+        100 and at 600 bytes each.
         """
         extended_path = _extended_path(path)
         handle = _KERNEL32.CreateFileW(

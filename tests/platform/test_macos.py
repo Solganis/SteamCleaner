@@ -1,5 +1,3 @@
-"""Tests for macOS-specific paths across all game clients."""
-
 import json
 from pathlib import Path
 

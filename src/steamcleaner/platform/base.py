@@ -16,16 +16,12 @@ class TrashRefusedError(OSError):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FileAllocation:
-    """What one file occupies on disk and how many names point at it."""
-
     allocated_bytes: int
     file_id: tuple[int, int]
     link_count: int
 
 
 class PlatformAdapter(abc.ABC):
-    """OS abstraction for registry, well-known directories and on-disk file sizes, injected into clients."""
-
     @abc.abstractmethod
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
         """Read a string value from the platform registry (Windows-only concept)."""
@@ -40,10 +36,7 @@ class PlatformAdapter(abc.ABC):
 
     @abc.abstractmethod
     def read_registry_dword(self, key: str, subkey: str, value_name: str) -> int | None:
-        """Read a DWORD from the 32-bit registry view. None when no such DWORD can be read.
-
-        That view is where Steam's install-script records were observed. That Steam consults it is assumed.
-        """
+        """Read a DWORD from the 32-bit registry view, where Steam's install-script records were observed."""
 
     @abc.abstractmethod
     def appdata_local(self) -> Path:
@@ -66,13 +59,7 @@ class PlatformAdapter(abc.ABC):
         """Return the shared application data directory (ProgramData on Windows)."""
 
     def file_allocation(self, path: Path) -> FileAllocation:
-        """Return the disk space a file holds, without following a symlink.
-
-        The default reads POSIX `st_blocks`, which already reflects sparse and compressed files.
-
-        Raises:
-            OSError: The file cannot be inspected.
-        """
+        """Return the disk space a file holds, without following a symlink. OSError when it cannot be inspected."""
         file_stat = path.lstat()
         return FileAllocation(
             allocated_bytes=file_stat.st_blocks * POSIX_BLOCK_BYTES,

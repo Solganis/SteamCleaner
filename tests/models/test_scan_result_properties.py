@@ -1,10 +1,3 @@
-"""Property-based tests for ScanResult, the contract between ScanEngine and CleanEngine.
-
-These guard the aggregation laws against future refactors: totals count each path once,
-grouping is a true partition (every entry lands in exactly one bucket), filtering
-only ever drops entries below the threshold, and merge concatenates without loss.
-"""
-
 from pathlib import Path
 
 from assertpy2 import assert_that

@@ -83,10 +83,7 @@ class ScanEngine:
         return ScanResult(entries=all_entries)
 
     def still_offers(self, entry: JunkEntry) -> bool:
-        """Return whether the client an entry came from still stands by it. An entry of no client always stands.
-
-        What is read again is the client's choice, not the whole scan: see `GameClient.still_offers`.
-        """
+        """Return whether the client an entry came from still stands by it. An entry of no client stands."""
         clients = ClientRegistry.create_all(self._platform, self._exclusions)
         return all(client.still_offers(entry) for client in clients if client.name == entry.client_name)
 

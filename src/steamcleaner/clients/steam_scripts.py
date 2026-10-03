@@ -1,26 +1,13 @@
-"""What Steam's own install scripts say about the installers a game ships.
+"""What Steam's install scripts say about the installers a game ships.
 
-A game's app manifest lists its install scripts. A script names the programs Steam starts when the game is
-first launched ("Run Process") and when it is uninstalled ("Run Process On Uninstall"). For a first-launch
-step it may name a registry key, `HasRunKey`, under which Steam keeps a completion record: a DWORD named
-after the step, in the 32-bit view of HKEY_LOCAL_MACHINE.
+A first-launch step is settled only by its `HasRunKey` record: a DWORD named after the step, in the 32-bit
+view of HKEY_LOCAL_MACHINE, that reaches the step's minimum. That Steam does not start a recorded step
+again is assumed. Everything a step without such a record refers to must stay. Never settled: an uninstall
+step, a step without exactly one `HasRunKey` under HKEY_LOCAL_MACHINE, a minimum that is not a plain
+number, a program reached through a link or through a path that cannot be inspected.
 
-This module reads that as evidence in both directions. A program whose every step has its completion
-record is taken as done with, on the assumption that Steam does not start a recorded step again. Whatever
-a step without such a record refers to must stay: its programs, where they really are behind a symlink or
-junction, and every other `%INSTALLDIR%` path in its fields. A record settles nothing for an uninstall
-step, for a step without exactly one `HasRunKey` under HKEY_LOCAL_MACHINE, for one whose
-`MinimumHasRunValue` is not a plain number, and for one that reaches a program through a link or through a
-path that cannot be inspected.
-
-On a platform without a registry no record can be read. A step a record could settle then neither keeps
-nor releases anything, and what it names is judged by directory name alone, as it was before this module.
-
-A game is kept whole when a script its manifest lists exists but cannot be read as an install script. When
-an app manifest does not name one game, nothing in that library is called finished and every game
-directory no readable manifest describes is kept whole.
-
-The record belongs to a key and a step name, not to a file: two games that share both share the record.
+Without a registry a keyed step neither keeps nor releases anything. A game whose script cannot be read is
+kept whole. The record belongs to a key and a step name: two games that share both share the record.
 """
 
 import logging
@@ -53,11 +40,8 @@ _LOCAL_MACHINE_HIVE: Final = "hkey_local_machine"
 class InstallStep:
     """One step of an install script.
 
-    programs: the game files its `process N` fields start. reached: the programs, where they really are
-    behind a symlink or junction, and every `%INSTALLDIR%` path its fields mention, inside the game or not.
-    A mention of the game directory itself, or of a directory that holds it, is left out. completion_subkey:
-    the key under HKEY_LOCAL_MACHINE that holds its completion record, or None when no record can settle
-    the step. completion_minimum: the least value that record must hold.
+    reached: its programs, where they really are behind a link, and every `%INSTALLDIR%` path it mentions.
+    completion_subkey: the key under HKEY_LOCAL_MACHINE that holds its record, None when no record can settle it.
     """
 
     name: str
@@ -80,11 +64,9 @@ class GameScripts:
 class InstallerEvidence:
     """What the install scripts of a library establish.
 
-    needed: paths referred to by a step that no record can settle or, where a registry can be read, whose
-    record is absent, is not a DWORD or is below the step's minimum. finished: programs whose every step has
-    a record that reaches its minimum and that nothing needed or kept whole covers, each with the name of
-    such a step. kept_whole: game directories with a script that cannot be read and, when a manifest names
-    no one game, every game directory no readable manifest describes.
+    needed: paths an unsettled step refers to. finished: programs of settled steps that nothing needed or kept
+    whole covers, each with the name of such a step. kept_whole: games with an unreadable script and, when a
+    manifest names no one game, every game directory no readable manifest describes.
     """
 
     needed: frozenset[Path]
@@ -92,7 +74,6 @@ class InstallerEvidence:
     kept_whole: frozenset[Path] = frozenset()
 
     def protects(self, path: Path) -> bool:
-        """Whether path is, holds or lies inside something an install script may still need."""
         return any(
             kept == path or kept in path.parents or path in kept.parents for kept in (*self.needed, *self.kept_whole)
         )
@@ -113,10 +94,7 @@ def _values(pairs: VdfPairs, name: str) -> list[str | VdfPairs]:
 
 
 def _follow(relative_text: str, directory: Path) -> Path | None:
-    """Follow a Windows relative path from directory, `..` stepping up as Windows reads it.
-
-    None when it has a colon anywhere: that names a drive or a stream, and pathlib would join it as one.
-    """
+    """Follow a Windows relative path, `..` stepping up as Windows reads it. None when it has a colon."""
     if ":" in relative_text:
         return None
     target = directory
@@ -140,20 +118,13 @@ def _resolve_program(value: str, install_dir: Path) -> Path | None:
 
 
 def _find_mentions(value: str, install_dir: Path) -> list[Path]:
-    """Return every `%INSTALLDIR%\\<path>` a field mentions, each read up to the next quote or variable.
-
-    A mention may leave the game. One that is the game directory, or a directory that holds it, is not kept.
-    """
+    """Return every `%INSTALLDIR%\\<path>` a field mentions, except the game directory and what holds it."""
     targets = [_follow(reference[1], install_dir) for reference in _INSTALL_DIR_REFERENCE.finditer(value)]
     return [target for target in targets if target is not None and target not in (install_dir, *install_dir.parents)]
 
 
 def _real_location(program: Path, install_dir: Path) -> Path:
-    """Return where the program really is, in terms of install_dir.
-
-    A place inside the game is given as a path under install_dir. The game directory itself, or one that holds
-    it, is install_dir. A place elsewhere leaves the program its own name.
-    """
+    """Return where the program really is, as a path under install_dir when that is inside the game."""
     real_install_dir = Path(os.path.realpath(install_dir))
     real_program = Path(os.path.realpath(program))
     if real_install_dir in real_program.parents:
@@ -175,7 +146,6 @@ def _may_be_link(path: Path) -> bool:
 
 
 def _may_go_through_link(program: Path, install_dir: Path) -> bool:
-    """Whether the program, or a directory between it and the game directory, may be a symlink or junction."""
     # realpath returns a link loop unchanged (measured on 3.14.5), so equal paths alone do not rule a link out.
     return any(_may_be_link(component) for component in (program, *program.parents) if install_dir in component.parents)
 
@@ -299,7 +269,6 @@ def _is_done(step: InstallStep, platform: PlatformAdapter) -> bool | None:
 
 
 def collect_installer_evidence(library: Path, platform: PlatformAdapter) -> InstallerEvidence:
-    """Read every app manifest of a Steam library and sort what its install scripts refer to."""
     needed: set[Path] = set()
     recorded_as_done: dict[Path, str] = {}
     kept_whole: set[Path] = set()

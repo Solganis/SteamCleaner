@@ -8,7 +8,6 @@ from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_lo
 
 @pytest.fixture(autouse=True)
 def _clean_logger():
-    """Remove all handlers from the steamcleaner logger before/after each test."""
     root_logger = logging.getLogger("steamcleaner")
     original_level = root_logger.level
     original_handlers = root_logger.handlers[:]

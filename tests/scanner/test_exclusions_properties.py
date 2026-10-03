@@ -1,11 +1,3 @@
-"""Property-based tests for ExclusionRegistry, the last guard against deleting real game data.
-
-The example tests in test_exclusions.py pin specific paths; these check the invariants that must
-hold for *any* path: a builtin (or user-added) pattern embedded anywhere always excludes, the
-verdict is invariant under case and slash direction, and a path built only from pattern-free
-segments is never excluded.
-"""
-
 from pathlib import PurePosixPath, PureWindowsPath
 
 from assertpy2 import assert_that
@@ -16,15 +8,13 @@ from steamcleaner.scanner.exclusions import BUILTIN_EXCLUSIONS, ExclusionRegistr
 
 _BUILTIN_PATTERNS = [exclusion.pattern for exclusion in BUILTIN_EXCLUSIONS]
 
-# Segments that provably share no substring with any builtin pattern, so a path assembled from
-# them must never be excluded. None of the multi-word builtin phrases can span the "/" joins.
+# Segments that share no substring with any builtin pattern: a path built from them is never excluded.
 _SAFE_SEGMENTS = ("common", "SomeGame", "data", "cache", "redist", "_CommonRedist", "bin", "app")
 _safe_segment = st.sampled_from(_SAFE_SEGMENTS)
 _filler = st.text(alphabet="abcdefghijklmnopqrstuvwxyz0123456789 _-", max_size=6)
 
 
 def _embed(pattern: str, prefix: str, suffix: str, separator: str) -> str:
-    """Join non-empty filler segments around pattern so the result embeds pattern verbatim."""
     parts = [part for part in (prefix, pattern, suffix) if part]
     return separator.join(parts)
 

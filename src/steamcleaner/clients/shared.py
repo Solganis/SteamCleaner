@@ -63,7 +63,6 @@ def scan_launcher_logs(
     game_root: Path | None = None,
     log_min_size: int = DEFAULT_LOG_MIN_SIZE,
 ) -> Iterator[JunkEntry]:
-    """Scan launcher log directories for large .log files."""
     for logs_dir in log_dirs:
         if not logs_dir.is_dir():
             continue
@@ -89,7 +88,6 @@ def scan_game(
     pattern: re.Pattern[str] = REDIST_DIR_RE,
     log_min_size: int = DEFAULT_LOG_MIN_SIZE,
 ) -> Iterator[JunkEntry]:
-    """Single-pass scan of a game directory for redist, dumps, and logs."""
     found_redist: list[Path] = []
     for file_path, size in walk_files(game_dir):
         if cancel_check():

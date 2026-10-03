@@ -14,7 +14,6 @@ _logger = logging.getLogger(__name__)
 
 
 def is_reparse_stat(path_stat: os.stat_result) -> bool:
-    """Check if an lstat result describes a symlink, junction, or other reparse point."""
     try:
         return bool(path_stat.st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)  # Windows-only attr
     except AttributeError:
@@ -22,7 +21,6 @@ def is_reparse_stat(path_stat: os.stat_result) -> bool:
 
 
 def is_reparse_point(path: Path) -> bool:
-    """Check if path is a symlink, junction, or other reparse point."""
     try:
         return is_reparse_stat(path.lstat())
     except OSError:
@@ -50,11 +48,7 @@ def safe_rmtree(path: Path) -> bool:
 
 
 def walk_files(root: Path) -> Iterator[tuple[Path, int]]:
-    """Walk directory tree via os.scandir, yielding (path, size) for each file.
-
-    Uses DirEntry.stat() to avoid extra syscalls. Skips reparse points, and an entry that cannot be told
-    to be one or not.
-    """
+    """Yield (path, size) for each file under a directory. Reparse points and unreadable entries are skipped."""
     try:
         scanner = os.scandir(root)
     except OSError as scan_error:
@@ -82,10 +76,7 @@ def dir_size(path: Path) -> int:
 
 
 def measure_files(path: Path, platform: PlatformAdapter) -> dict[Path, FileAllocation]:
-    """Return what every file at or under path occupies on disk.
-
-    Reparse points are not followed and hold nothing. A file that cannot be inspected is left out.
-    """
+    """Return what every file at or under path occupies on disk. An uninspectable file is left out."""
     if is_reparse_point(path):
         return {}
     file_paths = (file_path for file_path, _ in walk_files(path)) if path.is_dir() else (path,)
@@ -99,11 +90,7 @@ def measure_files(path: Path, platform: PlatformAdapter) -> dict[Path, FileAlloc
 
 
 def reclaimable_allocation(allocations: Iterable[FileAllocation]) -> int:
-    """Sum what deleting the measured files gives back.
-
-    A file with several hard links counts only when every one of its links is among the measured files:
-    deleting some of the names frees nothing.
-    """
+    """Sum what deleting the measured files gives back. A hard-linked file counts when all its links are measured."""
     total = 0
     linked_files: dict[tuple[int, int], tuple[int, int]] = {}
     for allocation in allocations:
@@ -116,13 +103,7 @@ def reclaimable_allocation(allocations: Iterable[FileAllocation]) -> int:
 
 
 def disk_usage(path: Path, platform: PlatformAdapter) -> int:
-    """Return the bytes the files at path occupy on disk, which is what deleting them gives back.
-
-    Counts the allocation the filesystem reports, not file lengths, so compression, sparse holes and
-    cluster rounding are reflected, with the hard-link rule of reclaimable_allocation. Directory metadata
-    is not counted, and a file another process still holds open is released only when that process
-    closes it.
-    """
+    """Return what deleting the files at path gives back: allocation, not length, hard links as above."""
     return reclaimable_allocation(measure_files(path, platform).values())
 
 
@@ -146,7 +127,6 @@ def list_subdirs(path: Path) -> list[Path]:
 
 
 def format_size(size_bytes: int) -> str:
-    """Format byte count as human-readable string."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
     value = float(size_bytes)

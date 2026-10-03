@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 
 def _vdf_escape(path: Path) -> str:
-    """Escape a path for VDF format (double backslashes on Windows)."""
     return str(path).replace("\\", "\\\\")
 
 
@@ -71,8 +70,7 @@ class TestParseLibraryFoldersVdf:
         assert_that(parse_library_folders_vdf(vdf)).is_equal_to([])
 
     def test_skips_entry_neither_dict_nor_str(self, tmp_path: Path, monkeypatch):
-        # The VDF parser only yields str or nested dict; inject an int to exercise the
-        # defensive branch that skips any other entry type.
+        # The parser yields only str or dict: an int reaches the branch that skips anything else.
         monkeypatch.setattr(
             "steamcleaner.clients.steam.load_vdf",
             lambda _path: {"libraryfolders": {"0": 123}},
@@ -298,7 +296,6 @@ class TestSteamDumps:
 
 class TestParseLibraryFoldersVdfStringEntries:
     def test_old_style_string_entries(self, tmp_path: Path):
-        """Old libraryfolders.vdf format where entries are plain strings, not dicts."""
         library = tmp_path / "SteamLib"
         library.mkdir()
         vdf = tmp_path / "libraryfolders.vdf"
@@ -498,8 +495,7 @@ class TestConfigVdfFallback:
         )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        # Two libraries present skip the config.vdf fallback; install already listed is
-        # not inserted again.
+        # Two libraries skip the config.vdf fallback, and the install path is not listed twice.
         folders = client._library_folders()
         assert_that(folders.count(steam)).is_equal_to(1)
         assert_that(folders).contains(extra_lib)
@@ -524,8 +520,6 @@ class TestConfigVdfFallback:
         )
         platform = FakePlatformAdapter(install_path=steam)
         client = SteamClient(platform, ExclusionRegistry())
-        # shared_lib is listed in both libraryfolders.vdf and config.vdf; the fallback
-        # dedups it so it appears once.
         folders = client._library_folders()
         assert_that(folders.count(shared_lib)).is_equal_to(1)
 

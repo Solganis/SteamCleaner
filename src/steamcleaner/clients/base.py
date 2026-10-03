@@ -18,8 +18,6 @@ _logger = logging.getLogger(__name__)
 
 
 class GameClient(abc.ABC):
-    """Base class for a game client: detects its install and yields junk entries bound to itself."""
-
     def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         self._platform = platform
         self._exclusions = exclusions
@@ -46,11 +44,7 @@ class GameClient(abc.ABC):
         """Yield all junk entries without exclusion filtering."""
 
     def still_offers(self, entry: JunkEntry) -> bool:
-        """Return whether what made an entry of this client junk still holds. Asked right before deleting it.
-
-        True unless the client overrides it: most entries are junk by what they are, not by what the client
-        knew at scan time.
-        """
+        """Return whether what made the entry junk still holds. Asked right before deleting it."""
         return True
 
     def scan_safe(self, cancel: threading.Event | None = None) -> Iterator[JunkEntry]:

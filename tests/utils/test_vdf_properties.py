@@ -1,10 +1,3 @@
-"""Property-based tests for the VDF parser.
-
-Example-based tests in test_vdf.py pin down specific shapes; these check the two
-algebraic properties that hold for *any* input: a quoted round-trip is the
-identity, and the parser only ever fails with VdfParseError.
-"""
-
 from assertpy2 import assert_that
 from helpers import serialize_vdf
 from hypothesis import given, settings
@@ -12,9 +5,7 @@ from hypothesis import strategies as st
 
 from steamcleaner.utils.vdf import VdfParseError, parse_vdf
 
-# Bias the alphabet toward the characters that exercise the parser's branches
-# (quotes, backslashes, braces, comment slashes, whitespace) while still covering
-# Cyrillic and CJK ranges per the project's unicode-path requirement.
+# Biased toward what the parser branches on, plus Cyrillic and CJK.
 _structural_chars = st.sampled_from('"\\{}/ \t\n')
 _unicode_chars = st.characters(min_codepoint=32, max_codepoint=0x2FFF, exclude_categories=("Cs",))
 

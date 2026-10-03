@@ -1,10 +1,3 @@
-"""Property-based tests for CleanEngine's reparse-point safety gate.
-
-The example tests cover single symlinks; this checks the gate holds for *any* configuration:
-across an arbitrary mix of plain and reparse-flagged directories, the engine deletes exactly the
-plain ones, never touches a reparse point, and keeps its deleted/skipped/bytes counters consistent.
-"""
-
 import uuid
 from typing import TYPE_CHECKING
 
@@ -32,8 +25,7 @@ class TestCleanEngineReparseGateProperties:
     @given(reparse_flags=st.lists(st.booleans(), min_size=1, max_size=6))
     @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None, max_examples=60)
     def test_reparse_points_survive_others_are_cleaned(self, reparse_flags, tmp_path, monkeypatch):
-        # tmp_path is resolved once and shared across hypothesis examples, so isolate each
-        # example in its own subtree to avoid cross-example collisions.
+        # tmp_path is shared across hypothesis examples, so each gets its own subtree.
         root = tmp_path / uuid.uuid4().hex
         root.mkdir()
 
@@ -47,8 +39,7 @@ class TestCleanEngineReparseGateProperties:
             if is_reparse:
                 reparse_set.add(target)
 
-        # Simulate the reparse subset at the safety primitive: real junctions need privileges on
-        # Windows, and is_reparse_point itself is unit-tested with real symlinks elsewhere.
+        # Real junctions need privileges on Windows, so the reparse subset is simulated.
         monkeypatch.setattr("steamcleaner.cleaner.engine.is_reparse_point", lambda path: path in reparse_set)
 
         result = ScanResult(entries=[_make_entry(target) for target in directories])
@@ -68,10 +59,9 @@ class TestCleanEngineExclusionGateProperties:
     @given(builtin=st.sampled_from(_BUILTIN_PATTERNS), before=st.booleans(), after=st.booleans())
     @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None, max_examples=40)
     def test_builtin_excluded_path_is_never_deleted(self, builtin, before, after, tmp_path, monkeypatch):
-        # No monkeypatch on is_reparse_point here: these are real, plain directories, so the ONLY
-        # thing that can keep them alive is the exclusion gate. Real junctions need privileges.
+        # Plain directories with no patch: only the exclusion gate can keep them.
         root = tmp_path / uuid.uuid4().hex
-        # Optional filler segments around the pattern confirm a substring match guards, not an exact path.
+        # Filler around the pattern: a substring match guards, not an exact path.
         relative = "/".join(part for part in ("outer" if before else "", builtin, "inner" if after else "") if part)
         target = root / relative
         target.mkdir(parents=True)

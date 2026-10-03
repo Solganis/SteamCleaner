@@ -42,7 +42,6 @@ def _load_fresh_registry(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
 # noinspection PyProtectedMember
 @pytest.fixture(autouse=True)
 def _restore_registry():
-    """Ensure registry state is restored after each test."""
     saved_classes = list(ClientRegistry._client_classes)
     saved_discovered = ClientRegistry._discovered
     yield

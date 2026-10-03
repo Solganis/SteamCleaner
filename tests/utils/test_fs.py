@@ -131,8 +131,7 @@ class TestIsReparsePoint:
         assert_that(is_reparse_point(tmp_path / "nope")).is_false()
 
     def test_windows_reparse_attribute(self, tmp_path: Path):
-        # On Linux/macOS lstat() has no st_file_attributes, so the Windows attribute path is
-        # otherwise unreachable. Mock lstat so the reparse-flag check runs on every OS.
+        # lstat() has no st_file_attributes off Windows, so it is mocked to run the check on every OS.
         target = tmp_path / "item"
         target.mkdir()
         fake_stat = SimpleNamespace(st_file_attributes=stat.FILE_ATTRIBUTE_REPARSE_POINT)

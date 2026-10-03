@@ -44,7 +44,6 @@ def _read_day(file_time: float) -> date | None:
 
 
 def parse_library_folders_vdf(path: Path) -> list[Path]:
-    """Parse libraryfolders.vdf to extract library paths."""
     data = load_vdf(path)
     folders = data.get("libraryfolders", {})
     paths: list[Path] = []
@@ -60,8 +59,6 @@ def parse_library_folders_vdf(path: Path) -> list[Path]:
 
 @ClientRegistry.register
 class SteamClient(GameClient):
-    """Steam client: resolves libraries via libraryfolders.vdf/config.vdf and scans them."""
-
     def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry) -> None:
         super().__init__(platform, exclusions)
         self._install_path: Path | None = None
@@ -124,7 +121,6 @@ class SteamClient(GameClient):
 
     @staticmethod
     def _parse_config_vdf_fallback(install: Path) -> list[Path]:
-        """Parse config/config.vdf for BaseInstallFolder_N keys (legacy Steam)."""
         config_path = install / "config" / "config.vdf"
         data = load_vdf(config_path)
         store = data.get("InstallConfigStore", {})
@@ -194,12 +190,9 @@ class SteamClient(GameClient):
     def _find_leftover_games(library: Path) -> set[str]:
         """Return the names of the game directories of a library that no app manifest describes.
 
-        None at all when the library has no manifest, has one that names no one game, or what a directory
-        is on disk cannot be read: what is installed there cannot be told then. A directory is matched by
-        what it is on disk, so a manifest describes it under another spelling of its name or through a
-        link. A directory the listing itself cannot read is passed over alone, and so are directories
-        whose paths compare equal, as two names differing in letter case do on Windows: nothing past this
-        point could tell them apart. Names are returned for the same reason.
+        None when that cannot be told: no manifest, one that names no one game, or a directory that cannot be
+        identified. Directories are matched by what they are on disk. Names are returned, not paths: paths that
+        differ in letter case compare equal on Windows.
         """
         described: list[Path] = []
         for manifest_path in (library / "steamapps").glob("appmanifest_*.acf"):
@@ -219,22 +212,13 @@ class SteamClient(GameClient):
             return set()
 
     def still_offers(self, entry: JunkEntry) -> bool:
-        """Return whether a leftover is still one: the leftovers of its library are worked out again.
-
-        That reads the manifests, the listing of the library and what its directories are on disk. What the
-        folder holds is not read again, and an entry of another category stands.
-        """
+        """Work out the leftovers of the library again. What the folder holds is not read again."""
         if entry.category is not JunkCategory.LEFTOVER:
             return True
         return entry.path.name in self._find_leftover_games(entry.path.parents[2])
 
     def _scan_leftover(self, game_dir: Path) -> Iterator[JunkEntry]:
-        """Yield the directory of an uninstalled game with what it still holds and when that was last written.
-
-        Nothing is yielded for a directory that holds no bytes, or one in which the walk meets an app manifest
-        of a Steam library. The walk enters no link and no directory it cannot read, so a library behind one
-        is not seen.
-        """
+        """Yield the directory of an uninstalled game, unless it holds no bytes or has a Steam library inside."""
         size = 0
         last_written = -math.inf
         for file_path, _ in walk_files(game_dir):
@@ -267,10 +251,7 @@ class SteamClient(GameClient):
     def _scan_finished_installers(
         self, game_dir: Path, evidence: InstallerEvidence, found: list[Path]
     ) -> Iterator[JunkEntry]:
-        """Yield the installers of this game whose install steps are all recorded as complete.
-
-        One that is a found entry, or lies inside one, is not yielded again.
-        """
+        """Yield the installers whose install steps are all recorded as complete, unless already found."""
         for installer, step_name in evidence.finished.items():
             if game_dir not in installer.parents or not {installer, *installer.parents}.isdisjoint(found):
                 continue

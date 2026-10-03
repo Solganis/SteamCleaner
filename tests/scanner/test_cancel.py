@@ -62,7 +62,6 @@ class TestCancelMidScan:
         assert_that(len(entries)).is_less_than(10)
 
     def test_cancel_stops_scan_junk_between_phases(self, tmp_path: Path):
-        """Cancel after redist scan should skip shader cache, logs, dumps."""
         platform = _make_steam_with_games(tmp_path, 1)
         client = SteamClient(platform, ExclusionRegistry())
         cancel = threading.Event()

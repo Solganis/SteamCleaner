@@ -66,10 +66,7 @@ def _write_manifest(library: Path, app_id: int, app_state: VdfDict) -> Path:
 def _install_game(
     library: Path, install_dir: str, scripts: dict[str, VdfDict | str], files: dict[str, int] | None = None
 ) -> Path:
-    """Write an app manifest, its install scripts and the listed files into a Steam library.
-
-    A script given as a dict becomes the body of an `InstallScript` section. One given as text is written as is.
-    """
+    """Write an app manifest, its scripts and the listed files. A dict script becomes an `InstallScript` body."""
     game_dir = library / "steamapps" / "common" / install_dir
     game_dir.mkdir(parents=True)
     for windows_relative_path, size in (files or {}).items():

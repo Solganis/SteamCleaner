@@ -131,12 +131,7 @@ class ListedEntriesClient(GameClient):
 
 
 def _escape_vdf_string(raw: str) -> str:
-    """Escape backslash and double quote so parse_vdf reconstructs the original string.
-
-    Order matters: backslashes are doubled first, otherwise the escape we add for a
-    quote would itself be re-escaped. Whitespace and braces are left raw because the
-    parser treats them literally inside quotes.
-    """
+    """Escape backslash, then double quote: the other order would escape the added backslash again."""
     return raw.replace("\\", "\\\\").replace('"', '\\"')
 
 
@@ -167,15 +162,7 @@ def write_app_manifest(library: Path, app_id: int, install_dir: str) -> Path:
 
 
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:
-    """Build a fake Steam directory tree.
-
-    Args:
-        root: tmp_path root
-        games: {game_name: {subdir_name: [filenames]}}
-
-    Returns:
-        Steam install path
-    """
+    """Build a fake Steam tree from {game_name: {subdir_name: [filenames]}} and return the install path."""
     steam = root / "Steam"
     common = steam / "steamapps" / "common"
     common.mkdir(parents=True)
@@ -197,7 +184,6 @@ def run_bounded(task: Coroutine[object, object, None], seconds: float = 10) -> N
 
 
 def scan_with_cancel_already_set(client: GameClient) -> list[JunkEntry]:
-    """Run ``scan_safe`` with a cancel event that is set before the scan starts."""
     cancel = threading.Event()
     cancel.set()
     return list(client.scan_safe(cancel=cancel))
