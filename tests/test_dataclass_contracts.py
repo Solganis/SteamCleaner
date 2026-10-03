@@ -9,6 +9,7 @@ from assertpy2 import assert_that
 from steamcleaner.cleaner.engine import CleanStats
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult
+from steamcleaner.platform.base import FileAllocation
 from steamcleaner.scanner.exclusions import Exclusion, ExclusionRegistry
 from steamcleaner.scanner.patterns import JunkPattern
 
@@ -38,6 +39,7 @@ RECORDS = [
     ),
     pytest.param(lambda: Exclusion(pattern="Steamworks Shared", reason="Shared pool"), id="Exclusion"),
     pytest.param(lambda: CleanStats(deleted=1, skipped=2, errors=["denied"], bytes_freed=3), id="CleanStats"),
+    pytest.param(lambda: FileAllocation(allocated_bytes=4096, file_id=(1, 2), link_count=1), id="FileAllocation"),
 ]
 
 CONTAINERS = [

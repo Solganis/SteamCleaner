@@ -1,12 +1,24 @@
 import abc
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+POSIX_BLOCK_BYTES: Final = 512
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FileAllocation:
+    """What one file occupies on disk and how many names point at it."""
+
+    allocated_bytes: int
+    file_id: tuple[int, int]
+    link_count: int
+
 
 class PlatformAdapter(abc.ABC):
-    """OS abstraction for registry and well-known directory lookups, injected into clients."""
+    """OS abstraction for registry, well-known directories and on-disk file sizes, injected into clients."""
 
     @abc.abstractmethod
     def read_registry_str(self, key: str, subkey: str, value_name: str) -> str | None:
@@ -35,6 +47,21 @@ class PlatformAdapter(abc.ABC):
     @abc.abstractmethod
     def programdata(self) -> Path:
         """Return the shared application data directory (ProgramData on Windows)."""
+
+    def file_allocation(self, path: Path) -> FileAllocation:
+        """Return the disk space a file holds, without following a symlink.
+
+        The default reads POSIX `st_blocks`, which already reflects sparse and compressed files.
+
+        Raises:
+            OSError: The file cannot be inspected.
+        """
+        file_stat = path.lstat()
+        return FileAllocation(
+            allocated_bytes=file_stat.st_blocks * POSIX_BLOCK_BYTES,
+            file_id=(file_stat.st_dev, file_stat.st_ino),
+            link_count=file_stat.st_nlink,
+        )
 
     def wine_prefixes(self) -> list[Path]:  # pragma: no cover - default only used by WindowsAdapter
         """Return discovered Wine/Proton drive_c paths. Empty on Windows."""

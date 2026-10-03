@@ -2,13 +2,14 @@ import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from steamcleaner.platform.base import PlatformAdapter
+from steamcleaner.clients.base import GameClient
+from steamcleaner.platform.base import FileAllocation, PlatformAdapter
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
-    from steamcleaner.clients.base import GameClient
     from steamcleaner.models.junk import JunkEntry
+    from steamcleaner.scanner.exclusions import ExclusionRegistry
 
 
 class FakePlatformAdapter(PlatformAdapter):
@@ -30,6 +31,7 @@ class FakePlatformAdapter(PlatformAdapter):
         self._appdata_local_override = appdata_local_dir
         self._registry: dict[tuple[str, str, str], str] = {}
         self._registry_subkeys: dict[tuple[str, str], list[str]] = {}
+        self._allocated_bytes: dict[Path, int] = {}
         if install_path:
             self._registry[("HKLM", r"SOFTWARE\Wow6432Node\Valve\Steam", "InstallPath")] = str(install_path)
 
@@ -64,6 +66,36 @@ class FakePlatformAdapter(PlatformAdapter):
 
     def wine_prefixes(self) -> list[Path]:
         return self._wine_prefixes
+
+    def set_allocated_bytes(self, path: Path, allocated_bytes: int):
+        self._allocated_bytes[path] = allocated_bytes
+
+    def file_allocation(self, path: Path) -> FileAllocation:
+        """Report the file length as its allocation unless a test set one, so sizes are the same on every OS."""
+        file_stat = path.lstat()
+        return FileAllocation(
+            allocated_bytes=self._allocated_bytes.get(path, file_stat.st_size),
+            file_id=(file_stat.st_dev, file_stat.st_ino),
+            link_count=file_stat.st_nlink,
+        )
+
+
+class ListedEntriesClient(GameClient):
+    """Client whose scan yields the entries it was given and never looks at the cancel flag."""
+
+    def __init__(self, platform: PlatformAdapter, exclusions: ExclusionRegistry, entries: list[JunkEntry]) -> None:
+        super().__init__(platform, exclusions)
+        self._entries = entries
+
+    @property
+    def name(self) -> str:
+        return "Listed entries"
+
+    def is_installed(self) -> bool:
+        return True
+
+    def scan_junk(self) -> Iterator[JunkEntry]:
+        yield from self._entries
 
 
 def build_fake_steam_tree(root: Path, games: dict[str, dict[str, list[str]]]) -> Path:
