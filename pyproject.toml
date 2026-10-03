@@ -34,7 +34,7 @@ classifiers = [
 
 dependencies = [
     "darkdetect>=0.8.0",
-    "flet>=1.0.1",
+    "flet>=1.0.3",
     "send2trash>=2.1.0",
 ]
 
@@ -77,11 +77,11 @@ include = [
 
 [dependency-groups]
 dev = [
-    "assertpy2>=2.27.1",
-    "hypothesis>=6.168.1",
+    "assertpy2>=2.29.1",
+    "hypothesis>=6.168.3",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.9",
+    "ruff>=0.16.10",
     "ty>=0.0.84",
 ]
 
