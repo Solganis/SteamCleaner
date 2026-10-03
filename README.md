@@ -39,7 +39,7 @@
 - **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
 - **Scans** &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
 - **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, unused cross-platform binaries, and folders left by uninstalled Steam games
-- **Game files** &middot; Known game files are never touched (e.g. `Steamworks Shared`, `Heroes of the Storm`, `Penumbra Overture`, `Medieval II Total War`)
+- **Game files** &middot; Known game files are never touched
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
 - **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
 - **Leftovers** &middot; Folders of uninstalled games may hold saves, so the confirmation says in red how many of them are selected. Each is checked against Steam's manifests again right before it is deleted
