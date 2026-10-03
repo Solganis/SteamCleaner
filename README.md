@@ -46,7 +46,7 @@
 - **5 languages** &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
 - **Shortcuts** &middot; Keyboard shortcuts for scan, select, clean, and cancel
 
-<h2 align="center">What it finds</h2>
+<h3 align="center">What it finds</h3>
 
 <div align="center">
 <table>
@@ -61,7 +61,7 @@
 </table>
 </div>
 
-<h2 align="center">Keyboard shortcuts</h2>
+<h3 align="center">Keyboard shortcuts</h3>
 
 <div align="center">
 <table>
