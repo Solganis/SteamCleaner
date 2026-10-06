@@ -1,8 +1,8 @@
 <h1 align="center">Steam Cleaner</h1>
 
 <p align="center">
-  <b>Reclaim disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect.</b><br>
-  Spiritual successor to <a href="https://github.com/Codeusa/SteamCleaner">Codeusa/SteamCleaner</a>.
+  <b>Reclaim disk space from Steam, Epic Games, EA App, GOG Galaxy, and Ubisoft Connect</b><br>
+  Spiritual successor to <a href="https://github.com/Codeusa/SteamCleaner">Codeusa/SteamCleaner</a>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 <h2 align="center">Quick start</h2>
 
 <p align="center">
-  Download the latest build from <a href="https://github.com/Solganis/SteamCleaner/releases">Releases</a>, run it, and press <b>Scan</b>.<br>
+  Download the latest build from <a href="https://github.com/Solganis/SteamCleaner/releases">Releases</a>, run it, and press <b>Scan</b><br>
   Or run from source:
 </p>
 
@@ -37,14 +37,10 @@
 
 - **Cross-platform** &middot; Desktop app for Windows, macOS, and Linux with automatic dark/light theme
 - **Recoverable** &middot; **Files go to system trash by default, not permanent deletion**
-- **Scans** &middot; Steam, Epic Games, EA App (Origin), GOG Galaxy, and Ubisoft Connect, including games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers
-- **Finds** &middot; Redistributable installers, shader/web caches, crash dumps, old logs, bundled installers, unused cross-platform binaries, and folders left by uninstalled Steam games
+- **Wine and Proton** &middot; Games installed through Wine, Proton, Bottles, Lutris, and other compatibility layers are scanned too
 - **Game files** &middot; Known game files are never touched
 - **Symlinks** &middot; Symlinks and junction points are never followed or deleted through
-- **Transparent** &middot; Each detected item shows its exact path, category, and size before removal
 - **Leftovers** &middot; Folders of uninstalled games may hold saves, so the confirmation says in red how many of them are selected. Each is checked against Steam's manifests again right before it is deleted
-- **5 languages** &middot; English, Russian, Chinese (Simplified), Spanish, Portuguese (Brazil)
-- **Shortcuts** &middot; Keyboard shortcuts for scan, select, clean, and cancel
 
 <h3 align="center">What it finds</h3>
 
@@ -74,7 +70,7 @@
 </div>
 
 <p align="center">
-  <sub>On macOS, use <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd>.</sub>
+  <sub>On macOS, use <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd></sub>
 </p>
 
 ---
