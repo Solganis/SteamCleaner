@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.platform.base import FileAllocation
 from steamcleaner.platform.linux import LinuxAdapter

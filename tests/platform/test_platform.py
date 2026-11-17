@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.platform import create_adapter
 from steamcleaner.platform.linux import LinuxAdapter

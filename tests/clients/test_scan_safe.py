@@ -1,7 +1,7 @@
 import os
 from typing import TYPE_CHECKING
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter, ListedEntriesClient
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.clients.ea_app import EaAppClient

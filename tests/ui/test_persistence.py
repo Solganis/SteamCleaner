@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import flet as ft
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.ui.gui.app import SteamCleanerGUI
 from steamcleaner.ui.gui.i18n import t

@@ -3,7 +3,7 @@ from pathlib import Path
 from string import Formatter
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.ui.gui import i18n
 from steamcleaner.ui.gui.i18n import LANGUAGES, t

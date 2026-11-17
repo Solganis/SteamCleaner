@@ -1,4 +1,4 @@
-from assertpy2 import assert_that
+from assertpy import assert_that
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -19,7 +19,7 @@ class TestFormatSizeProperties:
         assert_that(format_size(size_bytes)).is_equal_to(f"{size_bytes} B")
 
     @given(st.integers(min_value=1024, max_value=2**70))
-    def test_roundtrip_magnitude_within_rounding_tolerance(self, size_bytes):
+    def test_roundtrip_magnitude_within_rounding_tolerance(self, size_bytes: int):
         number_text, unit = format_size(size_bytes).rsplit(" ", 1)
         multiplier = _UNIT_MULTIPLIER[unit]
         reconstructed = float(number_text) * multiplier

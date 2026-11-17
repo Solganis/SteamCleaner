@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter, serialize_vdf
 
 from steamcleaner.clients.steam import SteamClient

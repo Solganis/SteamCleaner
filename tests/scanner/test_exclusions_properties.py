@@ -1,6 +1,6 @@
 from pathlib import PurePosixPath, PureWindowsPath
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 from hypothesis import given
 from hypothesis import strategies as st
 

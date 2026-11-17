@@ -1,7 +1,7 @@
 import sys
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 ONLY_WINDOWS = pytest.mark.skipif(sys.platform != "win32", reason="the Windows adapter calls winreg")
 CURRENT_VERSION = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"

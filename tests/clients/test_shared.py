@@ -2,7 +2,7 @@ import re
 import threading
 from typing import TYPE_CHECKING
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.clients.shared import (
     REDIST_DIR_RE,

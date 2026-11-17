@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.utils.config import config_dir, get_list, get_value, load_config, save_value
 

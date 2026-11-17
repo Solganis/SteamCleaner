@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Self
 from unittest.mock import patch
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.utils.fs import dir_size, format_size, is_reparse_point, list_subdirs, safe_rmtree, walk_files
 

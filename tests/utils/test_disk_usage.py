@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter
 
 from steamcleaner.utils.fs import disk_usage

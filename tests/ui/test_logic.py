@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import flet as ft
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.models.junk import JunkCategory, JunkEntry
 from steamcleaner.models.scan_result import ScanResult

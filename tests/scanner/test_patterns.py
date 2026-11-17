@@ -1,4 +1,4 @@
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.models.junk import JunkCategory
 from steamcleaner.scanner.patterns import COMMON_PATTERNS, JunkPattern

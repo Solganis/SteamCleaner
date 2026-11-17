@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.utils.vdf import VdfParseError, load_vdf, parse_vdf, parse_vdf_pairs
 

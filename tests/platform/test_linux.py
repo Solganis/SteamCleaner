@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.platform.linux import LinuxAdapter
 

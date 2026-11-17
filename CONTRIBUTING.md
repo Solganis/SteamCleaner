@@ -35,7 +35,7 @@ CI runs the first four on Linux and the tests on Linux, Windows and macOS.
 
 ## Tests
 
-- Assertions go through `assertpy2` (`assert_that`).
+- Assertions go through `assertpy` (`assert_that`).
 - `FakePlatformAdapter` from `tests/helpers.py` stands in for the registry and the home directory.
 - A test that needs one OS is marked `skipif`.
 

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import flet as ft
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter, run_bounded, write_app_manifest
 
 from steamcleaner.cleaner.engine import CleanStats

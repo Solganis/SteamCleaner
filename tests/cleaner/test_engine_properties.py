@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from assertpy2 import assert_that
+from assertpy import assert_that
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 

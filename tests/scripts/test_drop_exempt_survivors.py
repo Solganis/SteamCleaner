@@ -5,7 +5,7 @@ from contextlib import closing
 from pathlib import Path
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "drop_exempt_survivors.py"
 MODULE_SOURCE = """import typing

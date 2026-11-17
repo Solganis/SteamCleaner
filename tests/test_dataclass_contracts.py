@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.cleaner.engine import CleanStats
 from steamcleaner.clients.steam_scripts import GameScripts, InstallerEvidence, InstallStep

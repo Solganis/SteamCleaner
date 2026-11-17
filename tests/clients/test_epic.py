@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import FakePlatformAdapter, scan_cancelling_after, scan_with_cancel_already_set
 
 from steamcleaner.clients.epic import EpicClient

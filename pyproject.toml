@@ -79,7 +79,7 @@ include = [
 
 [dependency-groups]
 dev = [
-    "assertpy2>=2.29.1",
+    "assertpy>=2.36.1",
     "hypothesis>=6.168.3",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",

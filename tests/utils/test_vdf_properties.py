@@ -1,4 +1,4 @@
-from assertpy2 import assert_that
+from assertpy import assert_that
 from helpers import serialize_vdf
 from hypothesis import given, settings
 from hypothesis import strategies as st

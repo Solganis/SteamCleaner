@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from assertpy2 import assert_that
+from assertpy import assert_that
 
 from steamcleaner.utils.logging import is_logging_enabled, log_file_path, set_logging_enabled, setup_logging
 
